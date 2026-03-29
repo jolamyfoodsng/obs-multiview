@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>System Settings &amp; Defaults - OBS Church Studio</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec5b",
+                        "primary-dark": "#0eb545",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102216",
+                        "surface-dark": "#152e1e",
+                        "surface-darker": "#0a160e",
+                        "accent-purple": "#a855f7",
+                        "accent-purple-dark": "#3b0764",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #102216;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1f422b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2a5a3a;
+        }
+        .settings-card {
+            @apply bg-white dark:bg-surface-dark border border-gray-200 dark:border-primary/10 rounded-xl overflow-hidden;
+        }
+        .tab-button-active {
+            @apply text-primary border-b-2 border-primary;
+        }
+        .tab-button-inactive {
+            @apply text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border-b-2 border-transparent;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-gray-200 font-display min-h-screen flex flex-col selection:bg-primary selection:text-background-dark">
+<header class="h-16 bg-white dark:bg-surface-dark border-b border-gray-200 dark:border-primary/10 flex items-center justify-between px-6 z-20 shrink-0">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 cursor-pointer">
+<span class="material-icons text-primary text-2xl">dashboard_customize</span>
+<h1 class="font-bold text-lg tracking-tight text-gray-900 dark:text-white">OBS Church Studio</h1>
+</div>
+<div class="h-6 w-px bg-gray-300 dark:bg-primary/20 mx-2"></div>
+<div class="flex items-center gap-2">
+<span class="text-sm font-medium text-gray-500">Settings</span>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<button class="px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
+                Discard Changes
+            </button>
+<button class="flex items-center gap-2 px-6 py-2 bg-primary hover:bg-primary-dark text-background-dark font-bold text-sm rounded-lg shadow-[0_0_15px_rgba(19,236,91,0.3)] transition-all hover:shadow-[0_0_20px_rgba(19,236,91,0.5)] transform hover:-translate-y-0.5">
+                Save Settings
+            </button>
+</div>
+</header>
+<main class="flex-1 w-full max-w-5xl mx-auto p-8 space-y-8">
+<div class="flex flex-col gap-1">
+<h2 class="text-3xl font-bold text-gray-900 dark:text-white">System Settings</h2>
+<p class="text-gray-500 dark:text-gray-400">Manage your workspace appearance, broadcast defaults, and integrations.</p>
+</div>
+<div class="flex border-b border-gray-200 dark:border-primary/10 gap-8">
+<button class="px-1 py-4 text-sm font-semibold tab-button-active">Appearance</button>
+<button class="px-1 py-4 text-sm font-semibold tab-button-inactive">Defaults</button>
+<button class="px-1 py-4 text-sm font-semibold tab-button-inactive">Shortcuts</button>
+<button class="px-1 py-4 text-sm font-semibold tab-button-inactive">Team</button>
+<button class="px-1 py-4 text-sm font-semibold tab-button-inactive">Integrations</button>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<div class="md:col-span-2 space-y-8">
+<section class="space-y-4">
+<div class="flex flex-col">
+<h3 class="text-lg font-semibold text-gray-900 dark:text-white leading-tight">Interface Theme</h3>
+<p class="text-sm text-gray-500 dark:text-gray-400">Choose how OBS Church Studio looks on your screen.</p>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="relative group cursor-pointer border-2 border-primary rounded-xl p-4 bg-surface-dark transition-all">
+<div class="aspect-[16/10] bg-background-dark rounded-md mb-3 border border-primary/20 flex flex-col p-2 gap-2">
+<div class="h-2 w-1/2 bg-surface-dark rounded"></div>
+<div class="h-full w-full bg-surface-dark rounded flex items-center justify-center">
+<div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
+<span class="material-icons text-primary text-xs">dark_mode</span>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<span class="font-medium">Dark Mode</span>
+<span class="material-icons text-primary text-xl">check_circle</span>
+</div>
+</div>
+<div class="relative group cursor-pointer border-2 border-transparent hover:border-gray-300 dark:hover:border-gray-700 rounded-xl p-4 bg-white dark:bg-surface-darker/50 transition-all">
+<div class="aspect-[16/10] bg-gray-100 rounded-md mb-3 border border-gray-200 flex flex-col p-2 gap-2">
+<div class="h-2 w-1/2 bg-white rounded"></div>
+<div class="h-full w-full bg-white rounded flex items-center justify-center">
+<div class="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+<span class="material-icons text-gray-400 text-xs">light_mode</span>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between">
+<span class="font-medium text-gray-600 dark:text-gray-400">Light Mode</span>
+<span class="w-5 h-5 border-2 border-gray-300 dark:border-gray-700 rounded-full"></span>
+</div>
+</div>
+</div>
+</section>
+<section class="space-y-4">
+<div class="flex flex-col">
+<h3 class="text-lg font-semibold text-gray-900 dark:text-white leading-tight">Accent Color</h3>
+<p class="text-sm text-gray-500 dark:text-gray-400">Personalize your workspace highlights and focus states.</p>
+</div>
+<div class="flex flex-wrap gap-4">
+<button class="w-12 h-12 rounded-full bg-[#13ec5b] ring-offset-4 ring-offset-background-dark ring-2 ring-primary flex items-center justify-center">
+<span class="material-icons text-background-dark text-xl">check</span>
+</button>
+<button class="w-12 h-12 rounded-full bg-accent-purple hover:scale-105 transition-transform"></button>
+<button class="w-12 h-12 rounded-full bg-blue-500 hover:scale-105 transition-transform"></button>
+<button class="w-12 h-12 rounded-full bg-orange-500 hover:scale-105 transition-transform"></button>
+<button class="w-12 h-12 rounded-full bg-red-500 hover:scale-105 transition-transform"></button>
+<button class="w-12 h-12 rounded-full bg-cyan-400 hover:scale-105 transition-transform"></button>
+<div class="w-12 h-12 rounded-full border-2 border-dashed border-gray-500 flex items-center justify-center cursor-pointer hover:border-primary group transition-colors">
+<span class="material-icons text-gray-500 group-hover:text-primary">colorize</span>
+</div>
+</div>
+</section>
+</div>
+<div class="space-y-6">
+<div class="settings-card p-6 space-y-4">
+<h4 class="text-sm font-bold uppercase tracking-wider text-gray-500">Live Preview</h4>
+<div class="p-4 bg-surface-darker rounded-lg border border-primary/10">
+<div class="flex items-center gap-3 mb-4">
+<div class="w-8 h-8 rounded bg-primary"></div>
+<div class="space-y-1">
+<div class="h-2 w-24 bg-gray-700 rounded"></div>
+<div class="h-1.5 w-16 bg-gray-800 rounded"></div>
+</div>
+</div>
+<div class="space-y-2">
+<div class="h-8 w-full bg-primary/10 rounded flex items-center px-3">
+<span class="text-[10px] text-primary font-bold">ACTIVE STATE</span>
+</div>
+<div class="h-8 w-full bg-gray-800 rounded"></div>
+</div>
+</div>
+<p class="text-xs text-gray-500 italic">This is how your selected colors will appear in the main control panel.</p>
+</div>
+<div class="settings-card p-6 bg-accent-purple/5 border-accent-purple/20">
+<div class="flex items-start gap-3">
+<span class="material-icons text-accent-purple">info</span>
+<div>
+<h4 class="text-sm font-bold text-accent-purple">Pro Tip</h4>
+<p class="text-xs text-gray-400 mt-1 leading-relaxed">Dark mode is recommended for dim control booth environments to reduce eye strain during broadcasts.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<hr class="border-gray-200 dark:border-primary/10"/>
+<div class="opacity-50 pointer-events-none">
+<h3 class="text-lg font-semibold mb-4">Upcoming: Content Defaults</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<div class="space-y-2">
+<label class="text-sm font-medium">Safe Margins (px)</label>
+<input class="w-full bg-surface-dark border-primary/20 rounded-lg text-sm" disabled="" type="number" value="40"/>
+</div>
+<div class="space-y-2">
+<label class="text-sm font-medium">Default Logo</label>
+<div class="h-10 border border-dashed border-gray-600 rounded-lg flex items-center justify-center text-xs">
+                        church-logo-white.png
+                    </div>
+</div>
+</div>
+</div>
+</main>
+<footer class="mt-auto bg-white dark:bg-surface-darker border-t border-gray-200 dark:border-primary/10 py-4 px-8">
+<div class="max-w-5xl mx-auto flex items-center justify-between text-xs text-gray-500">
+<div class="flex gap-6">
+<div class="flex items-center gap-2">
+<kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-surface-dark border border-gray-300 dark:border-primary/30 rounded text-gray-900 dark:text-gray-300 font-mono font-bold">S</kbd>
+<span>Save Changes</span>
+</div>
+<div class="flex items-center gap-2">
+<kbd class="px-1.5 py-0.5 bg-gray-100 dark:bg-surface-dark border border-gray-300 dark:border-primary/30 rounded text-gray-900 dark:text-gray-300 font-mono font-bold">Esc</kbd>
+<span>Cancel</span>
+</div>
+</div>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">auto_awesome</span>
+<span>Config v2.4.1 Stable</span>
+</div>
+</div>
+</footer>
+
+</body></html>

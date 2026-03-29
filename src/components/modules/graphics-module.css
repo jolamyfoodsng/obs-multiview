@@ -1,0 +1,89 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   GraphicsModule — Merged Lower Third + Speaker sub-tab container
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.graphics-module {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* ── Sub-tab toggle bar ── */
+.graphics-module-subtabs {
+  display: flex;
+  gap: 2px;
+  padding: 6px 12px;
+  background: var(--b-bg, #121212);
+  border-bottom: 1px solid var(--b-border, #2C2C2C);
+  flex-shrink: 0;
+}
+
+.graphics-module-subtab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.45);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  font-family: inherit;
+}
+
+.graphics-module-subtab:hover {
+  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.graphics-module-subtab.is-active {
+  color: #fff;
+  background: var(--b-surface, #1E1E1E);
+  border-color: var(--b-border, #2C2C2C);
+}
+
+/* ── Panel body — fills remaining height ── */
+.graphics-module-body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.graphics-module-panel {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.graphics-module-panel[hidden] {
+  display: block !important;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* ── Light mode ── */
+:root.light .graphics-module-subtabs {
+  background: var(--bg-dark);
+  border-bottom-color: var(--border);
+}
+
+:root.light .graphics-module-subtab {
+  color: rgba(0, 0, 0, 0.45);
+}
+
+:root.light .graphics-module-subtab:hover {
+  color: rgba(0, 0, 0, 0.7);
+  background: rgba(0, 0, 0, 0.04);
+}
+
+:root.light .graphics-module-subtab.is-active {
+  color: var(--text-primary);
+  background: var(--surface-dark);
+  border-color: var(--border);
+}

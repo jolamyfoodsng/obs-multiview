@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Lower Third Overlay</title>
+
+  <!-- Tailwind CDN (used by all themes) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- CMG Sans + Material Icons -->
+  <link href="/fonts/cmg-sans-fonts.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+
+  <!-- Dynamic font imports container (populated by JS when theme has fontImports) -->
+  <div id="dynamic-fonts"></div>
+
+  <style id="theme-css"></style>
+
+  <style>
+    /* Base reset */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: transparent;
+      font-family: "CMG Sans", sans-serif;
+    }
+    body { position: relative; }
+
+    /* Container for the rendered theme */
+    #overlay-root,
+    #overlay-bg-buffer {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+    }
+    #overlay-bg-buffer {
+      pointer-events: none;
+      z-index: 0;
+    }
+    #overlay-root {
+      z-index: 1;
+    }
+
+    /* Size-driven overrides — applied via CSS custom properties */
+    #overlay-root[data-size] > *,
+    #overlay-bg-buffer[data-size] > * {
+      max-width: var(--lt-width, none) !important;
+      width: var(--lt-width, auto) !important;
+    }
+    /* Height override */
+    #overlay-root[style*="--lt-height"] > *,
+    #overlay-bg-buffer[style*="--lt-height"] > * {
+      min-height: var(--lt-height, auto) !important;
+    }
+    /* Also override Tailwind max-width classes */
+    #overlay-root[data-size] .max-w-2xl,
+    #overlay-root[data-size] .max-w-3xl,
+    #overlay-root[data-size] .max-w-4xl,
+    #overlay-root[data-size] .max-w-5xl,
+    #overlay-root[data-size] .max-w-xl,
+    #overlay-bg-buffer[data-size] .max-w-2xl,
+    #overlay-bg-buffer[data-size] .max-w-3xl,
+    #overlay-bg-buffer[data-size] .max-w-4xl,
+    #overlay-bg-buffer[data-size] .max-w-5xl,
+    #overlay-bg-buffer[data-size] .max-w-xl {
+      max-width: 100% !important;
+    }
+
+    /* Hidden state */
+    #overlay-root.hidden-state,
+    #overlay-bg-buffer.hidden-state {
+      opacity: 0;
+      pointer-events: none;
+    }
+    #overlay-bg-buffer.snapshot-active,
+    #overlay-bg-buffer.snapshot-active * {
+      animation: none !important;
+      transition: none !important;
+      text-shadow: none !important;
+      caret-color: transparent !important;
+    }
+    #overlay-bg-buffer.snapshot-active,
+    #overlay-bg-buffer.snapshot-active * {
+      color: transparent !important;
+      -webkit-text-fill-color: transparent !important;
+    }
+    #overlay-bg-buffer.snapshot-active img,
+    #overlay-bg-buffer.snapshot-active svg,
+    #overlay-bg-buffer.snapshot-active video,
+    #overlay-bg-buffer.snapshot-active canvas,
+    #overlay-bg-buffer.snapshot-active .material-icons,
+    #overlay-bg-buffer.snapshot-active .fa,
+    #overlay-bg-buffer.snapshot-active .fab,
+    #overlay-bg-buffer.snapshot-active .fas,
+    #overlay-bg-buffer.snapshot-active .far,
+    #overlay-bg-buffer.snapshot-active .fal,
+    #overlay-bg-buffer.snapshot-active .fad {
+      opacity: 0 !important;
+    }
+
+    /* ════════════════════════════════════════════
+       Animation Keyframes — Entry
+       ════════════════════════════════════════════ */
+
+    /* Slide from left */
+    @keyframes lt-slide-left {
+      0% { transform: translateX(-110%); opacity: 0; }
+      60% { opacity: 1; }
+      100% { transform: translateX(0); opacity: 1; }
+    }
+    /* Slide from right */
+    @keyframes lt-slide-right {
+      0% { transform: translateX(110%); opacity: 0; }
+      60% { opacity: 1; }
+      100% { transform: translateX(0); opacity: 1; }
+    }
+    /* Slide from bottom */
+    @keyframes lt-slide-up {
+      0% { transform: translateY(110%); opacity: 0; }
+      60% { opacity: 1; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+    /* Slide from top */
+    @keyframes lt-slide-down {
+      0% { transform: translateY(-110%); opacity: 0; }
+      60% { opacity: 1; }
+      100% { transform: translateY(0); opacity: 1; }
+    }
+    /* Fade in */
+    @keyframes lt-fade-in {
+      0% { opacity: 0; }
+      100% { opacity: 1; }
+    }
+    /* Fade up */
+    @keyframes lt-fade-up {
+      0% { opacity: 0; transform: translateY(30px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    /* Fade down */
+    @keyframes lt-fade-down {
+      0% { opacity: 0; transform: translateY(-30px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    /* Zoom in */
+    @keyframes lt-zoom-in {
+      0% { transform: scale(0.5); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    /* Bounce in */
+    @keyframes lt-bounce-in {
+      0% { transform: scale(0.3); opacity: 0; }
+      50% { transform: scale(1.08); opacity: 1; }
+      70% { transform: scale(0.95); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    /* Flip in */
+    @keyframes lt-flip-in {
+      0% { transform: perspective(600px) rotateX(-90deg); opacity: 0; }
+      60% { transform: perspective(600px) rotateX(10deg); opacity: 1; }
+      100% { transform: perspective(600px) rotateX(0); opacity: 1; }
+    }
+    /* Blur in */
+    @keyframes lt-blur-in {
+      0% { filter: blur(12px); opacity: 0; }
+      100% { filter: blur(0); opacity: 1; }
+    }
+
+    /* ════════════════════════════════════════════
+       Animation Keyframes — Exit
+       ════════════════════════════════════════════ */
+
+    @keyframes lt-slide-out-right {
+      0% { transform: translateX(0); opacity: 1; }
+      40% { opacity: 1; }
+      100% { transform: translateX(110%); opacity: 0; }
+    }
+    @keyframes lt-fade-scale-out {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(0.85); opacity: 0; }
+    }
+    /* Reverse exit animations (reverse of entry) */
+    @keyframes lt-slide-out-left {
+      0% { transform: translateX(0); opacity: 1; }
+      100% { transform: translateX(-110%); opacity: 0; }
+    }
+    @keyframes lt-slide-out-down {
+      0% { transform: translateY(0); opacity: 1; }
+      100% { transform: translateY(110%); opacity: 0; }
+    }
+    @keyframes lt-slide-out-up {
+      0% { transform: translateY(0); opacity: 1; }
+      100% { transform: translateY(-110%); opacity: 0; }
+    }
+    @keyframes lt-fade-out {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+    @keyframes lt-fade-out-down {
+      0% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(30px); }
+    }
+    @keyframes lt-fade-out-up {
+      0% { opacity: 1; transform: translateY(0); }
+      100% { opacity: 0; transform: translateY(-30px); }
+    }
+    @keyframes lt-zoom-out {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(0.5); opacity: 0; }
+    }
+    @keyframes lt-bounce-out {
+      0% { transform: scale(1); opacity: 1; }
+      30% { transform: scale(1.08); }
+      100% { transform: scale(0.3); opacity: 0; }
+    }
+    @keyframes lt-flip-out {
+      0% { transform: perspective(600px) rotateX(0); opacity: 1; }
+      100% { transform: perspective(600px) rotateX(90deg); opacity: 0; }
+    }
+    @keyframes lt-blur-out {
+      0% { filter: blur(0); opacity: 1; }
+      100% { filter: blur(12px); opacity: 0; }
+    }
+
+    /* ════════════════════════════════════════════
+       Named animation classes (set dynamically)
+       ════════════════════════════════════════════ */
+
+    #overlay-root.anim-slide-left   { animation: lt-slide-left  0.6s cubic-bezier(0.16,1,0.3,1) forwards; }
+    #overlay-root.anim-slide-right  { animation: lt-slide-right 0.6s cubic-bezier(0.16,1,0.3,1) forwards; }
+    #overlay-root.anim-slide-up     { animation: lt-slide-up    0.6s cubic-bezier(0.16,1,0.3,1) forwards; }
+    #overlay-root.anim-slide-down   { animation: lt-slide-down  0.6s cubic-bezier(0.16,1,0.3,1) forwards; }
+    #overlay-root.anim-fade-in      { animation: lt-fade-in     0.5s ease-out forwards; }
+    #overlay-root.anim-fade-up      { animation: lt-fade-up     0.5s ease-out forwards; }
+    #overlay-root.anim-fade-down    { animation: lt-fade-down   0.5s ease-out forwards; }
+    #overlay-root.anim-zoom-in      { animation: lt-zoom-in     0.5s cubic-bezier(0.16,1,0.3,1) forwards; }
+    #overlay-root.anim-bounce-in    { animation: lt-bounce-in   0.7s ease-out forwards; }
+    #overlay-root.anim-flip-in      { animation: lt-flip-in     0.6s ease-out forwards; }
+    #overlay-root.anim-blur-in      { animation: lt-blur-in     0.5s ease-out forwards; }
+    #overlay-root.anim-none         { opacity: 1; }
+
+    /* Legacy compat */
+    #overlay-root.slide-in  { animation: lt-slide-left 0.6s cubic-bezier(0.16,1,0.3,1) forwards; }
+    #overlay-root.slide-out { animation: lt-slide-out-right 0.5s cubic-bezier(0.7,0,0.84,0) forwards; }
+    #overlay-root.fade-in   { animation: lt-fade-in 0.4s ease-out forwards; }
+    #overlay-root.fade-out  { animation: lt-fade-scale-out 0.4s ease-in forwards; }
+    /* Reverse exit classes (matching entry animations) */
+    #overlay-root.exit-slide-left   { animation: lt-slide-out-left   0.5s cubic-bezier(0.7,0,0.84,0) forwards; }
+    #overlay-root.exit-slide-right  { animation: lt-slide-out-right  0.5s cubic-bezier(0.7,0,0.84,0) forwards; }
+    #overlay-root.exit-slide-up     { animation: lt-slide-out-up     0.5s cubic-bezier(0.7,0,0.84,0) forwards; }
+    #overlay-root.exit-slide-down   { animation: lt-slide-out-down   0.5s cubic-bezier(0.7,0,0.84,0) forwards; }
+    #overlay-root.exit-fade-in      { animation: lt-fade-out         0.4s ease-in forwards; }
+    #overlay-root.exit-fade-up      { animation: lt-fade-out-down    0.4s ease-in forwards; }
+    #overlay-root.exit-fade-down    { animation: lt-fade-out-up      0.4s ease-in forwards; }
+    #overlay-root.exit-zoom-in      { animation: lt-zoom-out         0.4s ease-in forwards; }
+    #overlay-root.exit-bounce-in    { animation: lt-bounce-out       0.5s ease-in forwards; }
+    #overlay-root.exit-flip-in      { animation: lt-flip-out         0.5s ease-in forwards; }
+    #overlay-root.exit-blur-in      { animation: lt-blur-out         0.4s ease-in forwards; }
+    #overlay-root.exit-none         { animation: lt-fade-out         0.3s ease-in forwards; }
+  </style>
+
+  <script>
+    /**
+     * Lower Third Overlay — OBS Church Studio
+     *
+     * Receives theme data + variable values via URL hash:
+     *   #data=<encoded JSON>
+     *
+     * JSON payload:
+     *   {
+     *     themeId: string,
+     *     html: string,       // Theme HTML template
+     *     css: string,        // Theme CSS
+     *     values: Record<string, string>,  // Variable values
+     *     live: boolean,
+     *     blanked: boolean,
+     *     size: string,       // "sm" | "md" | "lg" | "xl" | "2xl" | "3xl"
+     *     scale: number,      // Scale factor (from size)
+     *     timestamp: number
+     *   }
+     *
+     * Variables in the HTML are replaced: {{key}} → value
+     */
+
+    // Tailwind config
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#C8102E",
+            secondary: "#0033A0",
+          },
+          fontFamily: {
+            sans: ['"CMG Sans"', 'sans-serif'],
+            display: ['"CMG Sans"', 'sans-serif'],
+          }
+        },
+      },
+    };
+
+    let currentThemeId = null;
+    let currentThemePayload = null;
+    let isVisible = false;
+    const MIN_THEME_EXIT_DURATION_MS = 220;
+    const BACKGROUND_SNAPSHOT_HOLD_MS = 180;
+    let backgroundSnapshotTimer = null;
+
+    /**
+     * Replace all {{variable}} placeholders in template HTML
+     */
+    function substituteVariables(html, values) {
+      if (!values || typeof values !== "object") return html;
+      return html.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+        return values.hasOwnProperty(key) ? values[key] : match;
+      });
+    }
+
+    /**
+     * Apply size, font size override, and height to the overlay root.
+     * Uses CSS custom properties to control the inner content width.
+     * Font scaling sets the <html> root font-size so Tailwind rem-based
+     * classes (text-2xl, text-sm, etc.) all scale proportionally.
+     */
+    function applySize(root, widthPct, fontScale, fontSizeScale, heightPx) {
+
+      if (widthPct) {
+        let new_one = Math.max(0, widthPct);
+        root.setAttribute("data-size", String(new_one));
+        root.style.setProperty("--lt-width", new_one + "%");
+      } else {
+        root.removeAttribute("data-size");
+        root.style.removeProperty("--lt-width");
+      }
+      // Font scaling — set on <html> so rem-based Tailwind classes scale
+      var combinedFont = (fontScale || 1) * (fontSizeScale || 1);
+      if (combinedFont !== 1) {
+        document.documentElement.style.fontSize = (combinedFont * 16) + "px";
+      } else {
+        document.documentElement.style.removeProperty("font-size");
+      }
+      // Height override
+      if (heightPx && heightPx > 0) {
+        root.style.setProperty("--lt-height", heightPx + "px");
+      } else {
+        root.style.removeProperty("--lt-height");
+      }
+    }
+
+    /**
+     * Apply custom style overrides from payload.
+     * Injects CSS custom properties + direct overrides.
+     */
+    function applyCustomStyles(root, data) {
+      const { bgColor, textColor, accentColor, bgImage, bgImageOpacity, logoScale } = data;
+
+      // Inject a dynamic style block for custom overrides
+      let styleEl = document.getElementById("custom-overrides");
+      if (!styleEl) {
+        styleEl = document.createElement("style");
+        styleEl.id = "custom-overrides";
+        document.head.appendChild(styleEl);
+      }
+
+      let css = "#overlay-root,\n#overlay-bg-buffer {\n";
+      if (bgColor)    css += `  --lt-custom-bg: ${bgColor};\n`;
+      if (textColor)  css += `  --lt-custom-text: ${textColor};\n`;
+      if (accentColor) css += `  --lt-custom-accent: ${accentColor};\n`;
+      if (logoScale && Number(logoScale) > 0) css += `  --lt-logo-scale: ${Number(logoScale)} !important;\n`;
+      css += "}\n";
+
+      // Override background colors on common elements
+      if (bgColor) {
+        css += `#overlay-root > div,
+#overlay-root > div > div,
+#overlay-root [style*="background"],
+#overlay-root [class*="bg-"],
+#overlay-bg-buffer > div,
+#overlay-bg-buffer > div > div,
+#overlay-bg-buffer [style*="background"],
+#overlay-bg-buffer [class*="bg-"] {
+  background: ${bgColor} !important;
+  background-image: none !important;
+}\n`;
+        // Don't override icon boxes in social loops
+        css += `#overlay-root .sl-icon-box,
+#overlay-root .sl-neon-glow,
+#overlay-bg-buffer .sl-icon-box,
+#overlay-bg-buffer .sl-neon-glow {
+  background: revert !important;
+}\n`;
+      }
+      // Override text color
+      if (textColor) {
+        css += `#overlay-root,
+#overlay-root *:not(.fa):not(.fab):not(.fas):not(.far):not(.fal):not(.fad):not(.sl-icon-box):not(.sl-icon-box *),
+#overlay-bg-buffer,
+#overlay-bg-buffer *:not(.fa):not(.fab):not(.fas):not(.far):not(.fal):not(.fad):not(.sl-icon-box):not(.sl-icon-box *) {
+  color: ${textColor} !important;
+}\n`;
+      }
+      // Override accent (borders, icons, highlights)
+      if (accentColor) {
+        css += `#overlay-root [style*="C8102E"],
+#overlay-root [style*="c8102e"],
+#overlay-root .text-red-500,
+#overlay-root .text-red-700,
+#overlay-root .border-red-500,
+#overlay-bg-buffer [style*="C8102E"],
+#overlay-bg-buffer [style*="c8102e"],
+#overlay-bg-buffer .text-red-500,
+#overlay-bg-buffer .text-red-700,
+#overlay-bg-buffer .border-red-500 {
+  color: ${accentColor} !important;
+  border-color: ${accentColor} !important;
+}\n`;
+      }
+      // Background image overlay
+      if (bgImage) {
+        const opacity = bgImageOpacity != null ? bgImageOpacity : 0.3;
+        css += `#overlay-root > div:first-child {
+  position: relative;
+}
+#overlay-bg-buffer > div:first-child {
+  position: relative;
+}
+#overlay-root > div:first-child::before,
+#overlay-bg-buffer > div:first-child::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url(${bgImage});
+  background-size: cover;
+  background-position: center;
+  opacity: ${opacity};
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+}\n`;
+      }
+
+      styleEl.textContent = css;
+    }
+
+    function clearBackgroundSnapshot() {
+      if (backgroundSnapshotTimer) {
+        clearTimeout(backgroundSnapshotTimer);
+        backgroundSnapshotTimer = null;
+      }
+      var buffer = document.getElementById("overlay-bg-buffer");
+      if (!buffer) return;
+      buffer.innerHTML = "";
+      buffer.className = "hidden-state";
+      buffer.removeAttribute("data-size");
+      buffer.style.cssText = "";
+    }
+
+    function getBackgroundSnapshotSignature(data) {
+      if (!data || typeof data !== "object") return "";
+      return JSON.stringify({
+        themeId: data.themeId || "",
+        size: data.size || "",
+        widthPct: data.widthPct || 0,
+        fontScale: data.fontScale || 1,
+        fontSizeScale: data.fontSizeScale || 1,
+        heightPx: data.heightPx || 0,
+        position: data.position || "",
+        customX: data.customX != null ? data.customX : 2.5,
+        customY: data.customY != null ? data.customY : 92,
+        bgColor: data.bgColor || "",
+        bgImage: data.bgImage || "",
+        bgImageOpacity: data.bgImageOpacity != null ? data.bgImageOpacity : 0.3,
+      });
+    }
+
+    function captureBackgroundSnapshot(root) {
+      var buffer = document.getElementById("overlay-bg-buffer");
+      if (!buffer || !root || root.classList.contains("hidden-state") || root.children.length === 0) {
+        return;
+      }
+      if (backgroundSnapshotTimer) {
+        clearTimeout(backgroundSnapshotTimer);
+        backgroundSnapshotTimer = null;
+      }
+      buffer.innerHTML = root.innerHTML;
+      buffer.className = "snapshot-active";
+      if (root.hasAttribute("data-size")) {
+        buffer.setAttribute("data-size", root.getAttribute("data-size") || "");
+      } else {
+        buffer.removeAttribute("data-size");
+      }
+      buffer.style.cssText = root.style.cssText;
+    }
+
+    function releaseBackgroundSnapshot() {
+      var buffer = document.getElementById("overlay-bg-buffer");
+      if (!buffer || !buffer.innerHTML) return;
+      if (backgroundSnapshotTimer) {
+        clearTimeout(backgroundSnapshotTimer);
+      }
+      backgroundSnapshotTimer = setTimeout(() => {
+        clearBackgroundSnapshot();
+      }, BACKGROUND_SNAPSHOT_HOLD_MS);
+    }
+
+    /**
+     * Apply position to overlay root based on payload.
+     * Also strips any position:fixed + top/bottom/left/right/transform
+     * inline styles from theme inner elements so flexbox positioning works.
+     */
+    function applyPosition(root, data) {
+      var pos = data.position || "bottom-left";
+      var cx = data.customX != null ? data.customX : 2.5;
+      var cy = data.customY != null ? data.customY : 92;
+
+      // Reset all positioning styles
+      root.style.removeProperty("justify-content");
+      root.style.removeProperty("align-items");
+      root.style.removeProperty("padding-left");
+      root.style.removeProperty("padding-top");
+      root.style.removeProperty("padding-right");
+      root.style.removeProperty("padding-bottom");
+
+      // Strip position:fixed and inset properties from all theme inner elements
+      // (themes hardcode style="position:fixed;bottom:40px;left:40px;" which
+      //  overrides our flexbox positioning)
+      // EXCEPTION: elements with class sl-item or sl-fs-item use position:absolute
+      //  for stacking (social loop cycling), NOT for page positioning — skip them.
+      var inner = root.querySelectorAll("*");
+      for (var i = 0; i < inner.length; i++) {
+        var el = inner[i];
+        // Skip social loop stacking items — they need position:absolute for layering
+        if (el.classList.contains("sl-item") || el.classList.contains("sl-fs-item")) continue;
+        if (el.style.position === "fixed" || el.style.position === "absolute") {
+          el.style.removeProperty("position");
+          el.style.removeProperty("top");
+          el.style.removeProperty("bottom");
+          el.style.removeProperty("left");
+          el.style.removeProperty("right");
+          // Also remove transform used for centering (translateX(-50%))
+          if (el.style.transform && el.style.transform.indexOf("translate") !== -1) {
+            el.style.removeProperty("transform");
+          }
+        }
+      }
+
+      // Force top-level theme wrapper(s) to participate in root flex positioning.
+      // Many themes ship with class-based fixed anchors like `*-pos-bc`, which
+      // otherwise override module-level left/center/right placement.
+      var topLevel = root.children;
+      for (var j = 0; j < topLevel.length; j++) {
+        var node = topLevel[j];
+        if (!(node instanceof HTMLElement)) continue;
+        var computed = window.getComputedStyle(node);
+        if (computed.position === "fixed" || computed.position === "absolute" || computed.position === "relative") {
+          node.style.position = "relative";
+          node.style.top = "auto";
+          node.style.right = "auto";
+          node.style.bottom = "auto";
+          node.style.left = "auto";
+          node.style.transform = "none";
+          node.style.marginLeft = "0";
+          node.style.marginRight = "0";
+        }
+      }
+
+      // The root is 100% width/height. We use flexbox to position.
+      root.style.display = "flex";
+      root.style.flexDirection = "column";
+      // No edge padding — keeps the LT fully flush to edges
+      var sidePad = "0px";
+      var bottomPad = "0px";
+      var topPad = "0px";
+
+      switch (pos) {
+        case "bottom-left":
+          root.style.justifyContent = "flex-end";
+          root.style.alignItems = "flex-start";
+          root.style.padding = "0 0 " + bottomPad + " " + sidePad;
+          break;
+        case "bottom-center":
+          root.style.justifyContent = "flex-end";
+          root.style.alignItems = "center";
+          root.style.padding = "0 0 " + bottomPad + " 0";
+          break;
+        case "bottom-right":
+          root.style.justifyContent = "flex-end";
+          root.style.alignItems = "flex-end";
+          root.style.padding = "0 " + sidePad + " " + bottomPad + " 0";
+          break;
+        case "top-left":
+          root.style.justifyContent = "flex-start";
+          root.style.alignItems = "flex-start";
+          root.style.padding = topPad + " 0 0 " + sidePad;
+          break;
+        case "top-center":
+          root.style.justifyContent = "flex-start";
+          root.style.alignItems = "center";
+          root.style.padding = topPad + " 0 0 0";
+          break;
+        case "top-right":
+          root.style.justifyContent = "flex-start";
+          root.style.alignItems = "flex-end";
+          root.style.padding = topPad + " " + sidePad + " 0 0";
+          break;
+        case "center":
+          root.style.justifyContent = "center";
+          root.style.alignItems = "center";
+          root.style.padding = "0";
+          break;
+        case "custom":
+          root.style.justifyContent = "flex-start";
+          root.style.alignItems = "flex-start";
+          root.style.paddingLeft = cx + "%";
+          root.style.paddingTop = cy + "%";
+          break;
+        default:
+          root.style.justifyContent = "flex-end";
+          root.style.alignItems = "flex-start";
+          root.style.padding = "0 0 " + bottomPad + " " + sidePad;
+      }
+    }
+
+    /**
+     * Render a theme template with values and an optional forced state.
+     * If a theme defines {{state}}, this guarantees in/out lifecycle control.
+     */
+    function renderThemeHtml(templateHtml, values, forcedState) {
+      var merged = {};
+      if (values && typeof values === "object") {
+        merged = { ...values };
+      }
+      if (forcedState) {
+        merged.state = forcedState;
+      }
+      return substituteVariables(templateHtml || "", merged);
+    }
+
+    function parseCssTimeToMs(token) {
+      var value = String(token || "").trim();
+      if (!value) return 0;
+      if (value.endsWith("ms")) return parseFloat(value) || 0;
+      if (value.endsWith("s")) return (parseFloat(value) || 0) * 1000;
+      return parseFloat(value) || 0;
+    }
+
+    /**
+     * Compute the longest finite animation timeline currently applied in the DOM.
+     * Used so theme-defined exit animations can finish before cleanup.
+     */
+    function resolveThemeExitDuration(root) {
+      var maxMs = 0;
+      var nodes = [root].concat(Array.from(root.querySelectorAll("*")));
+      for (var i = 0; i < nodes.length; i++) {
+        var style = window.getComputedStyle(nodes[i]);
+        var names = String(style.animationName || "").split(",");
+        var durations = String(style.animationDuration || "").split(",");
+        var delays = String(style.animationDelay || "").split(",");
+        var iterations = String(style.animationIterationCount || "").split(",");
+
+        for (var j = 0; j < names.length; j++) {
+          var name = (names[j] || "").trim();
+          if (!name || name === "none") continue;
+
+          var iterationRaw = (iterations[j] || iterations[0] || "1").trim();
+          if (iterationRaw === "infinite") continue;
+          var iterationCount = parseFloat(iterationRaw);
+          if (!isFinite(iterationCount) || iterationCount <= 0) iterationCount = 1;
+
+          var durationMs = parseCssTimeToMs(durations[j] || durations[0] || "0s");
+          var delayMs = parseCssTimeToMs(delays[j] || delays[0] || "0s");
+          var totalMs = delayMs + durationMs * iterationCount;
+          if (totalMs > maxMs) maxMs = totalMs;
+        }
+      }
+      return Math.max(MIN_THEME_EXIT_DURATION_MS, Math.ceil(maxMs + 40));
+    }
+
+    /**
+     * Show using the theme's own "in" animation state.
+     */
+    function showOverlay(root, data) {
+      var widthPct = Math.max(0, data.widthPct || 80);
+      root.innerHTML = renderThemeHtml(data.html || "", data.values || {}, "in");
+      root.className = "";
+      applySize(root, widthPct, data.fontScale, data.fontSizeScale, data.heightPx);
+      applyCustomStyles(root, data);
+      applyPosition(root, data);
+      currentThemePayload = {
+        ...data,
+        values: { ...(data.values || {}) },
+      };
+      isVisible = true;
+    }
+
+    /**
+     * Hide using the theme's own "out" animation state.
+     */
+    function hideOverlay(root, payloadForExit, callback) {
+      if (!isVisible) {
+        if (!callback) clearBackgroundSnapshot();
+        if (callback) callback();
+        return;
+      }
+
+      var payload = payloadForExit || currentThemePayload;
+      if (payload && payload.html) {
+        var widthPct = Math.max(0, payload.widthPct || 80);
+        root.innerHTML = renderThemeHtml(payload.html || "", payload.values || {}, "out");
+        root.className = "";
+        applySize(root, widthPct, payload.fontScale, payload.fontSizeScale, payload.heightPx);
+        applyCustomStyles(root, payload);
+        applyPosition(root, payload);
+        // Ensure computed styles are up-to-date before reading animation timings.
+        void root.offsetWidth;
+        var exitDuration = resolveThemeExitDuration(root);
+        setTimeout(() => {
+          root.innerHTML = "";
+          root.className = "hidden-state";
+          isVisible = false;
+          currentThemePayload = null;
+          if (!callback) clearBackgroundSnapshot();
+          if (callback) callback();
+        }, exitDuration);
+        return;
+      }
+
+      root.innerHTML = "";
+      root.className = "hidden-state";
+      isVisible = false;
+      currentThemePayload = null;
+      if (!callback) clearBackgroundSnapshot();
+      if (callback) callback();
+    }
+
+    /**
+     * Apply theme data to the overlay
+     */
+    function applyTheme(data) {
+      const root = document.getElementById("overlay-root");
+      const cssEl = document.getElementById("theme-css");
+
+      if (!data) {
+        clearBackgroundSnapshot();
+        root.innerHTML = "";
+        root.className = "hidden-state";
+        isVisible = false;
+        currentThemeId = null;
+        currentThemePayload = null;
+        return;
+      }
+
+      const { themeId, html, css, values, live, blanked } = data;
+
+      // Handle blanked state — use theme-defined "out" state
+      // Visibility is controlled by OBS scene-item enabled state, not the live flag
+      if (blanked) {
+        if (isVisible) {
+          hideOverlay(root, data);
+        }
+        return;
+      }
+
+      // Inject CSS
+      if (css) {
+        cssEl.textContent = css;
+      }
+
+      // Body stays transparent (custom bg is handled inside the LT element)
+      document.body.style.background = "transparent";
+
+      // If same theme and already visible, just update content (no re-animation)
+      if (themeId === currentThemeId && isVisible) {
+        const canFreezeBackground = getBackgroundSnapshotSignature(currentThemePayload) === getBackgroundSnapshotSignature(data);
+        if (canFreezeBackground) {
+          captureBackgroundSnapshot(root);
+        } else {
+          clearBackgroundSnapshot();
+        }
+        root.innerHTML = renderThemeHtml(html || "", values || {}, "in");
+        root.className = "";
+        applySize(root, data.widthPct, data.fontScale, data.fontSizeScale, data.heightPx);
+        applyCustomStyles(root, data);
+        applyPosition(root, data);
+        currentThemePayload = {
+          ...data,
+          values: { ...(values || {}) },
+        };
+        if (canFreezeBackground) {
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              releaseBackgroundSnapshot();
+            });
+          });
+        }
+        return;
+      }
+
+      // Different theme — slide out old, then slide in new
+      if (isVisible && currentThemeId !== themeId) {
+        clearBackgroundSnapshot();
+        const previousPayload = currentThemePayload;
+        hideOverlay(root, previousPayload, () => {
+          currentThemeId = themeId;
+          showOverlay(root, data);
+        });
+      } else {
+        // First show — theme-controlled "in" state
+        clearBackgroundSnapshot();
+        currentThemeId = themeId;
+        showOverlay(root, data);
+      }
+    }
+
+    /**
+     * Parse data from URL hash
+     */
+    function parseHashData() {
+      try {
+        const hash = window.location.hash;
+        if (!hash || !hash.includes("data=")) return null;
+        const encoded = hash.split("data=")[1];
+        if (!encoded) return null;
+        return JSON.parse(decodeURIComponent(encoded));
+      } catch (err) {
+        console.warn("[LT-Overlay] Failed to parse hash data:", err);
+        return null;
+      }
+    }
+
+    /**
+     * Handle hash change — new data pushed
+     */
+    function onHashChange() {
+      const data = parseHashData();
+      if (data) {
+        applyTheme(data);
+      }
+    }
+
+    // Listen for hash changes (OBS updates the URL)
+    window.addEventListener("hashchange", onHashChange);
+
+    // Initial load
+    window.addEventListener("DOMContentLoaded", () => {
+      const data = parseHashData();
+      if (data) {
+        applyTheme(data);
+      }
+    });
+
+    // ════════════════════════════════════════════
+    // Countdown timer engine
+    // ════════════════════════════════════════════
+    let countdownInterval = null;
+
+    function startCountdown(root, values) {
+      // Stop any previous countdown
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+
+      // Parse hours, minutes, seconds from values
+      const hours   = parseInt(values.hours   || "0", 10) || 0;
+      const minutes = parseInt(values.minutes || "0", 10) || 0;
+      const seconds = parseInt(values.seconds || "0", 10) || 0;
+      let totalSeconds = hours * 3600 + minutes * 60 + seconds;
+
+      if (totalSeconds <= 0) return;
+
+      function formatTime(secs) {
+        const h = Math.floor(secs / 3600);
+        const m = Math.floor((secs % 3600) / 60);
+        const s = secs % 60;
+        if (h > 0) {
+          return String(h).padStart(2, "0") + ":" + String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+        }
+        return String(m).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+      }
+
+      function updateDisplay() {
+        // Find the countdown display element in the overlay
+        const el = root.querySelector("[data-countdown]") || root.querySelector(".countdown-display");
+        if (el) {
+          el.textContent = formatTime(totalSeconds);
+        }
+      }
+
+      updateDisplay();
+
+      countdownInterval = setInterval(() => {
+        totalSeconds--;
+        if (totalSeconds <= 0) {
+          totalSeconds = 0;
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+          // Show "LIVE" or finished state
+          const el = root.querySelector("[data-countdown]") || root.querySelector(".countdown-display");
+          if (el) el.textContent = "00:00";
+        }
+        updateDisplay();
+      }, 1000);
+    }
+
+    // Hook into applyTheme to detect countdown themes
+    const _origApplyTheme = applyTheme;
+    applyTheme = function(data) {
+      _origApplyTheme(data);
+      // After rendering, load any dynamic fonts the theme needs
+      if (data && data.fontImports && Array.isArray(data.fontImports)) {
+        loadDynamicFonts(data.fontImports);
+      }
+      // After rendering, check if this is a countdown theme
+      if (data && data.themeId && data.themeId.includes("countdown") && data.live && !data.blanked) {
+        const root = document.getElementById("overlay-root");
+        setTimeout(() => startCountdown(root, data.values || {}), 100);
+      }
+      // After rendering, check if this is a social-loop theme and start cycling
+      if (data && data.themeId && data.themeId.includes("social-loop") && data.live && !data.blanked) {
+        const root = document.getElementById("overlay-root");
+        setTimeout(() => startSocialLoop(root, data.values || {}), 150);
+      }
+    };
+
+    // ════════════════════════════════════════════
+    // Dynamic Font / CSS Loader
+    // ════════════════════════════════════════════
+    var loadedFonts = {};
+    function loadDynamicFonts(imports) {
+      var container = document.getElementById("dynamic-fonts");
+      if (!container) return;
+      for (var i = 0; i < imports.length; i++) {
+        var url = imports[i];
+        if (loadedFonts[url]) continue;
+        loadedFonts[url] = true;
+        var link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = url;
+        link.crossOrigin = "anonymous";
+        container.appendChild(link);
+      }
+    }
+
+    // ════════════════════════════════════════════
+    // Social Loop cycling engine
+    // ════════════════════════════════════════════
+    var socialLoopInterval = null;
+
+    function startSocialLoop(root, values) {
+      // Stop any previous loop
+      if (socialLoopInterval) {
+        clearInterval(socialLoopInterval);
+        socialLoopInterval = null;
+      }
+
+      // Try both sl-item (lower-third) and sl-fs-item (fullscreen)
+      var items = root.querySelectorAll(".sl-item");
+      var isFullscreen = false;
+      if (!items.length) {
+        items = root.querySelectorAll(".sl-fs-item");
+        isFullscreen = true;
+      }
+      if (!items.length) return;
+
+      var speedSec = parseInt(values.speed) || 3;
+      var loopVal = values.loop || "infinite";
+      var maxCycles = loopVal === "infinite" ? -1 : (parseInt(loopVal) || 2);
+      var idx = 0;
+      var cycles = 0;
+
+      function show() {
+        for (var i = 0; i < items.length; i++) {
+          var el = items[i];
+          if (isFullscreen) {
+            el.setAttribute("data-active", i === idx ? "true" : "false");
+            el.style.opacity = i === idx ? "1" : "0";
+            el.style.transform = i === idx ? "scale(1)" : "scale(0.96)";
+          } else {
+            el.style.opacity = i === idx ? "1" : "0";
+            el.style.transform = i === idx ? "translateY(0)" : "translateY(18px)";
+          }
+        }
+      }
+
+      // Initial show
+      show();
+
+      socialLoopInterval = setInterval(function() {
+        idx++;
+        if (idx >= items.length) {
+          idx = 0;
+          cycles++;
+        }
+        if (maxCycles > 0 && cycles >= maxCycles) {
+          // Hide all and stop
+          for (var i = 0; i < items.length; i++) {
+            items[i].style.opacity = "0";
+          }
+          clearInterval(socialLoopInterval);
+          socialLoopInterval = null;
+          return;
+        }
+        show();
+      }, speedSec * 1000);
+    }
+
+    // Also listen for BroadcastChannel messages (for local preview)
+    try {
+      const bc = new BroadcastChannel("ocs-lower-third");
+      bc.onmessage = (e) => {
+        if (e.data && e.data.type === "lt-update") {
+          applyTheme(e.data.payload);
+        }
+      };
+    } catch (err) {
+      // BroadcastChannel not available in all contexts
+    }
+  </script>
+</head>
+<body>
+  <div id="overlay-bg-buffer" class="hidden-state" aria-hidden="true"></div>
+  <div id="overlay-root" class="hidden-state"></div>
+</body>
+</html>

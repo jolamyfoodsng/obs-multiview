@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Multi-View Layout Editor Hub - OBS Church Studio</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style type="text/tailwindcss">
+        @layer base {
+            :root {
+                --primary: #13ec5b;
+                --primary-dark: #0eb545;
+                --background-dark: #0a0a0c;
+                --surface-dark: #16161a;
+                --surface-darker: #0d0d0f;
+                --accent-purple: #a855f7;
+                --accent-purple-dim: rgba(168, 85, 247, 0.15);
+            }
+        }
+    </style>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec5b",
+                        "primary-dark": "#0eb545",
+                        "background-dark": "#0a0a0c",
+                        "surface-dark": "#16161a",
+                        "surface-darker": "#0d0d0f",
+                        "accent-purple": "#a855f7",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0d0d0f;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2d2d35;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3f3f4a;
+        }
+        .canvas-grid {
+            background-image: radial-gradient(circle, #2d2d35 1px, transparent 1px);
+            background-size: 32px 32px;
+        }
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 14px;
+            width: 14px;
+            border-radius: 50%;
+            background: #a855f7;
+            cursor: pointer;
+            margin-top: -5px;
+            box-shadow: 0 0 10px rgba(168, 85, 247, 0.4);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #2d2d35;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-gray-200 font-display h-screen flex flex-col overflow-hidden selection:bg-accent-purple selection:text-white">
+<header class="h-14 bg-surface-dark border-b border-white/5 flex items-center justify-between px-4 z-30 shrink-0">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 bg-accent-purple/20 rounded-lg flex items-center justify-center border border-accent-purple/30">
+<span class="material-symbols-outlined text-accent-purple text-xl">layers</span>
+</div>
+<h1 class="font-bold text-base tracking-tight text-white uppercase italic">OBS Church Studio <span class="text-xs font-normal opacity-50 not-italic ml-2">v2.4</span></h1>
+</div>
+<div class="flex items-center gap-2 text-xs font-medium text-gray-400 bg-surface-darker px-3 py-1.5 rounded border border-white/5 hover:border-accent-purple/50 transition-colors cursor-pointer group">
+<span class="material-symbols-outlined text-sm text-accent-purple">folder_open</span>
+<span class="group-hover:text-white transition-colors">Pastor + Scripture Split</span>
+<span class="material-icons text-sm">expand_more</span>
+</div>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1 mr-2">
+<button class="p-2 text-gray-400 hover:text-white transition-colors"><span class="material-symbols-outlined text-xl">settings</span></button>
+<button class="p-2 text-gray-400 hover:text-white transition-colors"><span class="material-symbols-outlined text-xl">help</span></button>
+</div>
+<button class="px-5 py-2 text-xs font-semibold text-gray-300 hover:text-white transition-colors uppercase tracking-widest border border-white/10 rounded-md">
+            Save
+        </button>
+<button class="flex items-center gap-2 px-6 py-2 bg-primary hover:bg-primary-dark text-background-dark font-black text-xs uppercase tracking-widest rounded-md shadow-[0_0_20px_rgba(19,236,91,0.2)] transition-all transform active:scale-95">
+<span class="material-symbols-outlined text-lg">broadcast_on_home</span>
+            Apply to OBS
+        </button>
+</div>
+</header>
+<main class="flex-1 flex overflow-hidden">
+<aside class="w-72 bg-surface-dark border-r border-white/5 flex flex-col z-20">
+<div class="p-4 border-b border-white/5">
+<div class="flex bg-surface-darker p-1 rounded-md border border-white/5">
+<button class="flex-1 py-1.5 text-[10px] uppercase font-bold tracking-wider rounded text-center bg-white/10 text-white">
+                    Presets
+                </button>
+<button class="flex-1 py-1.5 text-[10px] uppercase font-bold tracking-wider rounded text-center text-gray-500 hover:text-gray-300 transition-colors">
+                    Assets
+                </button>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-4 space-y-5">
+<div>
+<div class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-3 flex items-center justify-between">
+<span>Active Scenes</span>
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+</div>
+<div class="space-y-2">
+<div class="group bg-surface-darker rounded-md p-3 border border-white/5 hover:border-accent-purple/40 cursor-grab active:cursor-grabbing transition-all">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-black/40 flex items-center justify-center text-accent-purple border border-white/5">
+<span class="material-symbols-outlined">video_camera_back</span>
+</div>
+<div>
+<div class="text-xs font-semibold text-gray-200">Main Camera</div>
+<div class="text-[10px] text-gray-500 font-mono">1080p • NDI_01</div>
+</div>
+</div>
+</div>
+<div class="group bg-surface-darker rounded-md p-3 border border-white/5 hover:border-accent-purple/40 cursor-grab active:cursor-grabbing transition-all">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-black/40 flex items-center justify-center text-accent-purple border border-white/5">
+<span class="material-symbols-outlined">person</span>
+</div>
+<div>
+<div class="text-xs font-semibold text-gray-200">Pastor Close-up</div>
+<div class="text-[10px] text-gray-500 font-mono">1080p • HDMI_2</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div>
+<div class="text-[10px] font-bold text-gray-500 uppercase tracking-[0.2em] mb-3">Resources</div>
+<div class="space-y-2">
+<div class="group bg-surface-darker rounded-md p-3 border border-white/5 hover:border-accent-purple/40 cursor-grab active:cursor-grabbing transition-all">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded bg-black/40 flex items-center justify-center text-accent-purple border border-white/5">
+<span class="material-symbols-outlined">auto_stories</span>
+</div>
+<div>
+<div class="text-xs font-semibold text-gray-200">Scripture Overlay</div>
+<div class="text-[10px] text-gray-500 font-mono">Dynamic XML</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="p-4 border-t border-white/5 space-y-2 bg-surface-darker/50">
+<button class="w-full py-2.5 flex items-center justify-center gap-2 bg-accent-purple/10 hover:bg-accent-purple/20 text-accent-purple rounded-md border border-accent-purple/30 transition-all text-[11px] font-bold uppercase tracking-wider">
+<span class="material-symbols-outlined text-lg">add_box</span>
+                Add Region
+            </button>
+<button class="w-full py-2.5 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-md border border-white/10 transition-all text-[11px] font-bold uppercase tracking-wider">
+<span class="material-symbols-outlined text-lg">text_fields</span>
+                Add Text
+            </button>
+</div>
+</aside>
+<section class="flex-1 bg-background-dark relative flex flex-col">
+<div class="absolute top-6 left-1/2 -translate-x-1/2 bg-surface-dark/95 backdrop-blur-md border border-white/10 px-6 py-2 rounded-full shadow-2xl flex items-center gap-6 z-30">
+<div class="flex items-center gap-2 border-r border-white/10 pr-6">
+<button class="p-1.5 text-gray-500 hover:text-accent-purple transition-colors"><span class="material-symbols-outlined">undo</span></button>
+<button class="p-1.5 text-gray-500 hover:text-accent-purple transition-colors"><span class="material-symbols-outlined">redo</span></button>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2 text-xs font-mono text-gray-500">
+<button class="material-symbols-outlined text-lg hover:text-white">zoom_out</button>
+<span class="w-10 text-center">85%</span>
+<button class="material-symbols-outlined text-lg hover:text-white">zoom_in</button>
+</div>
+<div class="h-4 w-px bg-white/10"></div>
+<button class="material-symbols-outlined text-lg text-gray-500 hover:text-white">grid_4x4</button>
+<button class="material-symbols-outlined text-lg text-accent-purple">visibility</button>
+</div>
+</div>
+<div class="flex-1 overflow-auto flex items-center justify-center p-12 canvas-grid relative">
+<div class="relative w-[1100px] aspect-video bg-black shadow-[0_40px_100px_-20px_rgba(0,0,0,0.8)] overflow-hidden ring-1 ring-white/10">
+<div class="absolute inset-[5%] border border-dashed border-white/5 pointer-events-none z-40"></div>
+<div class="absolute inset-[10%] border border-dashed border-white/10 pointer-events-none z-40"></div>
+<div class="absolute top-[10%] left-[5%] w-[45%] h-[80%] rounded-xl overflow-hidden ring-2 ring-primary group cursor-move shadow-2xl z-10">
+<img alt="Pastor on stage" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIo7HXX2LY9yRbLpm74hk_QyJMVhcxdkFE9VCWfXKtqQPI_k-lOxBXVnwl9HZpWEv3zCdmCA3UZREvS3UvoivLrfuGgl9sNOvwXmtGhfjMFs8oiDFwYUop-Tx1_NoN0ogQH90KNyqvBPZAT9cYx7s5Xu0f0iYr5buKLV3AA_KG7N8eSyYoa5UWfcEYKlobOJ_z1y38QuY4TDBTuNLmC4KfcWzAY_QhJgHH1Bz4jhlSFjkBS1BNmisZWfwsV9yU0h_ExkxPxZEu"/>
+<div class="absolute -top-1.5 -left-1.5 w-3 h-3 bg-primary border-2 border-background-dark rounded-full cursor-nwse-resize"></div>
+<div class="absolute -top-1.5 -right-1.5 w-3 h-3 bg-primary border-2 border-background-dark rounded-full cursor-nesw-resize"></div>
+<div class="absolute -bottom-1.5 -left-1.5 w-3 h-3 bg-primary border-2 border-background-dark rounded-full cursor-nesw-resize"></div>
+<div class="absolute -bottom-1.5 -right-1.5 w-3 h-3 bg-primary border-2 border-background-dark rounded-full cursor-nwse-resize"></div>
+<div class="absolute bottom-2 left-2 bg-primary px-2 py-0.5 rounded text-[10px] font-black text-background-dark uppercase">Pastor Feed</div>
+</div>
+<div class="absolute top-[10%] right-[5%] w-[42%] h-[80%] bg-surface-dark/90 backdrop-blur-xl rounded-xl border border-white/5 flex flex-col p-10 justify-center items-start hover:ring-2 hover:ring-accent-purple transition-all cursor-move">
+<div class="w-8 h-1 bg-accent-purple mb-6 rounded-full"></div>
+<h2 class="text-white text-2xl font-serif mb-6 leading-relaxed italic opacity-90">"For God so loved the world that he gave his one and only Son..."</h2>
+<span class="text-accent-purple font-bold tracking-[0.2em] text-xs uppercase">John 3:16</span>
+<div class="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-white/20 text-sm">drag_indicator</span>
+</div>
+</div>
+</div>
+</div>
+<div class="h-8 bg-surface-darker border-t border-white/5 flex items-center px-4 justify-between text-[10px] font-mono text-gray-500">
+<div class="flex gap-6">
+<span class="flex items-center gap-1.5"><span class="text-accent-purple">POS</span> X: 54px Y: 108px</span>
+<span class="flex items-center gap-1.5"><span class="text-accent-purple">DIM</span> W: 864px H: 1536px</span>
+</div>
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-1.5">
+<div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
+<span class="uppercase">Connected to OBS</span>
+</div>
+<div class="h-3 w-px bg-white/10"></div>
+<span class="uppercase">Auto-save: 14:02:11</span>
+</div>
+</div>
+</section>
+<aside class="w-80 bg-surface-dark border-l border-white/5 flex flex-col z-20 overflow-y-auto">
+<div class="p-4 border-b border-white/5 bg-surface-darker/40">
+<div class="flex items-center justify-between mb-3">
+<span class="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Live Preview</span>
+<span class="px-2 py-0.5 rounded-full bg-accent-purple/20 text-accent-purple text-[9px] font-bold border border-accent-purple/30 tracking-tighter uppercase flex items-center gap-1">
+<span class="w-1 h-1 bg-accent-purple rounded-full"></span> Simulated
+                </span>
+</div>
+<div class="aspect-video bg-black rounded border border-white/10 relative overflow-hidden group cursor-pointer">
+<img alt="Live program feed" class="w-full h-full object-cover opacity-40 grayscale" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDKEyu6QYYthNqFhciERmok96ztFjRcuj7Eo27DaTiuO9BNkot6b6ViUyXRRqpldUizfhSsSw45eaGXRrraMw2S7HzOv9bpfB9mEACx8OpLqbiiUkP0Glx6gqF6bgEUmNEZwM4SMLne8LAgvwu_Jp4QmqJKZVhueojGf1kxpeTUmjToGwK-wjVWfPJdNt61Js6PSq-yHj0WCClVWtcUQixeLblvT7-iAJDQJSvL0QCMGYD7cKnJbiSxGDeita3RpZVZgqJpq1OS"/>
+<div class="absolute inset-0 flex items-center justify-center">
+<div class="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-accent-purple/40 transition-all border border-white/20">
+<span class="material-symbols-outlined text-white text-xl">play_arrow</span>
+</div>
+</div>
+<div class="absolute bottom-2 right-2 text-[9px] font-mono text-white/30">PGM_OUT</div>
+</div>
+</div>
+<div class="flex-1 p-5 space-y-8">
+<div class="flex items-center justify-between">
+<div>
+<h3 class="font-bold text-white text-sm">Region 1</h3>
+<p class="text-[10px] text-gray-500 font-mono">ID: REG_1024_CAM1</p>
+</div>
+<button class="w-8 h-8 rounded-md flex items-center justify-center text-gray-500 hover:text-red-400 hover:bg-red-400/10 transition-all border border-white/5">
+<span class="material-symbols-outlined text-lg">delete</span>
+</button>
+</div>
+<div class="space-y-4">
+<div class="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+<span class="material-symbols-outlined text-sm">transform</span>
+<span>Position &amp; Size</span>
+</div>
+<div class="grid grid-cols-2 gap-4">
+<div class="space-y-1.5">
+<label class="text-[9px] text-gray-500 uppercase font-bold tracking-tighter">X-Position</label>
+<input class="w-full bg-surface-darker border border-white/10 rounded px-2 py-1.5 text-xs text-white font-mono focus:border-accent-purple focus:ring-0" type="number" value="120"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-[9px] text-gray-500 uppercase font-bold tracking-tighter">Y-Position</label>
+<input class="w-full bg-surface-darker border border-white/10 rounded px-2 py-1.5 text-xs text-white font-mono focus:border-accent-purple focus:ring-0" type="number" value="45"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-[9px] text-gray-500 uppercase font-bold tracking-tighter">Width</label>
+<input class="w-full bg-surface-darker border border-white/10 rounded px-2 py-1.5 text-xs text-white font-mono focus:border-accent-purple focus:ring-0" type="number" value="1080"/>
+</div>
+<div class="space-y-1.5">
+<label class="text-[9px] text-gray-500 uppercase font-bold tracking-tighter">Height</label>
+<input class="w-full bg-surface-darker border border-white/10 rounded px-2 py-1.5 text-xs text-white font-mono focus:border-accent-purple focus:ring-0" type="number" value="1920"/>
+</div>
+</div>
+</div>
+<div class="space-y-5">
+<div class="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+<span class="material-symbols-outlined text-sm">palette</span>
+<span>Style Properties</span>
+</div>
+<div class="space-y-4">
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<label class="text-[9px] text-gray-500 uppercase font-bold tracking-tighter">Padding</label>
+<span class="text-[10px] text-accent-purple font-mono">24px</span>
+</div>
+<input class="w-full" max="100" min="0" type="range" value="24"/>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<label class="text-[9px] text-gray-500 uppercase font-bold tracking-tighter">Border Radius</label>
+<span class="text-[10px] text-accent-purple font-mono">12px</span>
+</div>
+<input class="w-full" max="50" min="0" type="range" value="12"/>
+</div>
+<div class="space-y-2">
+<div class="flex justify-between items-center">
+<label class="text-[9px] text-gray-500 uppercase font-bold tracking-tighter">Transparency</label>
+<span class="text-[10px] text-accent-purple font-mono">100%</span>
+</div>
+<input class="w-full" max="100" min="0" type="range" value="100"/>
+</div>
+</div>
+</div>
+<div class="space-y-4">
+<div class="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+<span class="material-symbols-outlined text-sm">database</span>
+<span>Data Source</span>
+</div>
+<div class="bg-surface-darker p-3 rounded-md border border-white/5">
+<div class="flex items-center gap-3 mb-3">
+<div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-sm">linked_camera</span>
+</div>
+<span class="text-xs text-white font-medium">Main Camera 1</span>
+</div>
+<select class="w-full bg-surface-dark border border-white/10 text-gray-300 text-xs rounded px-2 py-2 focus:border-accent-purple focus:ring-0 outline-none">
+<option>HDMI Input 1 (4K)</option>
+<option>NDI Stream Local</option>
+<option>Media Playlist</option>
+</select>
+</div>
+</div>
+</div>
+</aside>
+</main>
+
+</body></html>

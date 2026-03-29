@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Presets &amp; Templates Library - OBS Church Studio</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec5b",
+                        "primary-dark": "#0eb545",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#0a0f0b",
+                        "surface-dark": "#121d14",
+                        "surface-darker": "#08110a",
+                        "accent-purple": "#a855f7", 
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer base {
+            ::-webkit-scrollbar {
+                width: 8px;
+                height: 8px;
+            }
+            ::-webkit-scrollbar-track {
+                background: #0a0f0b; 
+            }
+            ::-webkit-scrollbar-thumb {
+                background: #1f422b; 
+                border-radius: 4px;
+            }
+            ::-webkit-scrollbar-thumb:hover {
+                background: #2a5a3a; 
+            }
+        }
+        .preset-card:hover .use-preset-btn {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-gray-200 font-display h-screen flex flex-col overflow-hidden selection:bg-primary selection:text-background-dark">
+<header class="h-16 bg-surface-dark border-b border-primary/10 flex items-center justify-between px-6 z-20 shrink-0">
+<div class="flex items-center gap-8">
+<div class="flex items-center gap-2">
+<span class="material-icons text-primary text-2xl">dashboard_customize</span>
+<h1 class="font-bold text-lg tracking-tight text-white">OBS Church Studio</h1>
+</div>
+<nav class="hidden md:flex items-center gap-6">
+<a class="text-sm font-medium text-gray-400 hover:text-primary transition-colors" href="#">Editor</a>
+<a class="text-sm font-bold text-white border-b-2 border-primary pb-5 mt-5" href="#">Templates</a>
+<a class="text-sm font-medium text-gray-400 hover:text-primary transition-colors" href="#">Schedule</a>
+</nav>
+</div>
+<div class="flex items-center gap-4">
+<button class="flex items-center gap-2 px-5 py-2.5 bg-primary hover:bg-primary-dark text-background-dark font-bold text-sm rounded-xl shadow-[0_0_15px_rgba(19,236,91,0.2)] transition-all hover:shadow-[0_0_20px_rgba(19,236,91,0.4)] transform hover:-translate-y-0.5">
+<span class="material-icons text-sm">add</span>
+                Create New Preset
+            </button>
+<div class="w-8 h-8 rounded-full bg-surface-darker border border-primary/20 flex items-center justify-center cursor-pointer overflow-hidden">
+<img alt="User Avatar" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2JQ6B4huaPbBuA0zUQRdm-TFCIDVQdrfBC2_xSijQpGxXMLtMf7XkH4ehPMtTh_vc4yGR6hKPBkQfiBGuW6VXwGdtYIjK8VaS9IKBtUDOrE2J4JDRGpfIdU2omqdX9Otwx5DIXckSSKXuU-Y0uF2U01Ch95WWq5ts1ryGk7G6GYvdx3xMD9iBL6pbdfNA7sbbOs89tbB2qQJtQMebUVXFt90ZTkH6Eq4_JUy53koqh90vd6jETJ80ZvMYZew_0E2KyePIgGEs"/>
+</div>
+</div>
+</header>
+<main class="flex-1 flex overflow-hidden">
+<aside class="w-64 bg-surface-dark border-r border-primary/10 flex flex-col z-10 p-6 overflow-y-auto">
+<div class="mb-8">
+<div class="relative">
+<span class="material-icons absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">search</span>
+<input class="w-full bg-surface-darker border border-primary/10 rounded-xl py-2 pl-10 pr-4 text-sm focus:ring-1 focus:ring-primary focus:border-primary outline-none text-gray-200" placeholder="Search templates..." type="text"/>
+</div>
+</div>
+<div class="space-y-8">
+<div>
+<h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Categories</h3>
+<ul class="space-y-1">
+<li><a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary font-medium text-sm" href="#">
+<span class="material-symbols-outlined text-sm">auto_awesome</span> All Templates</a>
+</li>
+<li><a class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 hover:bg-white/5 hover:text-white transition-all text-sm" href="#">
+<span class="material-symbols-outlined text-sm">campaign</span> Sermon</a>
+</li>
+<li><a class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 hover:bg-white/5 hover:text-white transition-all text-sm" href="#">
+<span class="material-symbols-outlined text-sm">music_note</span> Worship</a>
+</li>
+<li><a class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 hover:bg-white/5 hover:text-white transition-all text-sm" href="#">
+<span class="material-symbols-outlined text-sm">menu_book</span> Scripture</a>
+</li>
+<li><a class="flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 hover:bg-white/5 hover:text-white transition-all text-sm" href="#">
+<span class="material-symbols-outlined text-sm">info</span> Announcements</a>
+</li>
+</ul>
+</div>
+<div>
+<h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Ratio</h3>
+<div class="grid grid-cols-2 gap-2">
+<button class="py-2 text-[10px] font-bold rounded-lg border border-primary/20 bg-primary/5 text-primary">16:9 WIDESCREEN</button>
+<button class="py-2 text-[10px] font-bold rounded-lg border border-white/5 text-gray-500 hover:border-white/20 transition-all">9:16 REELS</button>
+</div>
+</div>
+<div>
+<h3 class="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-4">Tags</h3>
+<div class="flex flex-wrap gap-2">
+<span class="px-2 py-1 bg-surface-darker border border-white/5 rounded text-[10px] text-gray-400 hover:border-primary/30 cursor-pointer">Lower Third</span>
+<span class="px-2 py-1 bg-surface-darker border border-white/5 rounded text-[10px] text-gray-400 hover:border-primary/30 cursor-pointer">Split Screen</span>
+<span class="px-2 py-1 bg-surface-darker border border-white/5 rounded text-[10px] text-gray-400 hover:border-primary/30 cursor-pointer">Live Stream</span>
+<span class="px-2 py-1 bg-surface-darker border border-white/5 rounded text-[10px] text-gray-400 hover:border-primary/30 cursor-pointer">Social</span>
+</div>
+</div>
+</div>
+</aside>
+<section class="flex-1 overflow-y-auto bg-surface-darker p-8">
+<div class="max-w-7xl mx-auto">
+<div class="flex items-center justify-between mb-8">
+<div>
+<h2 class="text-2xl font-bold text-white mb-1">Presets &amp; Templates Library</h2>
+<p class="text-sm text-gray-400">Select a layout to jumpstart your service broadcast</p>
+</div>
+<div class="flex items-center gap-2 bg-surface-dark p-1 rounded-xl border border-white/5">
+<button class="p-2 rounded-lg bg-surface-darker text-primary shadow-sm"><span class="material-icons">grid_view</span></button>
+<button class="p-2 rounded-lg text-gray-500 hover:text-gray-300"><span class="material-icons">view_list</span></button>
+</div>
+</div>
+<div class="mb-12">
+<div class="flex items-center gap-4 mb-6">
+<h3 class="text-sm font-bold text-white uppercase tracking-wider">Sermon Layouts</h3>
+<div class="h-px flex-1 bg-white/5"></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+<div class="group preset-card bg-surface-dark rounded-2xl border border-white/5 overflow-hidden hover:border-primary/40 transition-all hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] flex flex-col">
+<div class="relative aspect-video bg-black overflow-hidden">
+<img alt="Sermon Focus" class="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIo7HXX2LY9yRbLpm74hk_QyJMVhcxdkFE9VCWfXKtqQPI_k-lOxBXVnwl9HZpWEv3zCdmCA3UZREvS3UvoivLrfuGgl9sNOvwXmtGhfjMFs8oiDFwYUop-Tx1_NoN0ogQH90KNyqvBPZAT9cYx7s5Xu0f0iYr5buKLV3AA_KG7N8eSyYoa5UWfcEYKlobOJ_z1y38QuY4TDBTuNLmC4KfcWzAY_QhJgHH1Bz4jhlSFjkBS1BNmisZWfwsV9yU0h_ExkxPxZEu"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent"></div>
+<div class="absolute bottom-3 left-3 right-3 flex justify-between items-end">
+<div class="w-2/3 h-4 bg-primary/20 border-l-4 border-primary rounded-r"></div>
+</div>
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px]">
+<button class="use-preset-btn transform translate-y-4 opacity-0 transition-all duration-300 px-6 py-2.5 bg-primary text-background-dark font-bold text-sm rounded-xl">Use Preset</button>
+</div>
+</div>
+<div class="p-4 flex flex-col flex-1">
+<div class="flex justify-between items-start mb-1">
+<h4 class="font-bold text-white">Speaker Main Focus</h4>
+<span class="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/20">4K</span>
+</div>
+<p class="text-xs text-gray-500 mb-4">Clean full-screen speaker view with subtle name tag.</p>
+<div class="mt-auto flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+<span class="text-[10px] font-bold text-gray-400 uppercase">1 Video Source</span>
+</div>
+</div>
+</div>
+<div class="group preset-card bg-surface-dark rounded-2xl border border-white/5 overflow-hidden hover:border-primary/40 transition-all hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] flex flex-col">
+<div class="relative aspect-video bg-black overflow-hidden">
+<div class="absolute inset-0 flex">
+<div class="w-1/2 h-full border-r border-white/10 overflow-hidden">
+<img alt="Speaker" class="w-full h-full object-cover opacity-60" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIo7HXX2LY9yRbLpm74hk_QyJMVhcxdkFE9VCWfXKtqQPI_k-lOxBXVnwl9HZpWEv3zCdmCA3UZREvS3UvoivLrfuGgl9sNOvwXmtGhfjMFs8oiDFwYUop-Tx1_NoN0ogQH90KNyqvBPZAT9cYx7s5Xu0f0iYr5buKLV3AA_KG7N8eSyYoa5UWfcEYKlobOJ_z1y38QuY4TDBTuNLmC4KfcWzAY_QhJgHH1Bz4jhlSFjkBS1BNmisZWfwsV9yU0h_ExkxPxZEu"/>
+</div>
+<div class="w-1/2 h-full bg-surface-darker p-4 flex flex-col justify-center">
+<div class="h-2 w-12 bg-primary/40 rounded mb-2"></div>
+<div class="h-3 w-full bg-white/10 rounded mb-1"></div>
+<div class="h-3 w-3/4 bg-white/10 rounded"></div>
+</div>
+</div>
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px]">
+<button class="use-preset-btn transform translate-y-4 opacity-0 transition-all duration-300 px-6 py-2.5 bg-primary text-background-dark font-bold text-sm rounded-xl">Use Preset</button>
+</div>
+</div>
+<div class="p-4 flex flex-col flex-1">
+<h4 class="font-bold text-white mb-1">Speaker + Slide Split</h4>
+<p class="text-xs text-gray-500 mb-4">Side-by-side view for presentation notes and camera.</p>
+<div class="mt-auto flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-accent-purple"></span>
+<span class="text-[10px] font-bold text-gray-400 uppercase">2 Video Sources</span>
+</div>
+</div>
+</div>
+<div class="group preset-card bg-surface-dark rounded-2xl border border-white/5 overflow-hidden hover:border-primary/40 transition-all hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] flex flex-col">
+<div class="relative aspect-video bg-black overflow-hidden p-3">
+<div class="w-full h-full rounded-lg bg-gray-900 overflow-hidden relative border border-white/5">
+<img alt="Wide view" class="w-full h-full object-cover opacity-40" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDKEyu6QYYthNqFhciERmok96ztFjRcuj7Eo27DaTiuO9BNkot6b6ViUyXRRqpldUizfhSsSw45eaGXRrraMw2S7HzOv9bpfB9mEACx8OpLqbiiUkP0Glx6gqF6bgEUmNEZwM4SMLne8LAgvwu_Jp4QmqJKZVhueojGf1kxpeTUmjToGwK-wjVWfPJdNt61Js6PSq-yHj0WCClVWtcUQixeLblvT7-iAJDQJSvL0QCMGYD7cKnJbiSxGDeita3RpZVZgqJpq1OS"/>
+<div class="absolute bottom-4 right-4 w-1/3 aspect-video bg-black rounded-lg border-2 border-primary shadow-2xl overflow-hidden">
+<img alt="PiP" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIo7HXX2LY9yRbLpm74hk_QyJMVhcxdkFE9VCWfXKtqQPI_k-lOxBXVnwl9HZpWEv3zCdmCA3UZREvS3UvoivLrfuGgl9sNOvwXmtGhfjMFs8oiDFwYUop-Tx1_NoN0ogQH90KNyqvBPZAT9cYx7s5Xu0f0iYr5buKLV3AA_KG7N8eSyYoa5UWfcEYKlobOJ_z1y38QuY4TDBTuNLmC4KfcWzAY_QhJgHH1Bz4jhlSFjkBS1BNmisZWfwsV9yU0h_ExkxPxZEu"/>
+</div>
+</div>
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px]">
+<button class="use-preset-btn transform translate-y-4 opacity-0 transition-all duration-300 px-6 py-2.5 bg-primary text-background-dark font-bold text-sm rounded-xl">Use Preset</button>
+</div>
+</div>
+<div class="p-4 flex flex-col flex-1">
+<h4 class="font-bold text-white mb-1">Speaker PiP (Overlay)</h4>
+<p class="text-xs text-gray-500 mb-4">Main stage view with speaker in corner overlay.</p>
+<div class="mt-auto flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-accent-purple"></span>
+<span class="text-[10px] font-bold text-gray-400 uppercase">2 Video Sources</span>
+</div>
+</div>
+</div>
+<div class="group preset-card bg-surface-dark rounded-2xl border border-white/5 overflow-hidden hover:border-primary/40 transition-all hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] flex flex-col">
+<div class="relative aspect-video bg-black overflow-hidden flex items-center justify-center">
+<div class="w-[80%] aspect-video bg-surface-darker rounded border border-white/10 p-4">
+<div class="h-2 w-20 bg-primary/60 rounded mb-4"></div>
+<div class="space-y-2">
+<div class="h-1 w-full bg-white/5 rounded"></div>
+<div class="h-1 w-full bg-white/5 rounded"></div>
+<div class="h-1 w-2/3 bg-white/5 rounded"></div>
+</div>
+</div>
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px]">
+<button class="use-preset-btn transform translate-y-4 opacity-0 transition-all duration-300 px-6 py-2.5 bg-primary text-background-dark font-bold text-sm rounded-xl">Use Preset</button>
+</div>
+</div>
+<div class="p-4 flex flex-col flex-1">
+<h4 class="font-bold text-white mb-1">Full-Screen Bulletins</h4>
+<p class="text-xs text-gray-500 mb-4">High legibility layout for sermon key points.</p>
+<div class="mt-auto flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-gray-600"></span>
+<span class="text-[10px] font-bold text-gray-400 uppercase">Graphic Asset</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="mb-12">
+<div class="flex items-center gap-4 mb-6">
+<h3 class="text-sm font-bold text-white uppercase tracking-wider">Worship &amp; Scripture</h3>
+<div class="h-px flex-1 bg-white/5"></div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+<div class="group preset-card bg-surface-dark rounded-2xl border border-white/5 overflow-hidden hover:border-primary/40 transition-all hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] flex flex-col">
+<div class="relative aspect-video bg-black overflow-hidden">
+<img alt="Worship Stage" class="w-full h-full object-cover opacity-60" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDKEyu6QYYthNqFhciERmok96ztFjRcuj7Eo27DaTiuO9BNkot6b6ViUyXRRqpldUizfhSsSw45eaGXRrraMw2S7HzOv9bpfB9mEACx8OpLqbiiUkP0Glx6gqF6bgEUmNEZwM4SMLne8LAgvwu_Jp4QmqJKZVhueojGf1kxpeTUmjToGwK-wjVWfPJdNt61Js6PSq-yHj0WCClVWtcUQixeLblvT7-iAJDQJSvL0QCMGYD7cKnJbiSxGDeita3RpZVZgqJpq1OS"/>
+<div class="absolute bottom-6 left-1/2 -translate-x-1/2 w-[90%] text-center">
+<div class="h-3 w-full bg-white/20 rounded-full mb-1"></div>
+<div class="h-3 w-3/4 mx-auto bg-white/20 rounded-full"></div>
+</div>
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px]">
+<button class="use-preset-btn transform translate-y-4 opacity-0 transition-all duration-300 px-6 py-2.5 bg-primary text-background-dark font-bold text-sm rounded-xl">Use Preset</button>
+</div>
+</div>
+<div class="p-4 flex flex-col flex-1">
+<h4 class="font-bold text-white mb-1">Lyric Overlay Bottom</h4>
+<p class="text-xs text-gray-500 mb-4">Standard worship layout with centered text bottom.</p>
+<div class="mt-auto flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+<span class="text-[10px] font-bold text-gray-400 uppercase">Dynamic Feed</span>
+</div>
+</div>
+</div>
+<div class="group preset-card bg-surface-dark rounded-2xl border border-white/5 overflow-hidden hover:border-primary/40 transition-all hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.5)] flex flex-col">
+<div class="relative aspect-video bg-surface-darker flex items-center justify-center p-6">
+<div class="w-full border-l-2 border-accent-purple pl-4">
+<div class="h-2 w-1/4 bg-accent-purple/40 rounded mb-2"></div>
+<div class="space-y-1">
+<div class="h-2 w-full bg-white/10 rounded"></div>
+<div class="h-2 w-full bg-white/10 rounded"></div>
+<div class="h-2 w-4/5 bg-white/10 rounded"></div>
+</div>
+</div>
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/40 backdrop-blur-[2px]">
+<button class="use-preset-btn transform translate-y-4 opacity-0 transition-all duration-300 px-6 py-2.5 bg-primary text-background-dark font-bold text-sm rounded-xl">Use Preset</button>
+</div>
+</div>
+<div class="p-4 flex flex-col flex-1">
+<h4 class="font-bold text-white mb-1">Lower Third Verse</h4>
+<p class="text-xs text-gray-500 mb-4">Minimalist scripture display for sermon highlights.</p>
+<div class="mt-auto flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-accent-purple"></span>
+<span class="text-[10px] font-bold text-gray-400 uppercase">ProPresenter 7</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<footer class="h-10 bg-surface-dark border-t border-primary/10 flex items-center px-6 justify-between text-xs text-gray-500">
+<div class="flex gap-6">
+<span class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-primary"></span> System Online</span>
+<span>Cloud Sync: Active</span>
+</div>
+<div class="flex items-center gap-4">
+<span class="hover:text-primary transition-colors cursor-pointer">Help Center</span>
+<span class="text-gray-700">|</span>
+<span>v2.4.12-stable</span>
+</div>
+</footer>
+
+</body></html>

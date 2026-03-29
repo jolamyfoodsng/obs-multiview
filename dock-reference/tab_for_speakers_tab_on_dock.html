@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Unified Dock - Speaker Tab</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#3b82f6",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#1f212a",
+                        "surface-dark": "#2a2d3a",
+                        "surface-hover": "#363a4a",
+                        "danger": "#dc2626",
+                        "success": "#22c55e",
+                        "warning": "#eab308"
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.375rem", "xl": "0.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f212a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b4f6b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #636888;
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-slate-100 font-display h-screen flex justify-center overflow-hidden">
+<div class="w-full max-w-[340px] h-full flex flex-col bg-background-dark border-r border-white/5 relative">
+<nav class="bg-surface-dark border-b border-white/10 shrink-0 flex items-center justify-between px-2">
+<button class="flex-1 h-14 flex flex-col items-center justify-center text-primary relative group">
+<span class="material-symbols-outlined text-2xl mb-0.5">person</span>
+<span class="text-[9px] font-bold uppercase tracking-wider">Speaker</span>
+<div class="absolute bottom-0 left-0 w-full h-0.5 bg-primary"></div>
+</button>
+<button class="flex-1 h-14 flex flex-col items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-colors group">
+<span class="material-symbols-outlined text-2xl mb-0.5">menu_book</span>
+<span class="text-[9px] font-medium uppercase tracking-wider group-hover:text-white">Bible</span>
+</button>
+<button class="flex-1 h-14 flex flex-col items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-colors group">
+<span class="material-symbols-outlined text-2xl mb-0.5">format_quote</span>
+<span class="text-[9px] font-medium uppercase tracking-wider group-hover:text-white">Sermon</span>
+</button>
+<button class="flex-1 h-14 flex flex-col items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-colors group">
+<span class="material-symbols-outlined text-2xl mb-0.5">volunteer_activism</span>
+<span class="text-[9px] font-medium uppercase tracking-wider group-hover:text-white">Giving</span>
+</button>
+<button class="flex-1 h-14 flex flex-col items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-colors group">
+<span class="material-symbols-outlined text-2xl mb-0.5">link</span>
+<span class="text-[9px] font-medium uppercase tracking-wider group-hover:text-white">Connect</span>
+</button>
+</nav>
+<main class="flex-1 overflow-y-auto p-4 flex flex-col gap-3">
+<div class="flex items-center justify-between pb-1">
+<h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Saved Speakers</h2>
+<button class="text-xs text-primary hover:text-blue-400 font-medium">+ New</button>
+</div>
+<button class="group w-full bg-surface-dark hover:bg-surface-hover active:bg-surface-hover/80 active:scale-[0.99] transition-all rounded-lg p-3 flex items-center gap-3 border border-white/5 text-left relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="w-12 h-12 rounded bg-slate-700 shrink-0 overflow-hidden relative">
+<img alt="Speaker" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCbvma4ByPHyFoSWF2fU-Gr8fo3JNm-eRXKr8_7XC40H3KrcBM6bNjEceRRX7mdJMEWd_WIrWCGhI3T1KJQu4b6_iqeDLad7JDPZn4l4Rr0qv-0gEOEZxJwfdMV_iH_34sra0sN34-n1vcs7BQXeGUjIon2GBMFlEwDd3ZaCflfoDvQMPl6GcGEO_s8UQjdMkNyNMg0D-0jrpSAv_pNyE9IY9-wDhG__8oeAyx14XcmHKSNeR5DHbevdjFxpms53p59ZJKy6Fn1EQ"/>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="text-sm font-bold text-white truncate group-hover:text-blue-200">Min. Samuel Bella</h3>
+<p class="text-xs text-slate-400 truncate">Worship Leader</p>
+</div>
+<span class="material-symbols-outlined text-slate-500 group-hover:text-white">chevron_right</span>
+</button>
+<button class="group w-full bg-surface-dark hover:bg-surface-hover active:bg-surface-hover/80 active:scale-[0.99] transition-all rounded-lg p-3 flex items-center gap-3 border border-white/5 text-left relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="w-12 h-12 rounded bg-slate-700 shrink-0 overflow-hidden relative">
+<img alt="Speaker" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDz2elRhY2mpLHYlhmqbstGWZjmODB7Wev1_7pNU2hEkogvlLqpkP5aNV03H4QW7HP-pCLrkUr8UXsxLG8AZv5-seP__8tsgzU59C2Im8oIsL5BVQ14vvD0crZj76slpvIOclXnLda0ZVT98Dv-rPgcD5PdAT3PWcMbQ5yiv0vD9EX2ckjeaKxPpTI01v-w6wEys1_5o3C1Q8Hskk6WxF-J0ql34Tto6Gmmhot-da-h7EnyeMu7fn_HCz3WaFIIIeGIfgFh32nFOQ"/>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="text-sm font-bold text-white truncate group-hover:text-blue-200">Pastor Sarah Jenkins</h3>
+<p class="text-xs text-slate-400 truncate">Senior Pastor</p>
+</div>
+<span class="material-symbols-outlined text-slate-500 group-hover:text-white">chevron_right</span>
+</button>
+<button class="group w-full bg-surface-dark hover:bg-surface-hover active:bg-surface-hover/80 active:scale-[0.99] transition-all rounded-lg p-3 flex items-center gap-3 border border-white/5 text-left relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="w-12 h-12 rounded bg-slate-700 shrink-0 overflow-hidden relative">
+<img alt="Speaker" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBPVddosFI14X22vvvJEkXL4cJmCbAv94sdCoJRKLWhp1PLyDSeG1fFx2PN8vOLkgk7OpUrxGpkJokdCZqAC5OS5ljwzwwzF5v7qsAWOON9RcT91lsjNE5PGkYSKchkXbwyR9LJbimHwBA6XLDazeuA8G5RDGV6lwZ6-zx25Xis0l57TWtrF3mLrKGOcMyKr5k3-DojKSi7tKpYcraaUUeY0ukWbIW6VC2DfVNSByUNYmZN7NQQO6TpSFIGtNVzi8_9Daz7O11nWw"/>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="text-sm font-bold text-white truncate group-hover:text-blue-200">Elder Mark Thompson</h3>
+<p class="text-xs text-slate-400 truncate">Youth Ministry</p>
+</div>
+<span class="material-symbols-outlined text-slate-500 group-hover:text-white">chevron_right</span>
+</button>
+<button class="group w-full bg-surface-dark hover:bg-surface-hover active:bg-surface-hover/80 active:scale-[0.99] transition-all rounded-lg p-3 flex items-center gap-3 border border-white/5 text-left relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="w-12 h-12 rounded bg-slate-700 shrink-0 flex items-center justify-center text-slate-500">
+<span class="material-symbols-outlined text-2xl">person</span>
+</div>
+<div class="flex-1 min-w-0">
+<h3 class="text-sm font-bold text-white truncate group-hover:text-blue-200">Guest Speaker</h3>
+<p class="text-xs text-slate-400 truncate">Visiting Ministry</p>
+</div>
+<span class="material-symbols-outlined text-slate-500 group-hover:text-white">chevron_right</span>
+</button>
+</main>
+<section class="shrink-0 bg-black/40 border-t border-white/10 p-3 pb-2">
+<div class="flex items-center justify-between mb-1.5 px-1">
+<h4 class="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Staged Preview</h4>
+<div class="flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-warning"></span>
+<span class="text-[10px] text-slate-400">Ready</span>
+</div>
+</div>
+<div class="bg-surface-dark border border-white/10 rounded p-2.5 flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-slate-700 shrink-0 overflow-hidden">
+<img alt="Preview" class="w-full h-full object-cover grayscale opacity-70" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIev7edfttx5Q4Sp3B3-YVhcDbrYLCF_uh0lnfpORdEAkU-z4FwE84DEAESWQxEoRTXdSFvNKkQllcAa_KBP8WP7x--_MayTa6GmwK6anleTcYzYndaw8pZup9PN3t1HTq9LH4WFXVaXSGbF0wEn4lh9ozHS54vAN_zAnkWwF34DYUxh4erSplyHAI4Mg1RFVJQpEFSIe1XCcU4cW14Jb26jFGpYROoIsP-c2wbHsGhCL75x8ZqGbMWLGHIY8cdC8WgbZMrS6NPA"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="text-xs font-bold text-slate-200 truncate">Min. Samuel Bella</div>
+<div class="text-[10px] text-slate-500 truncate">Worship Leader</div>
+</div>
+<button class="text-slate-400 hover:text-white p-1 rounded hover:bg-white/10 transition-colors">
+<span class="material-symbols-outlined text-base">close</span>
+</button>
+</div>
+</section>
+<footer class="p-3 bg-surface-dark border-t border-white/10 grid grid-cols-2 gap-3 shrink-0">
+<button class="h-12 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded shadow-lg shadow-blue-900/20 active:translate-y-0.5 transition-all flex flex-col items-center justify-center leading-tight">
+<span class="uppercase tracking-wide text-[10px] opacity-80">Send To</span>
+<span class="uppercase tracking-widest">Preview</span>
+</button>
+<button class="h-12 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded shadow-lg shadow-emerald-900/20 active:translate-y-0.5 transition-all flex items-center justify-center gap-2">
+<span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+<span class="uppercase tracking-widest">Go Live</span>
+</button>
+</footer>
+</div>
+
+</body></html>

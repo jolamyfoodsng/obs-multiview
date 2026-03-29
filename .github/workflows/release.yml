@@ -1,0 +1,262 @@
+name: Release — Build & Publish
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Trigger: push a version tag (v*) — created automatically by auto-tag.yml
+# when you bump the version in package.json and push to main.
+#
+# Quick release workflow:
+#   1. npm run version:patch      (or :minor / :major)
+#   2. git add . && git commit -m "bump v0.X.Y" && git push
+#   3. auto-tag.yml creates the git tag automatically
+#   4. This workflow builds + publishes a GitHub Release with installers
+#
+# Manual trigger also available from GitHub → Actions → Release → Run workflow
+#
+# What it does:
+#   1. Builds Windows first
+#   2. Builds macOS and Linux after Windows has started/completed
+#   3. Signs update bundles with TAURI_SIGNING_PRIVATE_KEY
+#   4. Creates a GitHub Release with installers + latest.json (for auto-updater)
+#
+# Required secrets:
+#   TAURI_SIGNING_PRIVATE_KEY          — content of ~/.tauri/obs-church-studio.key
+#   TAURI_SIGNING_PRIVATE_KEY_PASSWORD — password for the signing key
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version (e.g. v0.2.0)"
+        required: false
+      platform:
+        description: "Release platform target"
+        required: false
+        default: all
+        type: choice
+        options:
+          - all
+          - windows-only
+
+permissions:
+  contents: write
+
+jobs:
+  # ── 1) Windows first ─────────────────────────────────────────────────────
+  publish-windows:
+    name: Build + Release (Windows-x64 first)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version || github.ref }}
+
+      # ── Node.js ──
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # ── Rust ──
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: x86_64-pc-windows-msvc
+
+      # ── Rust cache ──
+      - name: Cache Rust
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          cache-on-failure: true
+
+      # ── Install frontend deps ──
+      - name: Install dependencies
+        run: npm install
+
+      # ── Quality gate: typecheck + web build before packaging ──
+      - name: Validate frontend build
+        run: npm run build
+
+      # ── Sync version from git tag ──
+      - name: Set version from tag
+        shell: bash
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            TAG="${GITHUB_REF#refs/tags/v}"
+          elif [ -n "${{ github.event.inputs.version }}" ]; then
+            TAG="${{ github.event.inputs.version }}"
+            TAG="${TAG#v}"
+          else
+            echo "No version found, skipping"
+            exit 0
+          fi
+          echo "Setting version to $TAG"
+          node -e "
+            const fs = require('fs');
+            const conf = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json','utf8'));
+            conf.version = '$TAG';
+            fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(conf, null, 2) + '\n');
+          "
+
+      # ── Build + Release ──
+      - name: Build and release Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          VITE_UPDATER_TOKEN: ${{ secrets.UPDATER_GITHUB_TOKEN }}
+        with:
+          tauriScript: npx tauri
+          args: --target x86_64-pc-windows-msvc
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.version || format('v{0}', 'latest') }}
+          releaseName: "OBS Church Studio ${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.version || 'latest' }}"
+          releaseBody: |
+            ## OBS Church Studio
+
+            ### Downloads
+            | Platform | File |
+            |----------|------|
+            | macOS (Apple Silicon) | `.dmg` (arm64) |
+            | macOS (Intel) | `.dmg` (x64) |
+            | Windows | `.exe` (NSIS installer) or `.msi` |
+            | Linux | `.AppImage` or `.deb` |
+
+            ### Auto-Update
+            Existing installations will automatically download and install this update on next launch.
+
+            ---
+            _Built automatically from commit ${{ github.sha }}_
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true
+
+  # ── 2) macOS/Linux after Windows ─────────────────────────────────────────
+  publish-other:
+    name: Build + Release (${{ matrix.label }})
+    needs: publish-windows
+    if: ${{ always() && needs.publish-windows.result != 'cancelled' && (github.event_name != 'workflow_dispatch' || github.event.inputs.platform != 'windows-only') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+            label: macOS-arm64
+          - platform: macos-latest
+            target: x86_64-apple-darwin
+            label: macOS-x64
+          - platform: ubuntu-22.04
+            target: x86_64-unknown-linux-gnu
+            label: Linux-x64
+
+    runs-on: ${{ matrix.platform }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.version || github.ref }}
+
+      # ── System deps (Linux only) ──
+      - name: Install Linux dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libgtk-3-dev \
+            libsoup-3.0-dev \
+            javascriptcoregtk-4.1 \
+            webkit2gtk-4.1
+
+      # ── Node.js ──
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # ── Rust ──
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      # ── Rust cache ──
+      - name: Cache Rust
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          cache-on-failure: true
+
+      # ── Install frontend deps ──
+      - name: Install dependencies
+        run: npm install
+
+      # ── Quality gate: typecheck + web build before packaging ──
+      - name: Validate frontend build
+        run: npm run build
+
+      # ── Sync version from git tag ──
+      - name: Set version from tag
+        shell: bash
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            TAG="${GITHUB_REF#refs/tags/v}"
+          elif [ -n "${{ github.event.inputs.version }}" ]; then
+            TAG="${{ github.event.inputs.version }}"
+            TAG="${TAG#v}"
+          else
+            echo "No version found, skipping"
+            exit 0
+          fi
+          echo "Setting version to $TAG"
+          node -e "
+            const fs = require('fs');
+            const conf = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json','utf8'));
+            conf.version = '$TAG';
+            fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(conf, null, 2) + '\n');
+          "
+
+      # ── Build + Release ──
+      - name: Build and release Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          VITE_UPDATER_TOKEN: ${{ secrets.UPDATER_GITHUB_TOKEN }}
+        with:
+          tauriScript: npx tauri
+          args: --target ${{ matrix.target }}
+          tagName: ${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.version || format('v{0}', 'latest') }}
+          releaseName: "OBS Church Studio ${{ github.ref_type == 'tag' && github.ref_name || github.event.inputs.version || 'latest' }}"
+          releaseBody: |
+            ## OBS Church Studio
+
+            ### Downloads
+            | Platform | File |
+            |----------|------|
+            | macOS (Apple Silicon) | `.dmg` (arm64) |
+            | macOS (Intel) | `.dmg` (x64) |
+            | Windows | `.exe` (NSIS installer) or `.msi` |
+            | Linux | `.AppImage` or `.deb` |
+
+            ### Auto-Update
+            Existing installations will automatically download and install this update on next launch.
+
+            ---
+            _Built automatically from commit ${{ github.sha }}_
+          releaseDraft: false
+          prerelease: false
+          includeUpdaterJson: true

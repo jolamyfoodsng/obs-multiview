@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Sunday Switcher - Prepare Today’s Service</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#10b981","primary-hover": "#059669",
+                        "background-dark": "#18181b","surface-dark": "#27272a","surface-lighter": "#3f3f46",},
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.375rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                    },
+                },
+            },
+        }
+    </script>
+<style>
+        .backdrop-blur-custom {
+            backdrop-filter: blur(12px);
+            background-color: rgba(0, 0, 0, 0.65);
+        }
+        .custom-select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%23a1a1aa' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.75rem center;
+            background-repeat: no-repeat;
+            background-size: 1.25em 1.25em;
+        }
+    </style>
+</head>
+<body class="font-display bg-background-dark text-slate-100 min-h-screen">
+<div class="fixed inset-0 overflow-hidden pointer-events-none filter blur-sm opacity-30">
+<header class="h-16 border-b border-zinc-800 flex items-center px-8 bg-zinc-900">
+<div class="flex items-center gap-2">
+<div class="w-8 h-8 bg-primary rounded"></div>
+<span class="font-bold text-xl tracking-tight text-white">Sunday Switcher</span>
+</div>
+</header>
+<main class="p-8 grid grid-cols-12 gap-6">
+<div class="col-span-3 h-64 bg-zinc-800 rounded"></div>
+<div class="col-span-9 h-64 bg-zinc-800 rounded"></div>
+<div class="col-span-12 h-96 bg-zinc-800 rounded"></div>
+</main>
+</div>
+<div class="fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-custom">
+<div class="bg-surface-dark w-full max-w-[640px] rounded-2xl shadow-2xl overflow-hidden border border-zinc-700/50">
+<div class="px-8 pt-8 pb-4 border-b border-zinc-700/50">
+<div class="flex items-start justify-between">
+<div>
+<h2 class="text-2xl font-bold text-white tracking-tight">Prepare Today’s Service</h2>
+<p class="text-zinc-400 mt-1 text-sm font-medium">Select the scenes you use most during this service.</p>
+</div>
+<button class="text-zinc-500 hover:text-white transition-colors p-1 rounded-full hover:bg-zinc-700">
+<span class="material-symbols-outlined text-2xl">close</span>
+</button>
+</div>
+</div>
+<div class="px-8 py-6 space-y-8">
+<div class="space-y-2">
+<label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider">Service Name</label>
+<input class="w-full px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all placeholder:text-zinc-600 text-white font-medium" type="text" value="Sunday Morning – Mar 24, 2025"/>
+</div>
+<div class="space-y-4">
+<div class="flex justify-between items-baseline">
+<label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider">Scene Mapping</label>
+<span class="text-xs text-zinc-500">These scenes will be used automatically when displaying content.</span>
+</div>
+<div class="grid grid-cols-1 gap-4">
+<div class="relative">
+<label class="absolute -top-2 left-3 bg-surface-dark px-1 text-[10px] font-bold text-primary uppercase tracking-wide z-10">Required</label>
+<select class="custom-select w-full px-4 py-3 bg-zinc-900 border border-zinc-600 rounded-lg focus:ring-2 focus:ring-primary outline-none text-white appearance-none hover:border-zinc-500 transition-colors">
+<option disabled="" value="">Select Main Sermon Scene</option>
+<option selected="" value="cam1">Camera 1 - Center Stage (Clean)</option>
+<option value="cam2">Camera 2 - Wide Shot</option>
+<option value="cam3">PTZ Close Up</option>
+</select>
+</div>
+<div class="relative">
+<label class="absolute -top-2 left-3 bg-surface-dark px-1 text-[10px] font-bold text-zinc-500 uppercase tracking-wide z-10">Optional</label>
+<select class="custom-select w-full px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-lg focus:ring-2 focus:ring-primary outline-none text-zinc-300 appearance-none hover:border-zinc-600 transition-colors">
+<option selected="" value="">Select Worship Scene</option>
+<option value="worship1">Band Wide</option>
+<option value="worship2">Drum Cam</option>
+<option value="worship3">Dynamic Mix</option>
+</select>
+</div>
+<div class="relative">
+<label class="absolute -top-2 left-3 bg-surface-dark px-1 text-[10px] font-bold text-zinc-500 uppercase tracking-wide z-10">Optional</label>
+<select class="custom-select w-full px-4 py-3 bg-zinc-900 border border-zinc-700 rounded-lg focus:ring-2 focus:ring-primary outline-none text-zinc-300 appearance-none hover:border-zinc-600 transition-colors">
+<option selected="" value="">Select Slides / Presentation Scene</option>
+<option value="pp7">ProPresenter 7 (NDI)</option>
+<option value="pp7_txt">ProPresenter Text Only</option>
+</select>
+</div>
+</div>
+</div>
+<div class="space-y-3">
+<label class="block text-xs font-bold text-zinc-400 uppercase tracking-wider">Default Layout</label>
+<div class="grid grid-cols-2 gap-4">
+<label class="relative cursor-pointer group">
+<input checked="" class="peer sr-only" name="layout" type="radio"/>
+<div class="h-full flex flex-col p-4 bg-zinc-900 border-2 border-primary rounded-xl peer-checked:shadow-[0_0_15px_-3px_rgba(16,185,129,0.3)] transition-all">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-primary">splitscreen</span>
+<span class="font-semibold text-white">Lower Third</span>
+</div>
+<p class="text-xs text-zinc-400 leading-relaxed">Displays text over camera view</p>
+<div class="absolute top-3 right-3 w-5 h-5 bg-primary rounded-full flex items-center justify-center shadow-sm">
+<span class="material-symbols-outlined text-zinc-900 text-[14px] font-bold">check</span>
+</div>
+</div>
+</label>
+<label class="relative cursor-pointer group">
+<input class="peer sr-only" name="layout" type="radio"/>
+<div class="h-full flex flex-col p-4 bg-zinc-900 border-2 border-transparent border-zinc-800 rounded-xl hover:bg-zinc-800 peer-checked:border-primary peer-checked:bg-zinc-900 transition-all">
+<div class="flex items-center gap-2 mb-2">
+<span class="material-symbols-outlined text-zinc-500 group-hover:text-zinc-300">fullscreen</span>
+<span class="font-semibold text-zinc-300 group-hover:text-white">Full Screen</span>
+</div>
+<p class="text-xs text-zinc-500 group-hover:text-zinc-400 leading-relaxed">Displays content as main output</p>
+</div>
+</label>
+</div>
+</div>
+<div class="pt-2">
+<label class="flex items-start gap-3 cursor-pointer group">
+<div class="relative flex items-center mt-0.5">
+<input class="peer sr-only" type="checkbox"/>
+<div class="w-5 h-5 border-2 border-zinc-600 rounded bg-zinc-900 peer-checked:bg-primary peer-checked:border-primary transition-colors flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-[16px] opacity-0 peer-checked:opacity-100 font-bold">check</span>
+</div>
+</div>
+<div>
+<span class="block text-sm font-medium text-zinc-200 group-hover:text-white transition-colors">Use last service settings if available</span>
+<span class="block text-xs text-zinc-500 mt-0.5">Recommended for weekly recurring services.</span>
+</div>
+</label>
+</div>
+</div>
+<div class="px-8 py-6 bg-zinc-900/50 border-t border-zinc-800 flex flex-col gap-4">
+<button class="w-full bg-primary hover:bg-primary-hover text-zinc-900 font-bold py-3.5 rounded-lg text-lg shadow-lg shadow-primary/10 transition-all flex items-center justify-center gap-2 transform active:scale-[0.99]">
+                Start Service
+            </button>
+<div class="text-center">
+<a class="text-zinc-500 hover:text-white text-sm font-medium transition-colors" href="#">Cancel</a>
+</div>
+</div>
+</div>
+</div>
+
+</body></html>

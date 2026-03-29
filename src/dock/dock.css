@@ -1,0 +1,1872 @@
+/**
+ * dock.css — OBS Browser Dock styles
+ *
+ * Narrow dark-theme layout designed for OBS Custom Browser Docks.
+ * Max width ~340px, dark surfaces, compact spacing.
+ *
+ * Color palette (matches dock HTML references):
+ *   --dock-bg:          #1a1c25
+ *   --dock-surface:     #22252f
+ *   --dock-surface-alt: #2a2d3a
+ *   --dock-surface-hover: #363a4a
+ *   --dock-border:      #2e3140
+ *   --dock-text:        #e8e8ea
+ *   --dock-text-dim:    #8b8d9a
+ *   --dock-accent:      #6c63ff
+ *   --dock-accent-soft: rgba(108, 99, 255, 0.15)
+ *   --dock-green:       #00e676
+ *   --dock-green-soft:  rgba(0, 230, 118, 0.15)
+ *   --dock-red:         #ff5252
+ *   --dock-yellow:      #ffc107
+ */
+
+/* ── Root container ── */
+.dock-root {
+  --dock-bg: #1a1c25;
+  --dock-surface: #22252f;
+  --dock-surface-alt: #2a2d3a;
+  --dock-surface-hover: #363a4a;
+  --dock-border: #2e3140;
+  --dock-text: #e8e8ea;
+  --dock-text-dim: #8b8d9a;
+  --dock-accent: #6c63ff;
+  --dock-accent-soft: rgba(108, 99, 255, 0.15);
+  --dock-green: #00e676;
+  --dock-green-soft: rgba(0, 230, 118, 0.15);
+  --dock-red: #ff5252;
+  --dock-red-soft: rgba(255, 82, 82, 0.12);
+  --dock-yellow: #ffc107;
+
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 420px;
+  height: 100vh;
+  background: var(--dock-bg);
+  color: var(--dock-text);
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto,
+    sans-serif;
+  font-size: 10px;
+  line-height: 1.4;
+  overflow: hidden;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Status bar ── */
+.dock-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 8px;
+  background: var(--dock-surface);
+  border-bottom: 1px solid var(--dock-border);
+  font-size: 9px;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.dock-status-bar__left,
+.dock-status-bar__right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dock-status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dock-status-dot--connected {
+  background: var(--dock-green);
+  box-shadow: 0 0 6px rgba(0, 230, 118, 0.4);
+}
+
+.dock-status-dot--disconnected {
+  background: var(--dock-red);
+  box-shadow: 0 0 6px rgba(255, 82, 82, 0.3);
+}
+
+.dock-status-label {
+  color: var(--dock-text-dim);
+  font-size: 9px;
+}
+
+.dock-service-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 1px 5px;
+  border-radius: 8px;
+  font-size: 8px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.dock-service-badge--idle {
+  background: var(--dock-surface-hover);
+  color: var(--dock-text-dim);
+}
+
+.dock-service-badge--live {
+  background: var(--dock-red-soft);
+  color: var(--dock-red);
+  animation: dock-pulse 2s ease-in-out infinite;
+}
+
+.dock-service-badge--preservice {
+  background: var(--dock-accent-soft);
+  color: var(--dock-accent);
+}
+
+@keyframes dock-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+/* ── OBS Settings Panel ── */
+.dock-settings-panel {
+  padding: 8px 10px;
+  background: var(--dock-surface);
+  border-bottom: 1px solid var(--dock-border);
+  flex-shrink: 0;
+}
+
+.dock-error-msg {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 6px;
+  margin-bottom: 6px;
+  border-radius: 5px;
+  font-size: 10px;
+  background: var(--dock-red-soft, rgba(255, 82, 82, 0.1));
+  color: var(--dock-red, #ff5252);
+  border: 1px solid rgba(255, 82, 82, 0.2);
+}
+
+.dock-action-error {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 10px;
+  background: rgba(255, 171, 0, 0.1);
+  color: #ffab00;
+  border-top: 1px solid rgba(255, 171, 0, 0.2);
+  flex-shrink: 0;
+}
+
+/* ── Tab Navigation ── */
+.dock-tabs {
+  display: flex;
+  align-items: stretch;
+  background: var(--dock-surface);
+  border-bottom: 1px solid var(--dock-border);
+  flex-shrink: 0;
+}
+
+.dock-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 5px 3px 4px;
+  border: none;
+  background: transparent;
+  color: var(--dock-text-dim);
+  font-size: 9px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+  position: relative;
+}
+
+.dock-tab svg {
+  width: 14px; height: 14px;
+}
+
+.dock-tab:hover {
+  color: var(--dock-text);
+  background: var(--dock-surface-hover);
+}
+
+.dock-tab--active {
+  color: var(--dock-accent);
+}
+
+.dock-tab--active::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: var(--dock-accent);
+  border-radius: 2px 2px 0 0;
+}
+
+/* ── Sub-tab Navigation (inside Ministry tab) ── */
+.dock-subtabs {
+  display: flex;
+  align-items: stretch;
+  background: var(--dock-surface-alt);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  padding: 2px;
+  gap: 2px;
+}
+
+.dock-subtab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 6px;
+  border: none;
+  background: transparent;
+  color: var(--dock-text-dim);
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.dock-subtab:hover {
+  color: var(--dock-text);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dock-subtab--active {
+  color: var(--dock-text);
+  background: var(--dock-surface);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Tab content area (scrollable) ── */
+.dock-content {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 10px;
+}
+
+.dock-content::-webkit-scrollbar {
+  width: 5px;
+}
+
+.dock-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dock-content::-webkit-scrollbar-thumb {
+  background: var(--dock-border);
+  border-radius: 4px;
+}
+
+.dock-content::-webkit-scrollbar-thumb:hover {
+  background: var(--dock-surface-hover);
+}
+
+/* ── Section headers ── */
+.dock-section-label {
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--dock-text-dim);
+  margin: 8px 0 4px;
+}
+
+.dock-section-label:first-child {
+  margin-top: 0;
+}
+
+/* ── Cards / List items ── */
+.dock-card {
+  background: var(--dock-surface);
+  border: 1px solid var(--dock-border);
+  border-radius: 6px;
+  padding: 7px 10px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.dock-card:hover {
+  border-color: var(--dock-surface-hover);
+  background: var(--dock-surface-alt);
+}
+
+.dock-card--active {
+  border-color: var(--dock-accent);
+  background: var(--dock-accent-soft);
+}
+
+.dock-card__title {
+  font-weight: 600;
+  font-size: 10px;
+  color: var(--dock-text);
+  margin-bottom: 1px;
+}
+
+.dock-card__subtitle {
+  font-size: 10px;
+  color: var(--dock-text-dim);
+}
+
+/* ── Speaker avatar cards ── */
+.dock-speaker-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: var(--dock-surface);
+  border: 1px solid var(--dock-border);
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.dock-speaker-item:hover {
+  border-color: var(--dock-surface-hover);
+  background: var(--dock-surface-alt);
+}
+
+.dock-speaker-item--active {
+  border-color: var(--dock-accent);
+  background: var(--dock-accent-soft);
+}
+
+.dock-speaker-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--dock-accent-soft);
+  color: var(--dock-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 11px;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.dock-speaker-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.dock-speaker-name {
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--dock-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dock-speaker-role {
+  font-size: 10px;
+  color: var(--dock-text-dim);
+}
+
+/* ── Bible book grid ── */
+.dock-bible-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.dock-bible-grid--chapters {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.dock-bible-grid--verses {
+  grid-template-columns: repeat(5, 1fr);
+}
+
+.dock-bible-book-btn {
+  padding: 4px 2px;
+  border-radius: 4px;
+  border: 1px solid var(--dock-border);
+  background: var(--dock-surface);
+  color: var(--dock-text);
+  font-size: 10px;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dock-bible-book-btn:hover {
+  background: var(--dock-surface-hover);
+  border-color: var(--dock-surface-hover);
+}
+
+.dock-bible-book-btn--active {
+  background: var(--dock-accent);
+  color: #fff;
+  border-color: var(--dock-accent);
+}
+
+/* ── Number pad (chapter / verse) ── */
+.dock-numpad {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px;
+}
+
+.dock-numpad-btn {
+  padding:  3px;
+  border-radius: 4px;
+  border: 1px solid var(--dock-border);
+  background: var(--dock-surface);
+  color: var(--dock-text);
+  font-size: 11px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.dock-numpad-btn:hover {
+  background: var(--dock-surface-hover);
+}
+
+.dock-numpad-btn--active {
+  background: var(--dock-accent);
+  color: #fff;
+  border-color: var(--dock-accent);
+}
+
+/* ── Preview card ── */
+.dock-preview {
+  background: var(--dock-surface);
+  border: 1px solid var(--dock-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 6px 0;
+}
+
+.dock-preview__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.dock-preview__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: var(--dock-green-soft);
+  color: var(--dock-green);
+}
+
+.dock-preview__ref {
+  font-weight: 700;
+  font-size: 10px;
+  color: var(--dock-text);
+  margin-bottom: 2px;
+}
+
+.dock-preview__text {
+  font-size: 9px;
+  color: var(--dock-text-dim);
+  line-height: 1.4;
+}
+
+/* ── Staged item (above footer) ── */
+.dock-staged {
+  background: var(--dock-surface);
+  border-top: 1px solid var(--dock-border);
+  padding: 6px 10px;
+  flex-shrink: 0;
+}
+
+.dock-staged__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 3px;
+}
+
+.dock-staged__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 1px 6px;
+  border-radius: 10px;
+  font-size: 9px;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: var(--dock-accent-soft);
+  color: var(--dock-accent);
+}
+
+.dock-staged__clear {
+  background: none;
+  border: none;
+  color: var(--dock-text-dim);
+  font-size: 10px;
+  cursor: pointer;
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+.dock-staged__clear:hover {
+  color: var(--dock-red);
+  background: var(--dock-red-soft);
+}
+
+.dock-staged__label {
+  font-weight: 600;
+  font-size: 10px;
+  color: var(--dock-text);
+}
+
+.dock-staged__sub {
+  font-size: 9px;
+  color: var(--dock-text-dim);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* ── Footer actions ── */
+.dock-footer {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--dock-surface);
+  border-top: 1px solid var(--dock-border);
+  flex-shrink: 0;
+}
+
+.dock-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: none;
+  font-size: 10px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.dock-btn:active {
+  transform: scale(0.97);
+}
+
+.dock-btn--preview {
+  background: var(--dock-accent);
+  color: #fff;
+}
+
+.dock-btn--preview:hover {
+  background: #5a52e0;
+}
+
+.dock-btn--preview:disabled {
+  background: var(--dock-surface-hover);
+  color: var(--dock-text-dim);
+  cursor: not-allowed;
+}
+
+.dock-btn--live {
+  background: var(--dock-green);
+  color: #0a0a0a;
+  font-weight: 700;
+}
+
+.dock-btn--live:hover {
+  background: #00c964;
+}
+
+.dock-btn--live:disabled {
+  background: var(--dock-surface-hover);
+  color: var(--dock-text-dim);
+  cursor: not-allowed;
+}
+
+.dock-btn--danger {
+  background: var(--dock-red-soft);
+  color: var(--dock-red);
+}
+
+.dock-btn--danger:hover {
+  background: rgba(255, 82, 82, 0.2);
+}
+
+.dock-btn--ghost {
+  background: transparent;
+  color: var(--dock-text-dim);
+  border: 1px solid var(--dock-border);
+}
+
+.dock-btn--ghost:hover {
+  background: var(--dock-surface-hover);
+  color: var(--dock-text);
+}
+
+.dock-btn svg {
+  width: 14px; height: 14px;
+}
+
+/* ── Form elements ── */
+.dock-input {
+  width: 100%;
+  padding: 4px 7px;
+  border-radius: 5px;
+  border: 1px solid var(--dock-border);
+  background: var(--dock-surface);
+  color: var(--dock-text);
+  font-size: 10px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.dock-input:focus {
+  border-color: var(--dock-accent);
+}
+
+.dock-input::placeholder {
+  color: var(--dock-text-dim);
+}
+
+.dock-select {
+  width: 100%;
+  padding: 4px 7px;
+  border-radius: 5px;
+  border: 1px solid var(--dock-border);
+  background: var(--dock-surface);
+  color: var(--dock-text);
+  font-size: 10px;
+  font-family: inherit;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%238b8d9a' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  padding-right: 28px;
+  cursor: pointer;
+}
+
+.dock-select:focus {
+  border-color: var(--dock-accent);
+}
+
+/* ── Search ── */
+.dock-search {
+  position: relative;
+  margin-bottom: 6px;
+}
+
+.dock-search svg {
+  position: absolute;
+  left: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px; height: 14px;
+  color: var(--dock-text-dim);
+  pointer-events: none;
+}
+
+.dock-search .dock-input {
+  padding-left: 28px;
+}
+
+/* ── Smart search dropdown ── */
+.dock-search--smart {
+  position: relative;
+}
+
+.dock-search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  background: var(--dock-surface);
+  border: 1px solid var(--dock-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 100;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 4px;
+}
+
+.dock-search-dropdown__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 8px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--dock-text);
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.dock-search-dropdown__item:hover,
+.dock-search-dropdown__item--active {
+  background: var(--dock-accent);
+  color: #fff;
+}
+
+.dock-search-dropdown__label {
+  flex: 1;
+  font-weight: 500;
+}
+
+.dock-search-dropdown__hint {
+  font-size: 10px;
+  opacity: 0.6;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dock-search-dropdown__empty {
+  padding: 12px 10px;
+  font-size: 12px;
+  color: var(--dock-text-dim);
+  text-align: center;
+}
+
+/* ── Theme pills ── */
+.dock-theme-bar {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  margin: 6px 0;
+}
+
+.dock-theme-pill {
+  padding: 3px 10px;
+  border-radius: 14px;
+  border: 1px solid var(--dock-border);
+  background: var(--dock-surface);
+  color: var(--dock-text-dim);
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.dock-theme-pill:hover {
+  background: var(--dock-surface-hover);
+  color: var(--dock-text);
+}
+
+.dock-theme-pill--active {
+  background: var(--dock-accent-soft);
+  color: var(--dock-accent);
+  border-color: var(--dock-accent);
+}
+
+/* ── Worship lyric cards ── */
+.dock-lyric-card {
+  position: relative;
+  background: var(--dock-surface);
+  border: 1px solid var(--dock-border);
+  border-radius: 6px;
+  padding: 7px 10px;
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.dock-lyric-card:hover {
+  border-color: var(--dock-surface-hover);
+  background: var(--dock-surface-alt);
+}
+
+.dock-lyric-card--live {
+  border-color: var(--dock-green);
+  background: var(--dock-green-soft);
+}
+
+.dock-lyric-card--preview {
+  border-color: var(--dock-accent);
+  background: var(--dock-accent-soft);
+}
+
+.dock-lyric-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.dock-lyric-card__label {
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--dock-text);
+}
+
+.dock-lyric-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.dock-lyric-badge--live {
+  background: var(--dock-green-soft);
+  color: var(--dock-green);
+}
+
+.dock-lyric-badge--preview {
+  background: var(--dock-accent-soft);
+  color: var(--dock-accent);
+}
+
+.dock-lyric-card__text {
+  font-size: 10px;
+  color: var(--dock-text-dim);
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── Sermon points list ── */
+.dock-sermon-point {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  background: var(--dock-surface);
+  border: 1px solid var(--dock-border);
+  margin-bottom: 4px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.dock-sermon-point:hover {
+  border-color: var(--dock-surface-hover);
+}
+
+.dock-sermon-point--active {
+  border-color: var(--dock-accent);
+  background: var(--dock-accent-soft);
+}
+
+.dock-sermon-point__icon {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 10px;
+}
+
+.dock-sermon-point__icon--quote {
+  background: rgba(255, 193, 7, 0.15);
+  color: var(--dock-yellow);
+}
+
+.dock-sermon-point__icon--point {
+  background: var(--dock-accent-soft);
+  color: var(--dock-accent);
+}
+
+.dock-sermon-point__text {
+  font-size: 11px;
+  color: var(--dock-text);
+  flex: 1;
+}
+
+/* ── Pinned sermon message card ── */
+.dock-sermon-pinned {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 10px;
+  margin-bottom: 8px;
+  background: var(--dock-surface);
+  border: 1px solid var(--dock-accent, #6c63ff);
+  border-left: 3px solid var(--dock-accent, #6c63ff);
+  border-radius: 5px;
+}
+.dock-sermon-pinned__info {
+  flex: 1;
+  min-width: 0;
+}
+.dock-sermon-pinned__title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--dock-text);
+  line-height: 1.2;
+}
+.dock-sermon-pinned__meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--dock-text-dim);
+  margin-top: 2px;
+}
+
+/* ── Pinned/Recent pills ── */
+.dock-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.dock-chip {
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: var(--dock-surface);
+  border: 1px solid var(--dock-border);
+  color: var(--dock-text);
+  font-size: 10px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.dock-chip:hover {
+  background: var(--dock-surface-hover);
+}
+
+/* ── Empty state ── */
+.dock-empty {
+  text-align: center;
+  padding: 16px 12px;
+  color: var(--dock-text-dim);
+}
+
+.dock-empty svg {
+  width: 28px; height: 28px;
+  opacity: 0.3;
+  margin-bottom: 6px;
+}
+
+.dock-empty__title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--dock-text);
+  margin-bottom: 3px;
+}
+
+.dock-empty__text {
+  font-size: 10px;
+}
+
+/* ── Intro / Welcome screen ── */
+.dock-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 32px 24px;
+  text-align: center;
+}
+
+.dock-welcome__logo {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--dock-accent), #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.dock-welcome__logo svg {
+  width: 28px; height: 28px;
+  color: #fff;
+}
+
+.dock-welcome__title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dock-text);
+  margin-bottom: 3px;
+}
+
+.dock-welcome__subtitle {
+  font-size: 10px;
+  color: var(--dock-text-dim);
+  margin-bottom: 16px;
+}
+
+.dock-welcome__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: none;
+  background: var(--dock-accent);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.dock-welcome__btn:hover {
+  background: #5a52e0;
+}
+
+/* ── Row utilities ── */
+.dock-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dock-row--between {
+  justify-content: space-between;
+}
+
+.dock-spacer {
+  height: 8px;
+}
+
+/* ── Breadcrumb / Back ── */
+.dock-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 0 3px;
+}
+
+.dock-breadcrumb-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  color: var(--dock-accent);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 1px 3px;
+  border-radius: 3px;
+}
+
+.dock-breadcrumb-btn:hover {
+  background: var(--dock-accent-soft);
+}
+
+.dock-breadcrumb-btn svg {
+  width: 14px; height: 14px;
+}
+
+.dock-breadcrumb-sep {
+  color: var(--dock-text-dim);
+  font-size: 10px;
+}
+
+.dock-breadcrumb-current {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--dock-text);
+}
+
+/* ── Theme picker grid ── */
+
+.dock-lt-theme-picker,
+.dock-bible-theme-picker {
+  margin-top: 10px;
+}
+
+.dock-theme-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--dock-border) transparent;
+}
+
+.dock-theme-grid--bible {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  max-height: none;
+}
+
+.dock-theme-card {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding: 0;
+  background: var(--dock-surface);
+  border: 1px solid var(--dock-border);
+  border-radius: 6px;
+  cursor: pointer;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  text-align: left;
+  color: var(--dock-text);
+  font-size: 10px;
+}
+
+.dock-theme-card:hover {
+  border-color: var(--dock-accent);
+  box-shadow: 0 0 0 1px var(--dock-accent-soft);
+}
+
+.dock-theme-card--active {
+  border-color: var(--dock-accent);
+  box-shadow: 0 0 0 2px var(--dock-accent-soft);
+  background: var(--dock-accent-soft);
+}
+
+.dock-theme-card__accent {
+  height: 4px;
+  width: 100%;
+  border-radius: 0;
+}
+
+.dock-theme-card__name {
+  padding: 4px 5px;
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 1.15;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dock-theme-card__preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 32px;
+  border-radius: 4px 4px 0 0;
+}
+
+.dock-theme-card__type {
+  padding: 0 5px 4px;
+  font-size: 8px;
+  font-weight: 400;
+  color: var(--dock-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.dock-theme-card--bible {
+  flex-direction: column;
+}
+
+.dock-theme-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: 100%;
+  padding: 6px 0;
+  margin-top: 4px;
+  background: none;
+  border: none;
+  color: var(--dock-accent);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.dock-theme-toggle:hover {
+  background: var(--dock-accent-soft);
+}
+
+/* ── Theme dropdown selector ── */
+.dock-theme-dropdown-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--dock-border);
+  background: var(--dock-surface);
+  color: var(--dock-text);
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.dock-theme-dropdown-trigger--preview {
+  align-items: stretch;
+}
+
+.dock-theme-dropdown-trigger:hover {
+  border-color: var(--dock-accent);
+}
+
+.dock-theme-dropdown-trigger__swatch {
+  width: 22px;
+  height: 16px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dock-theme-dropdown-trigger__swatch--preview {
+  width: 54px;
+  height: 34px;
+  overflow: hidden;
+  padding: 4px 5px;
+}
+
+.dock-theme-dropdown-trigger__sample {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.dock-theme-dropdown-trigger__sample-main,
+.dock-theme-dropdown-trigger__sample-ref {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1;
+}
+
+.dock-theme-dropdown-trigger__sample-ref {
+  opacity: 0.85;
+}
+
+.dock-theme-dropdown-trigger__name {
+  flex: 1;
+  text-align: left;
+  font-weight: 500;
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dock-theme-dropdown-trigger__favorite {
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.dock-theme-dropdown-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 3px;
+  background: var(--dock-surface);
+  border: 1px solid var(--dock-border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+  z-index: 120;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 3px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--dock-border) transparent;
+}
+
+.dock-theme-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 4px 7px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--dock-text);
+  font-size: 10px;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.dock-theme-dropdown-item:hover {
+  background: var(--dock-surface-hover);
+}
+
+.dock-theme-dropdown-item--active {
+  background: var(--dock-accent-soft);
+  color: var(--dock-accent);
+}
+
+.dock-theme-dropdown-item__swatch {
+  width: 18px;
+  height: 13px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dock-theme-dropdown-item__name {
+  flex: 1;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dock-theme-dropdown-item__favorite {
+  color: #f59e0b;
+  flex-shrink: 0;
+}
+
+.dock-theme-dropdown-section {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px 3px;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--dock-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border-top: 1px solid var(--dock-border);
+}
+
+.dock-theme-dropdown-section:first-child {
+  border-top: none;
+  padding-top: 4px;
+}
+
+/* ── Dock Theme Browser Modal (dtb-*) ── */
+
+.dtb-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 500;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: dtb-fadeIn 0.15s ease;
+}
+
+@keyframes dtb-fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.dtb-modal {
+  width: 94%;
+  max-width: 480px;
+  max-height: 80vh;
+  background: var(--dock-surface, #1a1a2e);
+  border-radius: 12px;
+  border: 1px solid var(--dock-border, #2a2a42);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+}
+
+.dtb-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 8px;
+  border-bottom: 1px solid var(--dock-border);
+}
+
+.dtb-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--dock-text);
+  margin: 0;
+}
+
+.dtb-header__actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dtb-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--dock-text-dim);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.dtb-close-btn:hover {
+  background: var(--dock-surface-hover);
+  color: var(--dock-text);
+}
+
+.dtb-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 12px;
+  padding: 5px 10px;
+  background: var(--dock-bg, #0d0d1a);
+  border-radius: 6px;
+  border: 1px solid var(--dock-border);
+  color: var(--dock-text-dim);
+}
+
+.dtb-search__input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--dock-text);
+  font-size: 11px;
+  font-family: inherit;
+  outline: none;
+}
+
+.dtb-search__input::placeholder {
+  color: var(--dock-text-dim);
+}
+
+.dtb-search__clear {
+  display: inline-flex;
+  background: none;
+  border: none;
+  color: var(--dock-text-dim);
+  cursor: pointer;
+  padding: 0;
+}
+
+.dtb-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 12px 14px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--dock-border) transparent;
+}
+
+.dtb-section {
+  margin-bottom: 10px;
+}
+
+.dtb-section__header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--dock-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 0 6px;
+}
+
+.dtb-section__count {
+  font-weight: 500;
+  opacity: 0.6;
+}
+
+.dtb-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 8px;
+}
+
+.dtb-card {
+  display: flex;
+  flex-direction: column;
+  border-radius: 8px;
+  border: 1.5px solid transparent;
+  background: var(--dock-bg, #0d0d1a);
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  overflow: hidden;
+  text-align: left;
+  font-family: inherit;
+  color: var(--dock-text);
+  padding: 0;
+}
+
+.dtb-card:hover {
+  border-color: var(--dock-accent, #7c3aed);
+  box-shadow: 0 0 0 1px var(--dock-accent, #7c3aed);
+}
+
+.dtb-card--active {
+  border-color: var(--dock-accent, #7c3aed);
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.35);
+}
+
+.dtb-card__swatch {
+  position: relative;
+  height: 62px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px 6px 0 0;
+  padding: 6px 8px;
+  overflow: hidden;
+}
+
+.dtb-card__swatch-preview {
+  display: flex;
+  width: 100%;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+}
+
+.dtb-card__swatch-main,
+.dtb-card__swatch-ref {
+  display: block;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dtb-card__swatch-ref {
+  opacity: 0.86;
+}
+
+.dtb-card__logo-badge {
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 3px;
+  padding: 1px 3px;
+  display: inline-flex;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.dtb-card__info {
+  display: flex;
+  align-items: flex-start;
+  padding: 5px 7px 2px;
+  gap: 4px;
+}
+
+.dtb-card__name {
+  flex: 1;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dtb-card__favorite-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  padding: 1px 5px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.14);
+  color: #f59e0b;
+  font-size: 8px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dtb-card__meta {
+  display: flex;
+  gap: 3px;
+  padding: 2px 7px 5px;
+}
+
+.dtb-card__badge {
+  font-size: 8px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  text-transform: capitalize;
+}
+
+.dtb-card__badge--bible {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+.dtb-card__badge--worship {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+}
+
+.dtb-card__badge--general {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+}
+
+.dtb-card__badge--custom {
+  background: rgba(251, 146, 60, 0.15);
+  color: #fb923c;
+}
+
+.dtb-card__badge--builtin {
+  background: rgba(148, 163, 184, 0.1);
+  color: rgba(148, 163, 184, 0.7);
+}
+
+.dtb-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 32px 16px;
+  color: var(--dock-text-dim);
+  font-size: 11px;
+}
+
+/* ── Gear button for theme picker label row ── */
+/* ===================================================================
+   Dock Service Tab (dock-service-*)
+   =================================================================== */
+
+.dock-service-tab {
+  padding: 2px 0;
+}
+
+.dock-service-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 24px 12px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--dock-text-dim, #888);
+  line-height: 1.5;
+}
+
+.dock-service-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dock-service-plan-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--dock-border, rgba(255, 255, 255, 0.08));
+  border-radius: 6px;
+  background: var(--dock-card, rgba(255, 255, 255, 0.04));
+  color: var(--dock-text, #e8eaed);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.12s, background 0.12s;
+}
+
+.dock-service-plan-btn:hover {
+  border-color: var(--dock-accent, #7c5cfc);
+  background: rgba(124, 92, 252, 0.06);
+}
+
+.dock-service-plan-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.dock-service-plan-name {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dock-service-plan-meta {
+  font-size: 9px;
+  color: var(--dock-text-dim, #888);
+}
+
+/* Header */
+.dock-service-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.dock-service-back {
+  background: none;
+  border: none;
+  color: var(--dock-text-dim, #888);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  transition: color 0.12s;
+}
+
+.dock-service-back:hover {
+  color: var(--dock-text, #e8eaed);
+}
+
+.dock-service-header-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.dock-service-header-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--dock-text, #e8eaed);
+}
+
+.dock-service-header-progress {
+  font-size: 9px;
+  color: var(--dock-text-dim, #888);
+}
+
+/* Progress bar */
+.dock-service-progress-bar {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 2px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.dock-service-progress-fill {
+  height: 100%;
+  background: var(--dock-green, #4ade80);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* Checklist items */
+.dock-service-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dock-service-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--dock-border, rgba(255, 255, 255, 0.06));
+  border-radius: 5px;
+  background: var(--dock-card, rgba(255, 255, 255, 0.03));
+  color: var(--dock-text, #e8eaed);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.12s, opacity 0.2s;
+}
+
+.dock-service-item:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.dock-service-item--done {
+  opacity: 0.45;
+}
+
+.dock-service-item--done .dock-service-item-label {
+  text-decoration: line-through;
+}
+
+.dock-service-item--done .dock-service-item-icon {
+  color: var(--dock-green, #4ade80) !important;
+}
+
+.dock-service-item-num {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--dock-text-dim, #555);
+  min-width: 14px;
+  text-align: center;
+}
+
+.dock-service-item-icon {
+  color: var(--dock-accent, #7c5cfc);
+}
+
+.dock-service-item-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.dock-service-item-label {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.dock-service-item-details {
+  font-size: 9px;
+  color: var(--dock-text-dim, #888);
+}
+
+@keyframes dock-spin {
+  to { transform: rotate(360deg); }
+}
+
+.dock-spin {
+  animation: dock-spin 1s linear infinite;
+}

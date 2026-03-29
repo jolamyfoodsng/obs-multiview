@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Service Hub: Pre-Service Auto</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#0df259",
+                        "background-light": "#f5f8f6",
+                        "background-dark": "#102216",
+                        "card-dark": "#182e21", // Slightly lighter than background for cards
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #102216;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #28392e;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #3b5443;
+        }.toggle-checkbox:checked {
+            right: 0;
+            border-color: #0df259;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #0df259;
+        }.modal-overlay {
+            backdrop-filter: blur(4px);
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #0df259;
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 0 10px rgba(13, 242, 89, 0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #28392e;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 font-display min-h-screen flex flex-col overflow-hidden relative">
+<div class="absolute inset-0 z-50 flex items-center justify-center bg-black/60 modal-overlay">
+<div class="bg-[#182e21] w-full max-w-2xl rounded-2xl shadow-2xl border border-[#28392e] overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
+<div class="px-8 py-6 border-b border-[#28392e] flex items-center justify-between bg-[#14261b]">
+<div class="flex items-center gap-4">
+<div class="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/20 text-primary">
+<span class="material-symbols-outlined text-3xl">switch_video</span>
+</div>
+<div>
+<h3 class="text-white text-2xl font-bold tracking-tight">Scene Switch Configuration</h3>
+<p class="text-[#9cbaa6] text-sm mt-1">Configure automated OBS scene changes.</p>
+</div>
+</div>
+<button class="text-[#9cbaa6] hover:text-white transition-colors">
+<span class="material-symbols-outlined text-2xl">close</span>
+</button>
+</div>
+<div class="p-8 bg-[#102216] flex flex-col gap-8">
+<div class="flex flex-col gap-2">
+<label class="text-[#9cbaa6] text-xs font-bold uppercase tracking-wider" for="obs-scene">Target OBS Scene</label>
+<div class="relative">
+<select class="w-full bg-[#182e21] border border-[#28392e] text-white text-lg rounded-xl px-4 py-3 appearance-none focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" id="obs-scene">
+<option value="">Select a scene...</option>
+<option selected="" value="main">Main Stage (Camera 1 + Lower Thirds)</option>
+<option value="worship">Worship Wide (All Cameras)</option>
+<option value="preacher">Preacher Close-up</option>
+<option value="announcements">Announcement Slides</option>
+<option value="countdown">Countdown Overlay</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#9cbaa6]">
+<span class="material-symbols-outlined">expand_more</span>
+</div>
+</div>
+<p class="text-xs text-[#5a7a66] mt-1 flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">wifi</span>
+                        Synced with OBS WebSocket
+                    </p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+<div class="flex flex-col gap-2">
+<label class="text-[#9cbaa6] text-xs font-bold uppercase tracking-wider" for="transition-type">Transition Type</label>
+<div class="relative">
+<select class="w-full bg-[#182e21] border border-[#28392e] text-white rounded-xl px-4 py-3 appearance-none focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all" id="transition-type">
+<option value="cut">Cut</option>
+<option selected="" value="fade">Fade</option>
+<option value="cross-zoom">Cross-zoom</option>
+<option value="swipe">Swipe Left</option>
+<option value="stinger">Stinger: Logo Wipe</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-[#9cbaa6]">
+<span class="material-symbols-outlined">expand_more</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-4">
+<div class="flex justify-between items-center">
+<label class="text-[#9cbaa6] text-xs font-bold uppercase tracking-wider" for="duration">Duration</label>
+<span class="text-primary font-mono text-sm bg-primary/10 px-2 py-0.5 rounded border border-primary/20">1200ms</span>
+</div>
+<div class="relative pt-2">
+<input class="w-full bg-transparent appearance-none cursor-pointer" id="duration" max="5000" min="0" step="100" type="range" value="1200"/>
+<div class="flex justify-between text-[#5a7a66] text-[10px] mt-1 font-mono uppercase">
+<span>Cut (0ms)</span>
+<span>5s</span>
+</div>
+</div>
+</div>
+</div>
+<div class="bg-[#182e21] rounded-xl border border-[#28392e] p-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<div class="size-10 rounded-lg bg-[#28392e] flex items-center justify-center text-[#9cbaa6]">
+<span class="material-symbols-outlined">preview</span>
+</div>
+<div>
+<h4 class="text-white font-medium text-sm">Preview Transition</h4>
+<p class="text-[#5a7a66] text-xs">Triggers in Preview monitor only, not Program.</p>
+</div>
+</div>
+<button class="px-4 py-2 rounded-lg bg-[#28392e] hover:bg-[#3b5443] border border-[#3b5443] text-white text-sm font-medium transition-all flex items-center gap-2 group">
+<span class="material-symbols-outlined text-primary group-hover:scale-110 transition-transform">play_arrow</span>
+                            Test Switch
+                        </button>
+</div>
+</div>
+<div class="px-8 py-5 border-t border-[#28392e] bg-[#14261b] flex items-center justify-end gap-3">
+<button class="px-5 py-2.5 rounded-lg text-[#9cbaa6] font-medium hover:text-white hover:bg-[#28392e] transition-colors">
+                Cancel
+            </button>
+<button class="px-6 py-2.5 rounded-lg bg-primary text-[#102216] font-bold hover:bg-[#0bc94a] transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(13,242,89,0.3)] hover:shadow-[0_0_20px_rgba(13,242,89,0.5)]">
+<span class="material-symbols-outlined text-lg">save</span>
+                Save Configuration
+            </button>
+</div>
+</div>
+</div>
+<header class="flex flex-col w-full border-b border-[#28392e] bg-background-dark shrink-0 z-20 blur-[2px]">
+<div class="flex items-center justify-between px-6 py-4">
+<div class="flex items-center gap-3">
+<div class="size-8 text-primary">
+<svg fill="none" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg">
+<path d="M42.4379 44C42.4379 44 36.0744 33.9038 41.1692 24C46.8624 12.9336 42.2078 4 42.2078 4L7.01134 4C7.01134 4 11.6577 12.932 5.96912 23.9969C0.876273 33.9029 7.27094 44 7.27094 44L42.4379 44Z" fill="currentColor"></path>
+</svg>
+</div>
+<h1 class="text-white text-xl font-bold tracking-tight">Sunday Switcher</h1>
+</div>
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2 text-sm text-[#9cbaa6]">
+<span class="material-symbols-outlined text-[20px]">wifi</span>
+<span>Connected</span>
+</div>
+<div class="h-8 w-[1px] bg-[#28392e]"></div>
+<button class="flex items-center gap-2 text-white hover:text-primary transition-colors">
+<span class="material-symbols-outlined">settings</span>
+</button>
+<div class="size-9 rounded-full bg-cover bg-center border-2 border-[#28392e]" data-alt="User profile picture showing a smiling man" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuDpgHDPAW8qDjOnzQeQq0NJ66TWiRiXBC_oIJk1fB_uThrfO2SwoH37zCyO-C7AEL_P4wVQ53f4PEXWf8_rLCOqFHVMhqvKiM7iOdrFqnxfuRKTWJaY_4YePWubSyC_BePbLwzWg2LD5TtpDWHTgQLleCQnAoSmoCCoagZHp3kFkZWz_UGx60HEZerEXccQgkqCYjm3eJhqVjqrYJ05NZzKLhrBUnWx0outnD41m89ejm4tUDA-ONrHtFKp5DUnnp88jRB7VlYjMA");'></div>
+</div>
+</div>
+<div class="flex px-6 gap-8 overflow-x-auto">
+<a class="flex items-center gap-2 border-b-[3px] border-b-transparent text-[#9cbaa6] hover:text-white pb-3 pt-1 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">queue_music</span>
+<span class="text-sm font-bold tracking-wide">Worship</span>
+</a>
+<a class="flex items-center gap-2 border-b-[3px] border-b-transparent text-[#9cbaa6] hover:text-white pb-3 pt-1 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">menu_book</span>
+<span class="text-sm font-bold tracking-wide">Bible</span>
+</a>
+<a class="flex items-center gap-2 border-b-[3px] border-b-transparent text-[#9cbaa6] hover:text-white pb-3 pt-1 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">record_voice_over</span>
+<span class="text-sm font-bold tracking-wide">Speaker</span>
+</a>
+<a class="flex items-center gap-2 border-b-[3px] border-b-primary text-white pb-3 pt-1 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px] text-primary">auto_fix_high</span>
+<span class="text-sm font-bold tracking-wide text-white">Pre-Service Auto</span>
+</a>
+<a class="flex items-center gap-2 border-b-[3px] border-b-transparent text-[#9cbaa6] hover:text-white pb-3 pt-1 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">layers</span>
+<span class="text-sm font-bold tracking-wide">Overlays</span>
+</a>
+</div>
+</header>
+<main class="flex flex-1 overflow-hidden relative blur-[2px]">
+<aside class="w-full max-w-[400px] border-r border-[#28392e] bg-background-dark flex flex-col p-6 gap-6 z-10 shadow-xl">
+<div>
+<h2 class="text-white text-3xl font-black tracking-tight mb-2">Pre-Service Automation</h2>
+<p class="text-[#9cbaa6] text-sm leading-relaxed">Configure the run-of-show for the moments leading up to the service start.</p>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<button class="col-span-1 group flex flex-col items-center justify-center gap-1 rounded-xl h-24 bg-primary hover:bg-[#0bc94a] text-background-dark transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-3xl font-bold">play_arrow</span>
+<span class="text-sm font-bold uppercase tracking-wider">Run Sequence</span>
+</button>
+<button class="col-span-1 group flex flex-col items-center justify-center gap-1 rounded-xl h-24 border-2 border-[#3b5443] hover:border-primary hover:text-primary text-[#9cbaa6] bg-transparent transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-3xl">visibility</span>
+<span class="text-sm font-bold uppercase tracking-wider">Preview</span>
+</button>
+</div>
+<div class="rounded-xl bg-card-dark border border-primary/30 p-5 shadow-[0_0_20px_rgba(13,242,89,0.05)] relative overflow-hidden">
+<div class="absolute top-0 right-0 p-3">
+<span class="flex h-3 w-3">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+<span class="relative inline-flex rounded-full h-3 w-3 bg-primary"></span>
+</span>
+</div>
+<div class="flex flex-col gap-4 relative z-10">
+<div class="flex justify-between items-end">
+<span class="text-primary text-xs font-bold uppercase tracking-wider">Now Playing</span>
+</div>
+<div>
+<h3 class="text-white text-xl font-bold leading-tight mb-1">1. Play Video: Intro</h3>
+<p class="text-[#9cbaa6] text-xs">Remaining Duration</p>
+</div>
+<div class="text-4xl font-mono font-bold text-white tracking-tighter tabular-nums">
+                        01:28
+                    </div>
+<div class="w-full bg-[#111813] rounded-full h-2 mt-1">
+<div class="bg-primary h-2 rounded-full transition-all duration-1000 ease-linear" style="width: 25%"></div>
+</div>
+<div class="flex items-center gap-2 mt-1 pt-4 border-t border-[#28392e]">
+<span class="material-symbols-outlined text-[#9cbaa6] text-sm">skip_next</span>
+<p class="text-[#9cbaa6] text-sm truncate">Up Next: <span class="text-white font-medium">Show Image: Welcome Slide</span></p>
+<span class="ml-auto text-white font-mono text-xs bg-[#28392e] px-1.5 py-0.5 rounded">04:32</span>
+</div>
+</div>
+</div>
+<div class="mt-auto">
+<div class="flex items-center justify-between py-3 border-t border-[#28392e]">
+<span class="text-[#9cbaa6] text-sm font-medium">Loop Sequence</span>
+<div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+<input class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 appearance-none cursor-pointer border-[#28392e] checked:border-primary" id="loop-toggle" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-[#28392e] cursor-pointer" for="loop-toggle"></label>
+</div>
+</div>
+<div class="flex items-center justify-between py-3 border-t border-[#28392e]">
+<span class="text-[#9cbaa6] text-sm font-medium">Master Volume</span>
+<div class="flex items-center gap-2 w-1/2">
+<span class="material-symbols-outlined text-[#9cbaa6] text-xs">volume_down</span>
+<input class="w-full h-1 bg-[#28392e] rounded-lg appearance-none cursor-pointer accent-primary" type="range"/>
+<span class="material-symbols-outlined text-white text-xs">volume_up</span>
+</div>
+</div>
+</div>
+</aside>
+<section class="flex-1 flex flex-col bg-[#0c140e] overflow-hidden">
+<div class="flex items-center justify-between px-8 py-4 border-b border-[#28392e]">
+<div class="flex items-center gap-2">
+<span class="text-white font-bold text-lg">Sequence Steps</span>
+<span class="bg-[#28392e] text-[#9cbaa6] text-xs px-2 py-0.5 rounded-full font-mono">4 items</span>
+</div>
+<button class="flex items-center gap-2 bg-[#28392e] hover:bg-[#3b5443] text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
+<span class="material-symbols-outlined text-sm">add</span>
+                    Add Step
+                </button>
+</div>
+<div class="flex-1 overflow-y-auto p-8">
+<div class="max-w-4xl mx-auto flex flex-col gap-4">
+<div class="group relative flex gap-4 p-4 rounded-lg bg-card-dark border-l-4 border-primary shadow-lg transition-all hover:bg-[#1f382a]">
+<div class="flex flex-col items-center gap-2 pt-1">
+<span class="flex items-center justify-center size-6 rounded-full bg-primary text-background-dark text-xs font-bold">1</span>
+<div class="w-0.5 h-full bg-[#28392e] group-last:hidden"></div>
+</div>
+<div class="flex-1 flex flex-col md:flex-row gap-4 md:items-center">
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-primary text-lg">play_circle</span>
+<h4 class="text-white font-bold truncate">Play Video: Intro Reel</h4>
+</div>
+<div class="flex gap-2 text-xs text-[#9cbaa6]">
+<span class="flex items-center gap-1 bg-[#111813] px-1.5 rounded"><span class="material-symbols-outlined text-[10px]">movie</span> Media</span>
+<span>•</span>
+<span class="truncate">Reel_2023_v4.mp4</span>
+</div>
+</div>
+<div class="flex items-center gap-6 shrink-0">
+<div class="flex flex-col gap-1">
+<label class="text-[10px] uppercase text-[#5a7a66] font-bold tracking-wider">Duration</label>
+<div class="bg-[#111813] border border-[#28392e] rounded px-2 py-1 flex items-center gap-2 w-24">
+<span class="material-symbols-outlined text-[#5a7a66] text-xs">timer</span>
+<input class="bg-transparent text-white text-sm font-mono w-full focus:outline-none text-right" type="text" value="02:00"/>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<label class="text-[10px] uppercase text-[#5a7a66] font-bold tracking-wider">Transition</label>
+<div class="relative">
+<select class="appearance-none bg-[#111813] border border-[#28392e] text-white text-sm rounded px-3 py-1 pr-8 focus:outline-none focus:border-primary">
+<option>Fade (1s)</option>
+<option>Cut</option>
+<option>Wipe Left</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#9cbaa6]">
+<span class="material-symbols-outlined text-xs">expand_more</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-1 items-center">
+<label class="text-[10px] uppercase text-[#5a7a66] font-bold tracking-wider">Auto</label>
+<div class="relative inline-block w-8 align-middle select-none">
+<input checked="" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer border-[#28392e]" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-4 rounded-full bg-primary cursor-pointer"></label>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pl-4 border-l border-[#28392e]">
+<button class="p-1.5 text-[#9cbaa6] hover:text-white hover:bg-[#28392e] rounded"><span class="material-symbols-outlined text-lg">edit</span></button>
+<button class="p-1.5 text-[#9cbaa6] hover:text-red-400 hover:bg-[#28392e] rounded"><span class="material-symbols-outlined text-lg">delete</span></button>
+<button class="p-1.5 text-[#9cbaa6] hover:text-white hover:bg-[#28392e] rounded cursor-move"><span class="material-symbols-outlined text-lg">drag_indicator</span></button>
+</div>
+</div>
+</div>
+<div class="group relative flex gap-4 p-4 rounded-lg bg-[#14231b] border border-[#28392e] hover:bg-[#1f382a] transition-all">
+<div class="flex flex-col items-center gap-2 pt-1">
+<span class="flex items-center justify-center size-6 rounded-full bg-[#28392e] text-[#9cbaa6] text-xs font-bold group-hover:bg-[#3b5443] group-hover:text-white transition-colors">2</span>
+<div class="w-0.5 h-full bg-[#28392e] group-last:hidden"></div>
+</div>
+<div class="flex-1 flex flex-col md:flex-row gap-4 md:items-center opacity-70 group-hover:opacity-100 transition-opacity">
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-[#9cbaa6] text-lg">image</span>
+<h4 class="text-slate-200 font-medium truncate">Show Image: Welcome Slide</h4>
+</div>
+<div class="flex gap-2 text-xs text-[#5a7a66]">
+<span class="flex items-center gap-1 bg-[#111813] px-1.5 rounded"><span class="material-symbols-outlined text-[10px]">folder_open</span> Assets</span>
+<span>•</span>
+<span class="truncate">Welcome_Fall_2024.png</span>
+</div>
+</div>
+<div class="flex items-center gap-6 shrink-0">
+<div class="flex flex-col gap-1">
+<label class="text-[10px] uppercase text-[#5a7a66] font-bold tracking-wider">Duration</label>
+<div class="bg-[#111813] border border-[#28392e] rounded px-2 py-1 flex items-center gap-2 w-24">
+<span class="material-symbols-outlined text-[#5a7a66] text-xs">timer</span>
+<input class="bg-transparent text-[#9cbaa6] text-sm font-mono w-full focus:outline-none text-right" type="text" value="05:00"/>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<label class="text-[10px] uppercase text-[#5a7a66] font-bold tracking-wider">Transition</label>
+<div class="relative">
+<select class="appearance-none bg-[#111813] border border-[#28392e] text-[#9cbaa6] text-sm rounded px-3 py-1 pr-8 focus:outline-none focus:border-primary">
+<option>Cross Dissolve</option>
+<option>Cut</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#5a7a66]">
+<span class="material-symbols-outlined text-xs">expand_more</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-1 items-center">
+<label class="text-[10px] uppercase text-[#5a7a66] font-bold tracking-wider">Auto</label>
+<div class="relative inline-block w-8 align-middle select-none">
+<input checked="" class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer border-[#28392e]" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-4 rounded-full bg-primary cursor-pointer"></label>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pl-4 border-l border-[#28392e]">
+<button class="p-1.5 text-[#9cbaa6] hover:text-white hover:bg-[#28392e] rounded"><span class="material-symbols-outlined text-lg">edit</span></button>
+<button class="p-1.5 text-[#9cbaa6] hover:text-red-400 hover:bg-[#28392e] rounded"><span class="material-symbols-outlined text-lg">delete</span></button>
+<button class="p-1.5 text-[#9cbaa6] hover:text-white hover:bg-[#28392e] rounded cursor-move"><span class="material-symbols-outlined text-lg">drag_indicator</span></button>
+</div>
+</div>
+</div>
+<div class="group relative flex gap-4 p-4 rounded-lg bg-[#14231b] border border-[#28392e] hover:bg-[#1f382a] transition-all">
+<div class="flex flex-col items-center gap-2 pt-1">
+<span class="flex items-center justify-center size-6 rounded-full bg-[#28392e] text-[#9cbaa6] text-xs font-bold group-hover:bg-[#3b5443] group-hover:text-white transition-colors">3</span>
+<div class="w-0.5 h-full bg-[#28392e] group-last:hidden"></div>
+</div>
+<div class="flex-1 flex flex-col md:flex-row gap-4 md:items-center opacity-70 group-hover:opacity-100 transition-opacity">
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-[#9cbaa6] text-lg">hourglass_empty</span>
+<h4 class="text-slate-200 font-medium truncate">Countdown Timer: 10 Min</h4>
+</div>
+<div class="flex gap-2 text-xs text-[#5a7a66]">
+<span class="flex items-center gap-1 bg-[#111813] px-1.5 rounded"><span class="material-symbols-outlined text-[10px]">build</span> Generated</span>
+<span>•</span>
+<span class="truncate">Theme: Modern Dark</span>
+</div>
+</div>
+<div class="flex items-center gap-6 shrink-0">
+<div class="flex flex-col gap-1">
+<label class="text-[10px] uppercase text-[#5a7a66] font-bold tracking-wider">Duration</label>
+<div class="bg-[#111813] border border-[#28392e] rounded px-2 py-1 flex items-center gap-2 w-24">
+<span class="material-symbols-outlined text-[#5a7a66] text-xs">timer</span>
+<input class="bg-transparent text-[#9cbaa6] text-sm font-mono w-full focus:outline-none text-right" type="text" value="10:00"/>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<label class="text-[10px] uppercase text-[#5a7a66] font-bold tracking-wider">Transition</label>
+<div class="relative">
+<select class="appearance-none bg-[#111813] border border-[#28392e] text-[#9cbaa6] text-sm rounded px-3 py-1 pr-8 focus:outline-none focus:border-primary">
+<option>Cut</option>
+<option>Fade</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#5a7a66]">
+<span class="material-symbols-outlined text-xs">expand_more</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-1 items-center">
+<label class="text-[10px] uppercase text-[#5a7a66] font-bold tracking-wider">Auto</label>
+<div class="relative inline-block w-8 align-middle select-none">
+<input class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer border-[#28392e]" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-4 rounded-full bg-[#28392e] cursor-pointer"></label>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pl-4 border-l border-[#28392e]">
+<button class="p-1.5 text-[#9cbaa6] hover:text-white hover:bg-[#28392e] rounded"><span class="material-symbols-outlined text-lg">edit</span></button>
+<button class="p-1.5 text-[#9cbaa6] hover:text-red-400 hover:bg-[#28392e] rounded"><span class="material-symbols-outlined text-lg">delete</span></button>
+<button class="p-1.5 text-[#9cbaa6] hover:text-white hover:bg-[#28392e] rounded cursor-move"><span class="material-symbols-outlined text-lg">drag_indicator</span></button>
+</div>
+</div>
+</div>
+<div class="group relative flex gap-4 p-4 rounded-lg bg-[#14231b] border border-[#28392e] hover:bg-[#1f382a] transition-all">
+<div class="flex flex-col items-center gap-2 pt-1">
+<span class="flex items-center justify-center size-6 rounded-full bg-[#28392e] text-[#9cbaa6] text-xs font-bold group-hover:bg-[#3b5443] group-hover:text-white transition-colors">4</span>
+</div>
+<div class="flex-1 flex flex-col md:flex-row gap-4 md:items-center opacity-70 group-hover:opacity-100 transition-opacity">
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-1">
+<span class="material-symbols-outlined text-[#9cbaa6] text-lg">mic</span>
+<h4 class="text-slate-200 font-medium truncate">Mic Check: Stage</h4>
+</div>
+<div class="flex gap-2 text-xs text-[#5a7a66]">
+<span class="flex items-center gap-1 bg-[#111813] px-1.5 rounded"><span class="material-symbols-outlined text-[10px]">settings_input_component</span> Audio</span>
+<span>•</span>
+<span class="truncate">Gain: +4db</span>
+</div>
+</div>
+<div class="flex items-center gap-6 shrink-0">
+<div class="flex flex-col gap-1">
+<label class="text-[10px] uppercase text-[#5a7a66] font-bold tracking-wider">Duration</label>
+<div class="bg-[#111813] border border-[#28392e] rounded px-2 py-1 flex items-center gap-2 w-24">
+<span class="material-symbols-outlined text-[#5a7a66] text-xs">timer</span>
+<input class="bg-transparent text-[#9cbaa6] text-sm font-mono w-full focus:outline-none text-right" type="text" value="00:30"/>
+</div>
+</div>
+<div class="flex flex-col gap-1">
+<label class="text-[10px] uppercase text-[#5a7a66] font-bold tracking-wider">Transition</label>
+<div class="relative">
+<select class="appearance-none bg-[#111813] border border-[#28392e] text-[#9cbaa6] text-sm rounded px-3 py-1 pr-8 focus:outline-none focus:border-primary">
+<option>Cut</option>
+</select>
+<div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#5a7a66]">
+<span class="material-symbols-outlined text-xs">expand_more</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-1 items-center">
+<label class="text-[10px] uppercase text-[#5a7a66] font-bold tracking-wider">Auto</label>
+<div class="relative inline-block w-8 align-middle select-none">
+<input class="toggle-checkbox absolute block w-4 h-4 rounded-full bg-white border-4 appearance-none cursor-pointer border-[#28392e]" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-4 rounded-full bg-[#28392e] cursor-pointer"></label>
+</div>
+</div>
+</div>
+<div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pl-4 border-l border-[#28392e]">
+<button class="p-1.5 text-[#9cbaa6] hover:text-white hover:bg-[#28392e] rounded"><span class="material-symbols-outlined text-lg">edit</span></button>
+<button class="p-1.5 text-[#9cbaa6] hover:text-red-400 hover:bg-[#28392e] rounded"><span class="material-symbols-outlined text-lg">delete</span></button>
+<button class="p-1.5 text-[#9cbaa6] hover:text-white hover:bg-[#28392e] rounded cursor-move"><span class="material-symbols-outlined text-lg">drag_indicator</span></button>
+</div>
+</div>
+</div>
+<button class="flex items-center justify-center gap-2 border-2 border-dashed border-[#28392e] hover:border-[#3b5443] hover:bg-[#14231b] p-6 rounded-lg text-[#5a7a66] hover:text-[#9cbaa6] transition-all group">
+<span class="material-symbols-outlined group-hover:scale-110 transition-transform">add_circle</span>
+<span class="font-medium">Add to Sequence</span>
+</button>
+</div>
+</div>
+</section>
+</main>
+</body></html>

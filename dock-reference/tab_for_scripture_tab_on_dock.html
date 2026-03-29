@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>OBS Dock - Bible Selection</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#3b82f6",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#1f212a",
+                        "surface-dark": "#2a2d3a",
+                        "surface-hover": "#363a4a",
+                        "surface-active": "#4b5563",
+                        "danger": "#dc2626",
+                        "success": "#22c55e",
+                        "warning": "#eab308"
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.375rem", "xl": "0.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f212a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b4f6b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #636888;
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-slate-100 font-display h-screen flex justify-center overflow-hidden">
+<div class="w-full h-full flex flex-col bg-background-dark border-r border-white/5 relative">
+<header class="bg-surface-dark border-b border-white/10 px-4 py-3 shrink-0 flex items-center gap-3">
+<button class="text-slate-400 hover:text-white transition-colors flex items-center justify-center rounded-full w-8 h-8 hover:bg-white/5">
+<span class="material-symbols-outlined text-xl">arrow_back</span>
+</button>
+<h1 class="text-sm font-bold text-white tracking-wide uppercase">Show Scripture</h1>
+</header>
+<main class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+<section class="flex gap-2">
+<div class="relative flex-1">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-slate-500 text-lg">search</span>
+</div>
+<input autofocus="" class="w-full bg-surface-dark border border-white/10 rounded-lg py-2.5 pl-9 pr-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all shadow-sm" placeholder="Search..." type="text"/>
+</div>
+<select class="w-20 bg-surface-dark border border-white/10 rounded-lg py-2.5 px-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all shadow-sm font-semibold">
+<option>NKJV</option>
+<option>KJV</option>
+<option>NIV</option>
+<option>ESV</option>
+<option>NLT</option>
+</select>
+</section>
+<section class=" gap-3 flex-1 min-h-0">
+<div class="  h-full">
+<div class="flex-1 flex flex-col gap-2">
+<h4 class="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Books</h4>
+<div class="grid grid-cols-4 gap-1.5 overflow-y-auto pr-1">
+<button class="bg-surface-dark hover:bg-surface-hover active:bg-surface-active text-xs font-semibold text-slate-300 py-2 rounded border border-white/5 transition-colors">GEN</button>
+<button class="bg-surface-dark hover:bg-surface-hover active:bg-surface-active text-xs font-semibold text-slate-300 py-2 rounded border border-white/5 transition-colors">EXO</button>
+<button class="bg-surface-dark hover:bg-surface-hover active:bg-surface-active text-xs font-semibold text-slate-300 py-2 rounded border border-white/5 transition-colors">PSA</button>
+<button class="bg-surface-dark hover:bg-surface-hover active:bg-surface-active text-xs font-semibold text-slate-300 py-2 rounded border border-white/5 transition-colors">PRO</button>
+<button class="bg-primary/20 hover:bg-primary/30 text-primary border-primary/30 text-xs font-bold py-2 rounded border transition-colors">MAT</button>
+<button class="bg-surface-dark hover:bg-surface-hover active:bg-surface-active text-xs font-semibold text-slate-300 py-2 rounded border border-white/5 transition-colors">MRK</button>
+<button class="bg-surface-dark hover:bg-surface-hover active:bg-surface-active text-xs font-semibold text-slate-300 py-2 rounded border border-white/5 transition-colors">LUK</button>
+<button class="bg-surface-dark hover:bg-surface-hover active:bg-surface-active text-xs font-semibold text-slate-300 py-2 rounded border border-white/5 transition-colors">JHN</button>
+<button class="bg-surface-dark hover:bg-surface-hover active:bg-surface-active text-xs font-semibold text-slate-300 py-2 rounded border border-white/5 transition-colors">ACT</button>
+<button class="bg-surface-dark hover:bg-surface-hover active:bg-surface-active text-xs font-semibold text-slate-300 py-2 rounded border border-white/5 transition-colors">ROM</button>
+<button class="bg-surface-dark hover:bg-surface-hover active:bg-surface-active text-xs font-semibold text-slate-300 py-2 rounded border border-white/5 transition-colors">1CO</button>
+<button class="bg-surface-dark hover:bg-surface-hover active:bg-surface-active text-xs font-semibold text-slate-300 py-2 rounded border border-white/5 transition-colors">2CO</button>
+</div>
+</div>
+<section class="grid grid-cols-2 gap-3 h-full min-h-0">
+<div class="w-full flex flex-col gap-2 shrink-0">
+<h4 class="text-[10px] font-bold uppercase text-slate-500 tracking-wider text-center">Ch </h4>
+<div class="grid grid-cols-3 gap-1 h-full content-start">
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 text-sm font-bold text-slate-200">1</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 text-sm font-bold text-slate-200">2</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 text-sm font-bold text-slate-200">3</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 text-sm font-bold text-slate-200">4</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 text-sm font-bold text-slate-200">5</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 text-sm font-bold text-slate-200">6</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 text-sm font-bold text-slate-200">7</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 text-sm font-bold text-slate-200">8</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 text-sm font-bold text-slate-200">9</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 text-xs font-bold text-slate-400">:</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 text-sm font-bold text-slate-200">0</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 flex items-center justify-center text-slate-400">
+<span class="material-symbols-outlined text-base">backspace</span>
+</button>
+</div>
+</div>
+<div class="w-full flex flex-col gap-2 shrink-0">
+<h4 class="text-[10px] font-bold uppercase text-slate-500 tracking-wider text-center">Verse </h4>
+<div class="grid grid-cols-3 gap-1 h-full content-start">
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 text-sm font-bold text-slate-200">1</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 text-sm font-bold text-slate-200">2</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 text-sm font-bold text-slate-200">3</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 text-sm font-bold text-slate-200">4</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 text-sm font-bold text-slate-200">5</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 text-sm font-bold text-slate-200">6</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 text-sm font-bold text-slate-200">7</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 text-sm font-bold text-slate-200">8</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 text-sm font-bold text-slate-200">9</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 text-xs font-bold text-slate-400">:</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 text-sm font-bold text-slate-200">0</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover active:bg-surface-active rounded border border-white/5 flex items-center justify-center text-slate-400">
+<span class="material-symbols-outlined text-base">backspace</span>
+</button>
+</div>
+</div>
+</section>
+
+</div>
+</section>
+<section class="mt-auto">
+<h4 class="text-[10px] font-bold uppercase text-slate-500 tracking-wider mb-2">Visual Theme</h4>
+<div class="relative">
+<button class="w-full bg-surface-dark hover:bg-surface-hover border border-white/10 rounded-lg p-1.5 flex items-center gap-3 transition-colors text-left group">
+<div class="w-12 h-[27px] bg-gradient-to-br from-blue-900 to-slate-800 rounded border border-white/10 shrink-0"></div>
+<div class="flex-1 min-w-0">
+<div class="text-xs font-medium text-slate-200 truncate">Modern Glass</div>
+<div class="text-[10px] text-slate-500 truncate">Transparent overlay</div>
+</div>
+<span class="material-symbols-outlined text-slate-400 text-lg mr-1 group-hover:text-white">expand_more</span>
+</button>
+</div>
+</section>
+<section class="bg-surface-dark/50 rounded-lg p-3 border border-white/5">
+<div class="flex items-center justify-between mb-1">
+<span class="text-[10px] font-bold uppercase text-primary tracking-wider">Matthew 6:33</span>
+<span class="text-[10px] text-slate-500">NKJV</span>
+</div>
+<p class="text-xs text-slate-300 leading-relaxed line-clamp-2">
+                But seek first the kingdom of God and His righteousness, and all these things shall be added to you.
+            </p>
+</section>
+<div class="grid grid-cols-2 gap-2">
+<button class="h-12 bg-surface-hover hover:bg-blue-600/20 hover:text-blue-400 border border-blue-500/30 text-blue-400 font-bold text-xs uppercase rounded flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-lg">preview</span>
+                Preview
+            </button>
+<button class="h-12 bg-success hover:bg-green-500 text-white font-bold text-xs uppercase rounded shadow-lg shadow-green-900/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-lg">podium</span>
+                Go Live
+            </button>
+</div>
+</main>
+</div>
+
+</body></html>
+
+
+
+
+
+<!-- For Psalms book that has over 100 chapters only copy the chapter format and not the entire UI Codex  -->
+ <!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>OBS Dock - Bible Selection</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#3b82f6",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#1f212a",
+                        "surface-dark": "#2a2d3a",
+                        "surface-hover": "#363a4a",
+                        "surface-active": "#4b5563",
+                        "danger": "#dc2626",
+                        "success": "#22c55e",
+                        "warning": "#eab308"
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.375rem", "xl": "0.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f212a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b4f6b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #636888;
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-slate-100 font-display h-screen flex justify-center overflow-hidden">
+<div class="w-full max-w-[340px] h-full flex flex-col bg-background-dark border-r border-white/5 relative">
+<header class="bg-surface-dark border-b border-white/10 px-4 py-3 shrink-0 flex items-center gap-3">
+<button class="text-slate-400 hover:text-white transition-colors flex items-center justify-center rounded-full w-8 h-8 hover:bg-white/5">
+<span class="material-symbols-outlined text-xl">arrow_back</span>
+</button>
+<h1 class="text-sm font-bold text-white tracking-wide uppercase">Show Scripture</h1>
+</header>
+<main class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+<section class="flex gap-2">
+<div class="relative flex-1">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+<span class="material-symbols-outlined text-slate-500 text-lg">search</span>
+</div>
+<input autofocus="" class="w-full bg-surface-dark border border-white/10 rounded-lg py-2.5 pl-9 pr-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all shadow-sm" placeholder="Search..." type="text"/>
+</div>
+<select class="w-20 bg-surface-dark border border-white/10 rounded-lg py-2.5 px-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all shadow-sm font-semibold">
+<option>NKJV</option>
+<option>KJV</option>
+<option>NIV</option>
+<option>ESV</option>
+<option>NLT</option>
+</select>
+</section>
+<section class="flex flex-col gap-2">
+<div class="flex items-center justify-between">
+<h4 class="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Book: <span class="text-primary ml-1">Psalms</span></h4>
+<button class="text-[10px] text-slate-500 hover:text-white uppercase font-bold tracking-wider">See All</button>
+</div>
+<div class="flex gap-1.5 overflow-x-auto pb-2 -mx-1 px-1 snap-x">
+<button class="snap-start shrink-0 bg-surface-dark hover:bg-surface-hover active:bg-surface-active text-xs font-semibold text-slate-300 py-2 px-4 rounded border border-white/5 transition-colors">Gen</button>
+<button class="snap-start shrink-0 bg-surface-dark hover:bg-surface-hover active:bg-surface-active text-xs font-semibold text-slate-300 py-2 px-4 rounded border border-white/5 transition-colors">Exo</button>
+<button class="snap-start shrink-0 bg-surface-dark hover:bg-surface-hover active:bg-surface-active text-xs font-semibold text-slate-300 py-2 px-4 rounded border border-white/5 transition-colors">Lev</button>
+<button class="snap-start shrink-0 bg-primary/20 hover:bg-primary/30 text-primary border-primary/30 text-xs font-bold py-2 px-4 rounded border transition-colors shadow-sm shadow-primary/10">Psalms</button>
+<button class="snap-start shrink-0 bg-surface-dark hover:bg-surface-hover active:bg-surface-active text-xs font-semibold text-slate-300 py-2 px-4 rounded border border-white/5 transition-colors">Prov</button>
+<button class="snap-start shrink-0 bg-surface-dark hover:bg-surface-hover active:bg-surface-active text-xs font-semibold text-slate-300 py-2 px-4 rounded border border-white/5 transition-colors">Matt</button>
+<button class="snap-start shrink-0 bg-surface-dark hover:bg-surface-hover active:bg-surface-active text-xs font-semibold text-slate-300 py-2 px-4 rounded border border-white/5 transition-colors">Mark</button>
+<button class="snap-start shrink-0 bg-surface-dark hover:bg-surface-hover active:bg-surface-active text-xs font-semibold text-slate-300 py-2 px-4 rounded border border-white/5 transition-colors">Luke</button>
+<button class="snap-start shrink-0 bg-surface-dark hover:bg-surface-hover active:bg-surface-active text-xs font-semibold text-slate-300 py-2 px-4 rounded border border-white/5 transition-colors">John</button>
+</div>
+</section>
+<section class="flex flex-col gap-2 flex-1 min-h-0 bg-surface-dark/30 rounded-lg p-3 border border-white/5">
+<div class="flex items-center justify-between gap-3 mb-1">
+<h4 class="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Select Chapter</h4>
+<div class="relative flex-1 max-w-[120px]">
+<input class="w-full bg-surface-dark border border-white/10 rounded py-1 pl-2 pr-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all" placeholder="Jump to..." type="text"/>
+</div>
+</div>
+<div class="overflow-y-auto pr-1 flex-1">
+<div class="grid grid-cols-5 gap-1.5">
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">1</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">2</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">3</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">4</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">5</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">6</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">7</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">8</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">9</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">10</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">11</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">12</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">13</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">14</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">15</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">16</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">17</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">18</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">19</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">20</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">21</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">22</button>
+<button class="aspect-square bg-primary text-white shadow-lg shadow-blue-500/20 rounded border border-primary/50 text-xs font-bold transition-all ring-2 ring-primary/20 scale-105">23</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">24</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">25</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">26</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">27</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">28</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">29</button>
+<button class="aspect-square bg-surface-dark hover:bg-surface-hover text-slate-300 hover:text-white rounded border border-white/5 text-xs font-medium transition-colors">30</button>
+<button class="aspect-square bg-surface-dark/50 text-slate-500 rounded border border-white/5 text-xs font-medium cursor-default">31</button>
+<button class="aspect-square bg-surface-dark/50 text-slate-500 rounded border border-white/5 text-xs font-medium cursor-default">32</button>
+<div class="col-span-3 flex items-center justify-center text-slate-600 text-[10px] italic">...150</div>
+</div>
+</div>
+</section>
+<section class="mt-auto">
+<h4 class="text-[10px] font-bold uppercase text-slate-500 tracking-wider mb-2">Visual Theme</h4>
+<div class="relative">
+<button class="w-full bg-surface-dark hover:bg-surface-hover border border-white/10 rounded-lg p-1.5 flex items-center gap-3 transition-colors text-left group">
+<div class="w-12 h-[27px] bg-gradient-to-br from-blue-900 to-slate-800 rounded border border-white/10 shrink-0"></div>
+<div class="flex-1 min-w-0">
+<div class="text-xs font-medium text-slate-200 truncate">Modern Glass</div>
+<div class="text-[10px] text-slate-500 truncate">Transparent overlay</div>
+</div>
+<span class="material-symbols-outlined text-slate-400 text-lg mr-1 group-hover:text-white">expand_more</span>
+</button>
+</div>
+</section>
+<section class="bg-surface-dark/50 rounded-lg p-3 border border-white/5">
+<div class="flex items-center justify-between mb-1">
+<span class="text-[10px] font-bold uppercase text-primary tracking-wider">Psalms 23:1</span>
+<span class="text-[10px] text-slate-500">NKJV</span>
+</div>
+<p class="text-xs text-slate-300 leading-relaxed line-clamp-2">
+                The LORD is my shepherd; I shall not want.
+            </p>
+</section>
+<div class="grid grid-cols-2 gap-2">
+<button class="h-12 bg-surface-hover hover:bg-blue-600/20 hover:text-blue-400 border border-blue-500/30 text-blue-400 font-bold text-xs uppercase rounded flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-lg">preview</span>
+                Preview
+            </button>
+<button class="h-12 bg-success hover:bg-green-500 text-white font-bold text-xs uppercase rounded shadow-lg shadow-green-900/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-lg">podium</span>
+                Go Live
+            </button>
+</div>
+</main>
+</div>
+</body></html>
+<!-- For Psalms book that has over 100 chapters only copy the chapter format and not the entire one Opus, take note  -->
+
+
+
+<!-- Opus, they should have ability to pin bible verses in the dock -->
+ <!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Unified Dock - Bible View</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#3b82f6",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#1f212a",
+                        "surface-dark": "#2a2d3a",
+                        "surface-hover": "#363a4a",
+                        "danger": "#dc2626",
+                        "success": "#22c55e",
+                        "warning": "#eab308"
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.375rem", "xl": "0.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f212a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b4f6b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #636888;
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-slate-100 font-display h-screen flex justify-center overflow-hidden">
+<div class="w-full max-w-[340px] h-full flex flex-col bg-background-dark border-r border-white/5 relative">
+<nav class="bg-surface-dark border-b border-white/10 shrink-0 flex items-center justify-between px-2">
+<button class="flex-1 h-14 flex flex-col items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-colors group">
+<span class="material-symbols-outlined text-2xl mb-0.5">person</span>
+<span class="text-[9px] font-medium uppercase tracking-wider group-hover:text-white">Speaker</span>
+</button>
+<button class="flex-1 h-14 flex flex-col items-center justify-center text-primary relative group">
+<span class="material-symbols-outlined text-2xl mb-0.5">menu_book</span>
+<span class="text-[9px] font-bold uppercase tracking-wider">Bible</span>
+<div class="absolute bottom-0 left-0 w-full h-0.5 bg-primary"></div>
+</button>
+<button class="flex-1 h-14 flex flex-col items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-colors group">
+<span class="material-symbols-outlined text-2xl mb-0.5">format_quote</span>
+<span class="text-[9px] font-medium uppercase tracking-wider group-hover:text-white">Sermon</span>
+</button>
+<button class="flex-1 h-14 flex flex-col items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-colors group">
+<span class="material-symbols-outlined text-2xl mb-0.5">volunteer_activism</span>
+<span class="text-[9px] font-medium uppercase tracking-wider group-hover:text-white">Giving</span>
+</button>
+<button class="flex-1 h-14 flex flex-col items-center justify-center text-slate-400 hover:text-slate-200 hover:bg-white/5 transition-colors group">
+<span class="material-symbols-outlined text-2xl mb-0.5">link</span>
+<span class="text-[9px] font-medium uppercase tracking-wider group-hover:text-white">Connect</span>
+</button>
+</nav>
+<header class="p-3 pb-0 shrink-0 flex gap-2">
+<div class="relative w-20 shrink-0">
+<select class="w-full bg-surface-dark text-white text-xs font-bold border border-white/10 rounded h-9 pl-2 pr-6 appearance-none focus:ring-1 focus:ring-primary focus:border-primary">
+<option>KJV</option>
+<option>NIV</option>
+<option>ESV</option>
+<option>NKJV</option>
+</select>
+<span class="material-symbols-outlined absolute right-1 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">expand_more</span>
+</div>
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500 text-lg">search</span>
+<input class="w-full bg-surface-dark text-white text-sm border border-white/10 rounded h-9 pl-9 pr-3 focus:ring-1 focus:ring-primary focus:border-primary placeholder-slate-600" placeholder="Jn 3:16" type="text"/>
+</div>
+</header>
+<main class="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between pb-1">
+<h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">keep</span> Pinned Verses
+                    </h2>
+</div>
+<button class="group w-full bg-surface-dark hover:bg-surface-hover active:bg-surface-hover/80 active:scale-[0.99] transition-all rounded-lg p-3 border border-white/5 text-left relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="flex items-start justify-between mb-1">
+<h3 class="text-sm font-bold text-white group-hover:text-blue-200">John 3:16</h3>
+<span class="text-[10px] bg-white/5 px-1.5 py-0.5 rounded text-slate-400 font-mono">KJV</span>
+</div>
+<p class="text-xs text-slate-400 line-clamp-2 leading-relaxed">For God so loved the world, that he gave his only begotten Son...</p>
+</button>
+<button class="group w-full bg-surface-dark hover:bg-surface-hover active:bg-surface-hover/80 active:scale-[0.99] transition-all rounded-lg p-3 border border-white/5 text-left relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="flex items-start justify-between mb-1">
+<h3 class="text-sm font-bold text-white group-hover:text-blue-200">Psalm 23:1</h3>
+<span class="text-[10px] bg-white/5 px-1.5 py-0.5 rounded text-slate-400 font-mono">KJV</span>
+</div>
+<p class="text-xs text-slate-400 line-clamp-2 leading-relaxed">The Lord is my shepherd; I shall not want.</p>
+</button>
+</div>
+<div class="flex flex-col gap-2">
+<div class="flex items-center justify-between pb-1 mt-2">
+<h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">history</span> Recent
+                    </h2>
+</div>
+<button class="group w-full bg-surface-dark hover:bg-surface-hover active:bg-surface-hover/80 active:scale-[0.99] transition-all rounded-lg p-3 border border-white/5 text-left relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="flex items-start justify-between mb-1">
+<h3 class="text-sm font-bold text-white group-hover:text-blue-200">Romans 8:28</h3>
+<span class="text-[10px] bg-white/5 px-1.5 py-0.5 rounded text-slate-400 font-mono">NIV</span>
+</div>
+<p class="text-xs text-slate-400 line-clamp-2 leading-relaxed">And we know that in all things God works for the good of those who love him...</p>
+</button>
+<button class="group w-full bg-surface-dark hover:bg-surface-hover active:bg-surface-hover/80 active:scale-[0.99] transition-all rounded-lg p-3 border border-white/5 text-left relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="flex items-start justify-between mb-1">
+<h3 class="text-sm font-bold text-white group-hover:text-blue-200">Philippians 4:13</h3>
+<span class="text-[10px] bg-white/5 px-1.5 py-0.5 rounded text-slate-400 font-mono">NKJV</span>
+</div>
+<p class="text-xs text-slate-400 line-clamp-2 leading-relaxed">I can do all things through Christ who strengthens me.</p>
+</button>
+<button class="group w-full bg-surface-dark hover:bg-surface-hover active:bg-surface-hover/80 active:scale-[0.99] transition-all rounded-lg p-3 border border-white/5 text-left relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1 h-full bg-primary opacity-0 group-hover:opacity-100 transition-opacity"></div>
+<div class="flex items-start justify-between mb-1">
+<h3 class="text-sm font-bold text-white group-hover:text-blue-200">Genesis 1:1</h3>
+<span class="text-[10px] bg-white/5 px-1.5 py-0.5 rounded text-slate-400 font-mono">KJV</span>
+</div>
+<p class="text-xs text-slate-400 line-clamp-2 leading-relaxed">In the beginning God created the heaven and the earth.</p>
+</button>
+</div>
+</main>
+<section class="shrink-0 bg-black/40 border-t border-white/10 p-3 pb-2">
+<div class="flex items-center justify-between mb-1.5 px-1">
+<h4 class="text-[10px] font-bold uppercase text-slate-500 tracking-wider">Staged Preview</h4>
+<div class="flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-warning"></span>
+<span class="text-[10px] text-slate-400">Ready</span>
+</div>
+</div>
+<div class="bg-surface-dark border border-white/10 rounded p-3 flex gap-3 relative overflow-hidden">
+<div class="absolute left-0 top-0 bottom-0 w-1 bg-warning"></div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2 mb-1">
+<span class="text-xs font-bold text-white bg-blue-600/20 text-blue-300 px-1.5 py-0.5 rounded">John 3:16</span>
+<span class="text-[10px] text-slate-500 font-mono uppercase">KJV</span>
+</div>
+<p class="text-xs text-slate-300 italic leading-relaxed">"For God so loved the world, that he gave his only begotten Son, that whosoever believeth in him should not perish, but have everlasting life."</p>
+</div>
+<button class="self-start text-slate-500 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-sm">close</span>
+</button>
+</div>
+</section>
+<footer class="p-3 bg-surface-dark border-t border-white/10 grid grid-cols-2 gap-3 shrink-0">
+<button class="h-12 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded shadow-lg shadow-blue-900/20 active:translate-y-0.5 transition-all flex flex-col items-center justify-center leading-tight">
+<span class="uppercase tracking-wide text-[10px] opacity-80">Send To</span>
+<span class="uppercase tracking-widest">Preview</span>
+</button>
+<button class="h-12 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm rounded shadow-lg shadow-emerald-900/20 active:translate-y-0.5 transition-all flex items-center justify-center gap-2">
+<span class="w-2 h-2 bg-white rounded-full animate-pulse"></span>
+<span class="uppercase tracking-widest">Go Live</span>
+</button>
+</footer>
+</div>
+
+</body></html>
+<!-- Opus, they should have ability to pin bible verses in the dock -->

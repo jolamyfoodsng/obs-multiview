@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Unified Dock - Event Tab</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#3b82f6",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#1f212a",
+                        "surface-dark": "#2a2d3a",
+                        "surface-hover": "#363a4a",
+                        "danger": "#dc2626",
+                        "success": "#22c55e",
+                        "warning": "#eab308"
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.375rem", "xl": "0.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1f212a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #4b4f6b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #636888;
+        }
+        input[type="text"], input[type="datetime-local"] {
+            background-color: #1a1c23;
+            border-color: rgba(255,255,255,0.1);
+            color: white;
+            font-size: 0.875rem;
+            padding: 0.5rem;
+            border-radius: 0.25rem;
+        }
+        input[type="text"]:focus, input[type="datetime-local"]:focus {
+            outline: none;
+            border-color: #3b82f6;
+            ring: 1px solid #3b82f6;
+        }
+    </style>
+</head>
+<body class="bg-background-dark text-slate-100 font-display h-screen flex justify-center overflow-hidden">
+<div class="w-full max-w-[340px] h-full flex flex-col bg-background-dark border-r border-white/5 relative shadow-2xl">
+<header class="bg-surface-dark border-b border-white/10 shrink-0 flex flex-col">
+<div class="px-3 py-1.5 flex items-center justify-between text-[10px] font-medium border-b border-white/5 bg-black/20">
+<div class="flex items-center gap-3 text-slate-400">
+<div class="flex items-center gap-1.5">
+<span class="relative flex h-1.5 w-1.5">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+<span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-success"></span>
+</span>
+<span class="text-slate-300">OBS: Connected</span>
+</div>
+</div>
+<div class="text-slate-500">Service: <span class="text-green-400">Live</span></div>
+</div>
+<div class="flex items-stretch h-12">
+<button class="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-colors border-r border-white/5 group">
+<span class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform">person</span>
+<span class="text-[9px] font-bold uppercase tracking-wider">Speaker</span>
+</button>
+<button class="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-colors border-r border-white/5 group">
+<span class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform">title</span>
+<span class="text-[9px] font-bold uppercase tracking-wider">Sermon</span>
+</button>
+<button class="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-300 hover:bg-white/5 transition-colors border-r border-white/5 group">
+<span class="material-symbols-outlined text-xl group-hover:scale-110 transition-transform">qr_code_2</span>
+<span class="text-[9px] font-bold uppercase tracking-wider">Giving</span>
+</button>
+<button class="flex-1 flex flex-col items-center justify-center gap-0.5 text-white bg-surface-hover border-b-2 border-primary relative shadow-inner">
+<span class="material-symbols-outlined text-xl text-primary">calendar_month</span>
+<span class="text-[9px] font-bold uppercase tracking-wider">Event</span>
+</button>
+</div>
+</header>
+<main class="flex-1 overflow-y-auto p-3 flex flex-col gap-4">
+<section>
+<h2 class="text-[10px] font-bold uppercase text-slate-500 tracking-wider mb-2 px-1">Select Event</h2>
+<div class="flex flex-col gap-3">
+<div class="w-full bg-surface-dark border-2 border-primary rounded-lg flex flex-col p-3 gap-3 transition-all shadow-lg relative overflow-hidden ring-4 ring-primary/10">
+<div class="flex items-center justify-between border-b border-white/5 pb-2 mb-1">
+<span class="text-[10px] font-bold text-primary uppercase tracking-wider flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">edit</span>
+                            Quick Edit
+                        </span>
+</div>
+<div class="flex flex-col gap-2.5">
+<div class="flex flex-col gap-1">
+<label class="text-[10px] uppercase font-bold text-slate-500">Event Title</label>
+<input class="w-full bg-black/20 border border-white/10 rounded px-2 py-1.5 text-sm font-medium text-white focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all placeholder-slate-600" type="text" value="Youth Camp 2024"/>
+</div>
+<div class="grid grid-cols-2 gap-2">
+<div class="flex flex-col gap-1">
+<label class="text-[10px] uppercase font-bold text-slate-500">Date/Time</label>
+<input class="w-full bg-black/20 border border-white/10 rounded px-2 py-1.5 text-xs font-medium text-white focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all" type="text" value="MAR 24, 9 AM"/>
+</div>
+<div class="flex flex-col gap-1">
+<label class="text-[10px] uppercase font-bold text-slate-500">Location</label>
+<input class="w-full bg-black/20 border border-white/10 rounded px-2 py-1.5 text-xs font-medium text-white focus:border-primary focus:ring-1 focus:ring-primary focus:outline-none transition-all" type="text" value="Main Auditorium"/>
+</div>
+</div>
+</div>
+<div class="flex gap-2 mt-2 pt-2 border-t border-white/5">
+<button class="flex-1 bg-surface-hover hover:bg-slate-700 text-slate-300 text-xs font-bold py-2 rounded transition-colors uppercase tracking-wide border border-white/10">
+                            Cancel
+                        </button>
+<button class="flex-1 bg-success hover:bg-green-600 text-white text-xs font-bold py-2 rounded transition-colors uppercase tracking-wide shadow-lg shadow-green-900/20">
+                            Update
+                        </button>
+</div>
+</div>
+<button class="w-full bg-surface-dark/60 border border-white/5 hover:bg-surface-hover hover:border-white/10 rounded-lg flex items-center p-3 gap-3 transition-all group text-left opacity-75 grayscale-[0.3]">
+<div class="flex flex-col items-center justify-center bg-black/20 rounded border border-white/5 px-2 py-1.5 shrink-0 w-12 text-center group-hover:border-white/10 transition-colors">
+<span class="text-[9px] font-bold text-slate-500 group-hover:text-slate-400 uppercase leading-none mb-0.5">Apr</span>
+<span class="text-sm font-bold text-slate-400 group-hover:text-slate-200 leading-none">05</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-medium text-slate-400 group-hover:text-slate-200 transition-colors leading-tight">Night of Worship</span>
+<span class="text-[10px] text-slate-600">Sanctuary</span>
+</div>
+</button>
+<button class="w-full bg-surface-dark/60 border border-white/5 hover:bg-surface-hover hover:border-white/10 rounded-lg flex items-center p-3 gap-3 transition-all group text-left opacity-75 grayscale-[0.3]">
+<div class="flex flex-col items-center justify-center bg-black/20 rounded border border-white/5 px-2 py-1.5 shrink-0 w-12 text-center group-hover:border-white/10 transition-colors">
+<span class="text-[9px] font-bold text-slate-500 group-hover:text-slate-400 uppercase leading-none mb-0.5">Apr</span>
+<span class="text-sm font-bold text-slate-400 group-hover:text-slate-200 leading-none">21</span>
+</div>
+<div class="flex flex-col">
+<span class="text-sm font-medium text-slate-400 group-hover:text-slate-200 transition-colors leading-tight">Leadership Summit</span>
+<span class="text-[10px] text-slate-600">Conference Room</span>
+</div>
+</button>
+</div>
+</section>
+<section class="flex-1 flex flex-col min-h-0">
+<h2 class="text-[10px] font-bold uppercase text-slate-500 tracking-wider mb-2 px-1">Graphic Preview</h2>
+<div class="w-full aspect-video bg-black/40 rounded-lg border border-white/10 flex items-center justify-center relative overflow-hidden group">
+<div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1523580494863-6f3031224c94?q=80&amp;w=600&amp;auto=format&amp;fit=crop')] bg-cover bg-center opacity-40 group-hover:opacity-50 transition-opacity"></div>
+<div class="absolute bottom-4 left-4 right-4 h-16 bg-surface-dark/95 backdrop-blur-md border-l-4 border-primary rounded-r flex items-center px-4 shadow-2xl animate-fade-in-up">
+<div class="flex flex-col">
+<span class="text-primary font-bold text-xs uppercase leading-none mb-1">Upcoming Event</span>
+<span class="text-white font-bold text-lg leading-none tracking-tight">Youth Camp 2024</span>
+<span class="text-slate-300 text-[10px] mt-0.5 font-medium">Register at church.com/camp</span>
+</div>
+</div>
+<div class="absolute top-2 left-2 px-1.5 py-0.5 bg-black/60 rounded text-[9px] font-mono text-primary border border-primary/20 backdrop-blur-md">
+                        READY
+                    </div>
+</div>
+<div class="mt-2 text-[10px] text-slate-500 text-center italic">
+                    Preview generated from 'Events - Lower Third' template.
+                </div>
+</section>
+</main>
+<footer class="bg-surface-dark border-t border-white/10 p-3 shrink-0">
+<div class="grid grid-cols-2 gap-3">
+<button class="h-12 bg-surface-hover hover:bg-[#404557] border border-white/10 rounded flex items-center justify-center gap-2 text-slate-200 font-bold text-sm uppercase tracking-wide transition-all active:scale-[0.98]">
+<span class="material-symbols-outlined text-lg">preview</span>
+                    Send to Preview
+                </button>
+<button class="h-12 bg-danger hover:bg-red-600 shadow-lg shadow-red-900/20 rounded flex items-center justify-center gap-2 text-white font-bold text-sm uppercase tracking-wide transition-all active:scale-[0.98] border border-transparent">
+<span class="material-symbols-outlined text-lg fill-1">fiber_manual_record</span>
+                    Go Live
+                </button>
+</div>
+</footer>
+</div>
+</body></html>

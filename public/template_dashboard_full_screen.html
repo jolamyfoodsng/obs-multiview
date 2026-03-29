@@ -1,0 +1,554 @@
+<!-- Templates Quick Setup - Giving View -->
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Templates Quick Setup - Giving View</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#13ec13",
+              "primary-content": "#052e05",
+              "background-light": "#f6f8f6",
+              "background-dark": "#102210",
+              "surface-dark": "#162b16",
+              "surface-highlight": "#1c361c",
+              "text-muted": "#92c992",
+            },
+            fontFamily: {
+              "display": ["Inter", "sans-serif"]
+            },
+            borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" },
+          },
+        },
+      }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar for webkit browsers */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #102210;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1c361c;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #234823;
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 h-screen overflow-hidden flex font-display">
+<!-- Left Column: Navigation -->
+<aside class="w-64 flex flex-col justify-between border-r border-surface-highlight bg-background-dark flex-shrink-0 z-20">
+<div class="flex flex-col gap-6 p-4">
+<div class="flex flex-col">
+<h1 class="text-white text-lg font-bold tracking-tight">OBS Helper</h1>
+<p class="text-text-muted text-xs font-normal">Sunday Service</p>
+</div>
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-300 hover:bg-surface-highlight transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">church</span>
+<span class="text-sm font-medium">Services</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-300 hover:bg-surface-highlight transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">music_note</span>
+<span class="text-sm font-medium">Lyrics</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-300 hover:bg-surface-highlight transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">menu_book</span>
+<span class="text-sm font-medium">Scripture</span>
+</a>
+<!-- Active State -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-primary/10 text-primary border border-primary/20 transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px] fill-1">volunteer_activism</span>
+<span class="text-sm font-medium">Giving</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-slate-300 hover:bg-surface-highlight transition-colors" href="#">
+<span class="material-symbols-outlined text-[20px]">campaign</span>
+<span class="text-sm font-medium">Announcements</span>
+</a>
+</nav>
+</div>
+<div class="p-4 border-t border-surface-highlight">
+<button class="flex w-full items-center justify-center gap-2 rounded-lg h-10 px-4 bg-primary hover:bg-[#0fdc0f] text-primary-content text-sm font-bold shadow-lg shadow-primary/20 transition-all">
+<span class="material-symbols-outlined text-[18px]">videocam</span>
+<span>Go Live</span>
+</button>
+</div>
+</aside>
+<!-- Main Content Area: Split into Template Gallery (Middle) and Settings (Right) -->
+<main class="flex-1 flex overflow-hidden">
+<!-- Middle Column: Templates Gallery -->
+<div class="flex-1 flex flex-col bg-background-dark overflow-y-auto relative">
+<!-- Header -->
+<header class="flex items-end justify-between px-8 py-8 pb-4">
+<div class="flex flex-col gap-1">
+<h2 class="text-white text-3xl font-bold tracking-tight">Giving Templates</h2>
+<p class="text-text-muted text-sm">Choose a visual style for your donation overlays.</p>
+</div>
+<div class="flex gap-2">
+<button class="px-3 py-1.5 rounded-lg text-xs font-medium bg-surface-highlight text-white hover:bg-surface-highlight/80 transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">filter_list</span> Filter
+                    </button>
+<button class="px-3 py-1.5 rounded-lg text-xs font-medium bg-surface-highlight text-white hover:bg-surface-highlight/80 transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">add</span> New
+                    </button>
+</div>
+</header>
+<!-- Cards Grid -->
+<div class="p-8 pt-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+<!-- Card 1 -->
+<div class="group relative aspect-video rounded-xl overflow-hidden border border-surface-highlight bg-surface-dark cursor-pointer hover:border-primary/50 transition-all">
+<div class="absolute inset-0 bg-cover bg-center opacity-60 group-hover:opacity-80 transition-opacity" data-alt="Dark minimal abstract geometric pattern" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDeV49JWexUU04K6wOcRcd_jqJwZgmsSGJsYkFLXDBR2jhmKyczsj62zqYCtVPq7AjH5rIja2SwFS__OJr0otiClfp8Uwd3hd8O15zPX6rSIwstgt79u7gFJHD5-LP7rzrkBuD5WzNlAABpFtsgDkDkqUCSLtkpCXNXIl5_bkS1fhSdoyRn8cyBOVWVyQ-mCai2jVpcud8kGeOs7ELpaY2RLPXYOVWvGrrGIOupeCNLiC9hMM_YdkhvnSP_ZL-REaUuY_DrKJ_6hA');"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+<div class="absolute top-3 right-3">
+<div class="bg-primary text-primary-content text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm">ACTIVE</div>
+</div>
+<div class="absolute bottom-0 left-0 w-full p-4 flex flex-col gap-1">
+<p class="text-white font-bold text-lg leading-tight">Minimal QR</p>
+<p class="text-gray-400 text-xs">Clean corner overlay</p>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="group relative aspect-video rounded-xl overflow-hidden border border-surface-highlight bg-surface-dark cursor-pointer hover:border-primary/50 transition-all">
+<div class="absolute inset-0 bg-cover bg-center opacity-60 group-hover:opacity-80 transition-opacity" data-alt="Dark finance abstract background" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDeaFh5RyH5eij0nNTJ0LshR9HQd9v4jVcN8hzDWyXRg-5D7wkZS2VJK0KIwQy2Z8zK3xa5_cKQC07jpOCtcM_vwzU5T_zWmFICh5j1vv6lEKCvqy5WL7y3jpDErLqFl7hCk21Dafd2cukvXLkiQlcbEgyw2-eoQfjF0hcTCNpSqYTY3ITO-Zib6nd-0T8NVeM-yMKQG4YSPM6CMmcJCoe9Nn84EbfOS6GxYxFYfBWHv55Iu3cxP7giMSvY0VepCcSRQ5XqZnQHMQ');"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+<div class="absolute bottom-0 left-0 w-full p-4 flex flex-col gap-1">
+<p class="text-white font-bold text-lg leading-tight">Bold Bank Info</p>
+<p class="text-gray-400 text-xs">High contrast details</p>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="group relative aspect-video rounded-xl overflow-hidden border border-surface-highlight bg-surface-dark cursor-pointer hover:border-primary/50 transition-all">
+<div class="absolute inset-0 bg-cover bg-center opacity-60 group-hover:opacity-80 transition-opacity" data-alt="Abstract fluid dark green shapes" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuBQJ1WSbR86iiYmwj9f72TDq8F9kbLuUVS7NFd7T4hMKsoXUR-FEIM9BBl3IGUKVZFmJPpFmWz-uUpKKJ0qOLHJJ2OyolXzYaEYGkiIwjvrPJ2YrJ4VTwKYMjXTD_nVxoBQdemivXjafmvZYdy1MfV7n8bTpS3pp89V2tKmOb-0kxCSQIycqQhFaJynibGw_3cgjbeN1ds6jwz_otOcHofohEb2umoi_h1rINveEP_Abjxt2EO10HAnvDxKyyakNRRKhxxM_b0q1A');"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+<div class="absolute bottom-0 left-0 w-full p-4 flex flex-col gap-1">
+<p class="text-white font-bold text-lg leading-tight">Lower Third - Simple</p>
+<p class="text-gray-400 text-xs">Non-intrusive strip</p>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="group relative aspect-video rounded-xl overflow-hidden border border-surface-highlight bg-surface-dark cursor-pointer hover:border-primary/50 transition-all">
+<div class="absolute inset-0 bg-cover bg-center opacity-60 group-hover:opacity-80 transition-opacity" data-alt="Dark colorful gradient mesh" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDgnSGedF5Uw3tRvfpesUXOjAri89yaU6oX41nHNUGg1ZKNGg1573e7yEi838ToUSfxW9iWxhNaOSEjmmBOlPAMMNCBU6S-PmXqrsaQBY0CaB5q9loDj-3TfA3HI0SZ7xIto_3zM9DPDDEgMYZMOG8KW1lPKoZujtrGW8e6SYgVGnl22LnQNkM-Spg87_OVTB-R1apy2TW9vr5bJ-TrflAtmavrMAfrcQgU-dJRwAiVvjEGphRkxO-2118cBIKuwATf60Q-Pi56Dg');"></div>
+<div class="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent"></div>
+<div class="absolute bottom-0 left-0 w-full p-4 flex flex-col gap-1">
+<p class="text-white font-bold text-lg leading-tight">Full Screen Promo</p>
+<p class="text-gray-400 text-xs">Maximum visibility</p>
+</div>
+</div>
+<!-- Add New Placeholder -->
+<div class="group relative aspect-video rounded-xl overflow-hidden border border-dashed border-surface-highlight bg-transparent cursor-pointer hover:border-primary hover:bg-primary/5 transition-all flex flex-col items-center justify-center gap-2">
+<span class="material-symbols-outlined text-surface-highlight group-hover:text-primary text-4xl transition-colors">add_circle</span>
+<p class="text-text-muted group-hover:text-primary text-sm font-medium transition-colors">Create Template</p>
+</div>
+</div>
+<!-- Toast Notification -->
+<div class="absolute bottom-6 left-1/2 -translate-x-1/2 bg-surface-highlight border border-primary/20 text-white px-4 py-3 rounded-lg shadow-xl flex items-center gap-3 animate-fade-in-up">
+<span class="material-symbols-outlined text-primary text-xl">check_circle</span>
+<span class="text-sm font-medium">Default template updated.</span>
+<button class="text-gray-400 hover:text-white transition-colors">
+<span class="material-symbols-outlined text-lg">close</span>
+</button>
+</div>
+</div>
+<!-- Right Column: Settings Panel -->
+<aside class="w-80 border-l border-surface-highlight bg-surface-dark/30 backdrop-blur-sm flex flex-col">
+<div class="p-6 border-b border-surface-highlight">
+<h3 class="text-white text-lg font-bold">Giving Defaults</h3>
+<p class="text-text-muted text-xs mt-1">Configure global behaviors for giving overlays.</p>
+</div>
+<div class="p-6 flex flex-col gap-8 overflow-y-auto">
+<!-- Display Elements Section -->
+<div class="flex flex-col gap-3">
+<label class="text-xs font-semibold uppercase tracking-wider text-gray-400">Display Elements</label>
+<div class="flex flex-wrap gap-2">
+<button class="flex items-center gap-2 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40 px-3 py-1.5 rounded-full text-xs font-medium transition-all group">
+<span class="material-symbols-outlined text-[16px]">language</span>
+                            Website
+                            <span class="material-symbols-outlined text-[14px] ml-1 opacity-60 group-hover:opacity-100">close</span>
+</button>
+<button class="flex items-center gap-2 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40 px-3 py-1.5 rounded-full text-xs font-medium transition-all group">
+<span class="material-symbols-outlined text-[16px]">qr_code_2</span>
+                            QR Code
+                            <span class="material-symbols-outlined text-[14px] ml-1 opacity-60 group-hover:opacity-100">close</span>
+</button>
+<button class="flex items-center gap-2 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/40 px-3 py-1.5 rounded-full text-xs font-medium transition-all group">
+<span class="material-symbols-outlined text-[16px]">account_balance</span>
+                            Bank
+                            <span class="material-symbols-outlined text-[14px] ml-1 opacity-60 group-hover:opacity-100">close</span>
+</button>
+<button class="flex items-center gap-2 bg-surface-highlight hover:bg-surface-highlight/80 text-gray-400 border border-transparent px-3 py-1.5 rounded-full text-xs font-medium transition-all">
+<span class="material-symbols-outlined text-[16px]">add</span>
+                            Add
+                        </button>
+</div>
+</div>
+<!-- Timing Section -->
+<div class="flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<label class="text-xs font-semibold uppercase tracking-wider text-gray-400">Duration</label>
+<span class="text-primary text-sm font-mono font-bold bg-primary/10 px-2 py-0.5 rounded">12s</span>
+</div>
+<div class="relative w-full h-1.5 bg-surface-highlight rounded-full">
+<div class="absolute top-0 left-0 h-full bg-primary rounded-full" style="width: 40%;"></div>
+<div class="absolute top-1/2 -translate-y-1/2 left-[40%] w-4 h-4 bg-white rounded-full shadow-md cursor-pointer border-2 border-primary hover:scale-110 transition-transform"></div>
+</div>
+<div class="flex justify-between text-[10px] text-gray-500 font-mono">
+<span>5s</span>
+<span>30s</span>
+</div>
+</div>
+<!-- Toggles Section -->
+<div class="flex flex-col gap-4">
+<label class="text-xs font-semibold uppercase tracking-wider text-gray-400">Automation</label>
+<div class="flex items-center justify-between group cursor-pointer">
+<div class="flex flex-col">
+<span class="text-sm text-gray-200 group-hover:text-white font-medium">Auto-show QR</span>
+<span class="text-xs text-gray-500">Show when "Giving" scene is active</span>
+</div>
+<!-- Toggle Switch On -->
+<div class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-primary">
+<span class="pointer-events-none translate-x-5 inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
+</div>
+</div>
+<div class="flex items-center justify-between group cursor-pointer">
+<div class="flex flex-col">
+<span class="text-sm text-gray-200 group-hover:text-white font-medium">Loop Animation</span>
+<span class="text-xs text-gray-500">Restart motion every 15s</span>
+</div>
+<!-- Toggle Switch Off -->
+<div class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none bg-surface-highlight">
+<span class="pointer-events-none translate-x-0 inline-block h-5 w-5 transform rounded-full bg-gray-400 shadow ring-0 transition duration-200 ease-in-out"></span>
+</div>
+</div>
+</div>
+<!-- Template Specific Data -->
+<div class="flex flex-col gap-4 pt-4 border-t border-surface-highlight">
+<label class="text-xs font-semibold uppercase tracking-wider text-gray-400">Content Data</label>
+<div class="space-y-3">
+<div class="bg-surface-highlight/50 p-3 rounded-lg border border-surface-highlight hover:border-surface-highlight/80 transition-colors">
+<div class="text-[10px] text-primary uppercase font-bold mb-1">Bank Name</div>
+<div class="text-sm text-white font-mono">First City Church</div>
+</div>
+<div class="bg-surface-highlight/50 p-3 rounded-lg border border-surface-highlight hover:border-surface-highlight/80 transition-colors">
+<div class="text-[10px] text-primary uppercase font-bold mb-1">Account Number</div>
+<div class="text-sm text-white font-mono">**** **** 8842</div>
+</div>
+</div>
+<button class="text-xs text-text-muted hover:text-primary transition-colors flex items-center gap-1 mt-1">
+<span class="material-symbols-outlined text-[14px]">edit</span> Edit Bank Details
+                    </button>
+</div>
+</div>
+<div class="mt-auto p-6 border-t border-surface-highlight bg-surface-dark/50">
+<button class="w-full bg-white text-black font-semibold py-2 rounded-lg hover:bg-gray-100 transition-colors text-sm">
+                    Save Changes
+                </button>
+</div>
+</aside>
+</main>
+</body></html>
+
+<!-- Templates Studio - Advanced Editor -->
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Templates Studio - Advanced Editor</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec13",
+                        "primary-dark": "#0fa60f",
+                        "primary-light": "#76f676",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102210",
+                        "surface-dark": "#1a2e1a",
+                        "surface-darker": "#152815",
+                        "border-dark": "#234823",
+                        "text-subtle": "#92c992"
+                    },
+                    fontFamily: {
+                        "display": ["Inter"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-light dark:bg-background-dark font-display min-h-screen flex flex-col overflow-hidden text-slate-900 dark:text-slate-100">
+<!-- Header -->
+<header class="flex items-center justify-between whitespace-nowrap border-b border-solid border-border-dark bg-background-dark px-6 py-3 shrink-0 z-20">
+<div class="flex items-center gap-4 text-slate-100">
+<div class="size-6 text-primary">
+<span class="material-symbols-outlined text-2xl">grid_view</span>
+</div>
+<h2 class="text-slate-100 text-lg font-bold leading-tight tracking-[-0.015em]">Templates Studio</h2>
+</div>
+<!-- Navigation -->
+<div class="flex flex-1 justify-center gap-8 hidden md:flex">
+<a class="text-text-subtle hover:text-white text-sm font-medium leading-normal transition-colors" href="#">Dashboard</a>
+<a class="text-text-subtle hover:text-white text-sm font-medium leading-normal transition-colors" href="#">Live</a>
+<a class="text-text-subtle hover:text-white text-sm font-medium leading-normal transition-colors" href="#">Schedule</a>
+<a class="text-white text-sm font-medium leading-normal border-b-2 border-primary pb-0.5" href="#">Studio</a>
+<a class="text-text-subtle hover:text-white text-sm font-medium leading-normal transition-colors" href="#">Settings</a>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden sm:flex items-center gap-3">
+<button class="flex items-center justify-center rounded-lg h-9 px-4 border border-border-dark bg-transparent text-text-subtle text-sm font-medium hover:bg-surface-dark transition-colors">
+                    Draft
+                </button>
+<button class="flex items-center justify-center rounded-lg h-9 px-4 bg-primary text-background-dark text-sm font-bold shadow-lg shadow-primary/20 hover:bg-primary-dark transition-colors">
+                    Save Changes
+                </button>
+</div>
+<div class="bg-center bg-no-repeat aspect-square bg-cover rounded-full size-9 ring-2 ring-border-dark" data-alt="User profile avatar" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuAJC_Lrn9ojtZD9dgG46zx0Li5KJBgWmZLbvfTVXEM3O4bFC4GWoGQyjHbY9Y3f26aqxK8eg8heiCR3_tYKH20IFH1fmVnp0crOY0V8HogCadWBXToCYoMh5Qp7cumS4i8TVfQQm5mfF5tF5-xae1NgS1wX31JDZnmTfjhLTi58dVkRgM94El5DdXe50fZMZ8QkgN_a9FJ3L1V35MwodW5HxU5Bk1sBbDmXA4vsWoNSZQLWtN2JpI2Zj7BH2-q4GFnylTe5rh3iiw");'></div>
+</div>
+</header>
+<!-- Main Workspace -->
+<div class="flex flex-1 overflow-hidden h-full">
+<!-- Left Panel: Template Library -->
+<aside class="w-72 bg-surface-darker border-r border-border-dark flex flex-col shrink-0">
+<div class="p-4 border-b border-border-dark">
+<h3 class="text-slate-100 tracking-light text-lg font-bold leading-tight pb-3">Template Library</h3>
+<!-- Search -->
+<div class="relative w-full">
+<div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-text-subtle">
+<span class="material-symbols-outlined text-[20px]">search</span>
+</div>
+<input class="block w-full pl-10 pr-3 py-2 border-none rounded-lg leading-5 bg-background-dark text-slate-100 placeholder-text-subtle focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm" placeholder="Search templates..." type="text"/>
+</div>
+<!-- Filters -->
+<div class="flex gap-2 mt-3 overflow-x-auto no-scrollbar pb-1">
+<button class="px-3 py-1 rounded-full bg-primary/20 text-primary text-xs font-medium whitespace-nowrap border border-primary/30">All</button>
+<button class="px-3 py-1 rounded-full bg-background-dark text-text-subtle text-xs font-medium whitespace-nowrap hover:text-white border border-border-dark">Lower Thirds</button>
+<button class="px-3 py-1 rounded-full bg-background-dark text-text-subtle text-xs font-medium whitespace-nowrap hover:text-white border border-border-dark">Full Screen</button>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-2 space-y-1">
+<!-- Group: Built-in -->
+<details class="group" open="">
+<summary class="flex items-center justify-between px-3 py-2 text-sm font-medium text-slate-100 cursor-pointer rounded-lg hover:bg-surface-dark select-none">
+<span class="flex items-center gap-2">
+<span class="material-symbols-outlined text-text-subtle group-open:rotate-90 transition-transform text-[18px]">chevron_right</span>
+                            Built-in
+                        </span>
+</summary>
+<div class="pl-4 mt-1 space-y-1">
+<div class="flex items-center gap-3 px-3 py-2 text-sm text-text-subtle rounded-lg cursor-pointer bg-primary/10 border border-primary/20 text-white">
+<span class="material-symbols-outlined text-[18px] text-primary">video_label</span>
+                            Simple Lower Third
+                        </div>
+<div class="flex items-center gap-3 px-3 py-2 text-sm text-text-subtle rounded-lg cursor-pointer hover:bg-surface-dark hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[18px]">call_to_action</span>
+                            Verse Overlay
+                        </div>
+<div class="flex items-center gap-3 px-3 py-2 text-sm text-text-subtle rounded-lg cursor-pointer hover:bg-surface-dark hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[18px]">featured_video</span>
+                            Announcement
+                        </div>
+</div>
+</details>
+<!-- Group: My Templates -->
+<details class="group" open="">
+<summary class="flex items-center justify-between px-3 py-2 text-sm font-medium text-slate-100 cursor-pointer rounded-lg hover:bg-surface-dark select-none mt-2">
+<span class="flex items-center gap-2">
+<span class="material-symbols-outlined text-text-subtle group-open:rotate-90 transition-transform text-[18px]">chevron_right</span>
+                            My Templates
+                        </span>
+<span class="material-symbols-outlined text-text-subtle hover:text-primary text-[16px]">add</span>
+</summary>
+<div class="pl-4 mt-1 space-y-1">
+<div class="flex items-center gap-3 px-3 py-2 text-sm text-text-subtle rounded-lg cursor-pointer hover:bg-surface-dark hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[18px]">person</span>
+                            Pastor Sunday
+                        </div>
+<div class="flex items-center gap-3 px-3 py-2 text-sm text-text-subtle rounded-lg cursor-pointer hover:bg-surface-dark hover:text-white transition-colors">
+<span class="material-symbols-outlined text-[18px]">music_note</span>
+                            Worship Team
+                        </div>
+</div>
+</details>
+</div>
+</aside>
+<!-- Center Panel: Canvas / Preview -->
+<main class="flex-1 flex flex-col bg-background-dark relative overflow-hidden">
+<!-- Canvas Toolbar -->
+<div class="h-12 border-b border-border-dark flex items-center justify-between px-4 bg-surface-darker shrink-0">
+<div class="flex items-center gap-4">
+<span class="text-xs font-semibold text-text-subtle uppercase tracking-wider">Canvas: 1920x1080</span>
+<div class="h-4 w-px bg-border-dark"></div>
+<div class="flex items-center gap-2">
+<label class="flex items-center cursor-pointer gap-2">
+<input class="form-checkbox h-4 w-4 text-primary rounded border-border-dark bg-background-dark focus:ring-0 focus:ring-offset-0" type="checkbox"/>
+<span class="text-sm text-text-subtle">Safe Areas</span>
+</label>
+</div>
+</div>
+<div class="flex items-center gap-3">
+<div class="flex bg-background-dark rounded-lg p-0.5 border border-border-dark">
+<button class="px-3 py-1 text-xs font-medium text-slate-100 bg-surface-dark rounded shadow-sm">Fit</button>
+<button class="px-3 py-1 text-xs font-medium text-text-subtle hover:text-white">100%</button>
+<button class="px-3 py-1 text-xs font-medium text-text-subtle hover:text-white">50%</button>
+</div>
+</div>
+</div>
+<!-- Canvas Area -->
+<div class="flex-1 flex items-center justify-center p-8 bg-neutral-900 overflow-auto bg-[radial-gradient(#234823_1px,transparent_1px)] [background-size:20px_20px]">
+<!-- 16:9 Container -->
+<div class="aspect-video w-full max-w-[1024px] bg-black shadow-2xl relative group overflow-hidden border border-border-dark rounded-sm">
+<!-- Background Placeholder (Simulating Live Feed) -->
+<div class="absolute inset-0 bg-cover bg-center opacity-60 filter blur-sm" data-alt="Blurred church auditorium background showing stage lighting" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuC0ybHToVVqt_4xmw8zPrwo94d3SNf2JDoi6I9Ob-bFHlrGYrUFl1PYUFHYtg3vOeZd5qx10eAhiaeZEh5VYc4E4FS3fhX0gyL8s13_4oV-IDnVdVwzoVBy256VqFUS8-y53MuH-dBC2mITROAndjjDAB8tJZqgSeBnZPM9yiSqGt-TDaabCrye3wdo3mGeyhUQit4q0q9z4B_1VTHk9ECdqp6ibhgOKm1IBHzAnmVvfBI2x-P2ZDiCVyIZIGvGuuaHUmNgm8d_PQ');"></div>
+<!-- Overlay Elements (The Template) -->
+<div class="absolute bottom-16 left-16 z-10 flex flex-col gap-1 animate-in fade-in slide-in-from-bottom-4 duration-700">
+<div class="bg-primary px-6 py-2 rounded-sm shadow-lg w-max">
+<h1 class="text-background-dark font-bold text-3xl font-display tracking-tight">Pastor John Doe</h1>
+</div>
+<div class="bg-background-dark/90 backdrop-blur-md px-6 py-1.5 rounded-sm shadow-lg w-max border-l-4 border-primary">
+<h2 class="text-white font-medium text-xl font-display">Senior Pastor // Sunday Service</h2>
+</div>
+</div>
+<!-- Safe Area Guides (Conditional) -->
+<div class="absolute inset-[5%] border border-dashed border-primary/30 pointer-events-none"></div>
+<div class="absolute inset-[10%] border border-dashed border-red-500/30 pointer-events-none"></div>
+<!-- Live Badge -->
+<div class="absolute top-4 right-4 bg-red-600 text-white text-xs font-bold px-2 py-1 rounded uppercase tracking-wider flex items-center gap-1 shadow-md">
+<span class="animate-pulse w-2 h-2 rounded-full bg-white"></span>
+                        Live Preview
+                    </div>
+</div>
+</div>
+<!-- Bottom zoom/scrub bar (Optional utility) -->
+<div class="h-8 bg-surface-darker border-t border-border-dark flex items-center px-4 justify-between text-xs text-text-subtle">
+<span>Zoom: 64%</span>
+<span>Hold Shift to pan</span>
+</div>
+</main>
+<!-- Right Panel: Properties -->
+<aside class="w-80 bg-surface-darker border-l border-border-dark flex flex-col shrink-0">
+<!-- Tabs -->
+<div class="flex border-b border-border-dark">
+<button class="flex-1 py-3 text-sm font-medium text-primary border-b-2 border-primary bg-surface-dark/50">Content</button>
+<button class="flex-1 py-3 text-sm font-medium text-text-subtle hover:text-white hover:bg-surface-dark transition-colors">Design</button>
+<button class="flex-1 py-3 text-sm font-medium text-text-subtle hover:text-white hover:bg-surface-dark transition-colors">Behavior</button>
+</div>
+<!-- Content Area -->
+<div class="flex-1 overflow-y-auto p-5 space-y-6">
+<!-- Section: Data Source -->
+<div class="space-y-3">
+<label class="text-xs font-bold text-text-subtle uppercase tracking-wider">Data Source</label>
+<select class="block w-full rounded-lg border-border-dark bg-background-dark text-white text-sm focus:border-primary focus:ring-primary">
+<option>Manual Entry</option>
+<option>Planning Center</option>
+<option>CSV Import</option>
+</select>
+</div>
+<hr class="border-border-dark"/>
+<!-- Section: Text Fields -->
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<label class="text-sm font-medium text-slate-100">Show Name</label>
+<div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 border-primary appearance-none cursor-pointer checked:right-0 right-5" id="toggle-name" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-primary cursor-pointer" for="toggle-name"></label>
+</div>
+</div>
+<div>
+<input class="block w-full rounded-lg border-border-dark bg-background-dark text-white text-sm focus:border-primary focus:ring-primary placeholder-text-subtle p-2.5" type="text" value="Pastor John Doe"/>
+</div>
+<div class="flex items-center justify-between pt-2">
+<label class="text-sm font-medium text-slate-100">Show Role/Subtitle</label>
+<div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+<input checked="" class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 border-primary appearance-none cursor-pointer checked:right-0 right-5" id="toggle-role" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-primary cursor-pointer" for="toggle-role"></label>
+</div>
+</div>
+<div>
+<input class="block w-full rounded-lg border-border-dark bg-background-dark text-white text-sm focus:border-primary focus:ring-primary placeholder-text-subtle p-2.5" type="text" value="Senior Pastor // Sunday Service"/>
+</div>
+</div>
+<hr class="border-border-dark"/>
+<!-- Section: Image/Logo -->
+<div class="space-y-4">
+<div class="flex items-center justify-between">
+<label class="text-sm font-medium text-slate-100">Church Logo</label>
+<div class="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
+<input class="toggle-checkbox absolute block w-5 h-5 rounded-full bg-white border-4 border-slate-600 appearance-none cursor-pointer right-5 checked:right-0 checked:border-primary" id="toggle-logo" name="toggle" type="checkbox"/>
+<label class="toggle-label block overflow-hidden h-5 rounded-full bg-slate-700 cursor-pointer peer-checked:bg-primary" for="toggle-logo"></label>
+</div>
+</div>
+<div class="border-2 border-dashed border-border-dark rounded-lg p-4 flex flex-col items-center justify-center text-center hover:bg-background-dark transition-colors cursor-pointer group">
+<span class="material-symbols-outlined text-text-subtle group-hover:text-primary mb-2">cloud_upload</span>
+<p class="text-xs text-text-subtle">Click to upload or drag &amp; drop</p>
+<p class="text-[10px] text-text-subtle/70 mt-1">PNG, JPG (max 2MB)</p>
+</div>
+</div>
+<hr class="border-border-dark"/>
+<!-- Section: Theme Override -->
+<div class="space-y-3">
+<label class="text-xs font-bold text-text-subtle uppercase tracking-wider">Color Override</label>
+<div class="grid grid-cols-5 gap-2">
+<button class="w-8 h-8 rounded-full bg-primary ring-2 ring-white ring-offset-2 ring-offset-surface-darker"></button>
+<button class="w-8 h-8 rounded-full bg-blue-500 hover:ring-2 hover:ring-white/50 hover:ring-offset-2 hover:ring-offset-surface-darker transition-all"></button>
+<button class="w-8 h-8 rounded-full bg-purple-500 hover:ring-2 hover:ring-white/50 hover:ring-offset-2 hover:ring-offset-surface-darker transition-all"></button>
+<button class="w-8 h-8 rounded-full bg-orange-500 hover:ring-2 hover:ring-white/50 hover:ring-offset-2 hover:ring-offset-surface-darker transition-all"></button>
+<button class="w-8 h-8 rounded-full bg-white flex items-center justify-center hover:ring-2 hover:ring-white/50 hover:ring-offset-2 hover:ring-offset-surface-darker transition-all">
+<span class="material-symbols-outlined text-black text-[18px]">add</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Panel Footer -->
+<div class="p-4 border-t border-border-dark bg-background-dark">
+<button class="w-full py-2.5 rounded-lg border border-border-dark bg-surface-dark text-sm font-medium text-white hover:bg-surface-darker hover:border-text-subtle transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">refresh</span>
+                    Reset Defaults
+                </button>
+</div>
+</aside>
+</div>
+<style>
+        /* Custom toggle switch styling to work without JS framework logic, purely visual CSS */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #13ec13;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #13ec13;
+        }
+
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        .no-scrollbar {
+            -ms-overflow-style: none;  /* IE and Edge */
+            scrollbar-width: none;  /* Firefox */
+        }
+    </style>
+</body></html>

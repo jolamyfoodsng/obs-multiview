@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Export &amp; Share - OBS Church Studio</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec5b",
+                        "primary-dark": "#0eb545",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102216",
+                        "surface-dark": "#152e1e",
+                        "surface-darker": "#0a160e",
+                        "accent-purple": "#a855f7", 
+                        "accent-purple-dark": "#3b0764",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #102216; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1f422b; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2a5a3a; 
+        }
+        .dotted-grid {
+            background-image: radial-gradient(circle, #1f422b 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        .glass-panel {
+            background: rgba(21, 46, 30, 0.8);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(19, 236, 91, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-background-light dark:bg-background-dark text-slate-800 dark:text-gray-200 font-display h-screen flex flex-col overflow-hidden selection:bg-primary selection:text-background-dark">
+<header class="h-14 bg-white dark:bg-surface-dark border-b border-gray-200 dark:border-primary/10 flex items-center justify-between px-6 z-20 shrink-0">
+<div class="flex items-center gap-4">
+<div class="flex items-center gap-2">
+<span class="material-icons text-primary text-2xl">dashboard_customize</span>
+<h1 class="font-bold text-lg tracking-tight text-gray-900 dark:text-white">OBS Church Studio</h1>
+</div>
+<div class="h-6 w-px bg-gray-300 dark:bg-primary/20 mx-2"></div>
+<nav class="flex items-center gap-4 text-sm font-medium">
+<a class="text-gray-500 dark:text-gray-400 hover:text-primary transition-colors" href="#">Editor</a>
+<span class="text-gray-600">/</span>
+<span class="text-gray-900 dark:text-white">Export &amp; Share</span>
+</nav>
+</div>
+<div class="flex items-center gap-3">
+<button class="p-2 text-gray-400 hover:text-white transition-colors">
+<span class="material-icons">settings</span>
+</button>
+<div class="w-8 h-8 rounded-full bg-accent-purple flex items-center justify-center text-xs font-bold text-white">
+            JD
+        </div>
+</div>
+</header>
+<main class="flex-1 overflow-y-auto relative dotted-grid flex flex-col items-center py-12 px-6">
+<div class="w-full max-w-4xl space-y-8">
+<div class="text-center space-y-2 mb-10">
+<h2 class="text-3xl font-bold text-white">Export Layout</h2>
+<p class="text-gray-400">Finalize and share "Morning Worship Layout" with your production team.</p>
+</div>
+<div class="glass-panel rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 group">
+<div class="p-4 bg-surface-darker/50 flex items-center justify-between border-b border-white/5">
+<div class="flex items-center gap-3">
+<span class="material-icons text-primary text-sm">visibility</span>
+<span class="text-xs font-semibold uppercase tracking-widest text-gray-300">Layout Preview</span>
+</div>
+<span class="text-xs text-gray-500 font-mono">ID: WS-2024-001</span>
+</div>
+<div class="aspect-video bg-black relative group-hover:scale-[1.01] transition-transform duration-500">
+<img alt="Speaker giving a presentation on stage" class="absolute inset-0 w-full h-full object-cover opacity-60" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIo7HXX2LY9yRbLpm74hk_QyJMVhcxdkFE9VCWfXKtqQPI_k-lOxBXVnwl9HZpWEv3zCdmCA3UZREvS3UvoivLrfuGgl9sNOvwXmtGhfjMFs8oiDFwYUop-Tx1_NoN0ogQH90KNyqvBPZAT9cYx7s5Xu0f0iYr5buKLV3AA_KG7N8eSyYoa5UWfcEYKlobOJ_z1y38QuY4TDBTuNLmC4KfcWzAY_QhJgHH1Bz4jhlSFjkBS1BNmisZWfwsV9yU0h_ExkxPxZEu"/>
+<div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+<div class="w-[90%] h-[80%] border-2 border-primary/40 rounded-xl relative">
+<div class="absolute top-4 left-4 bg-primary text-black text-[10px] px-2 py-0.5 font-bold rounded">LIVE FEED</div>
+<div class="absolute bottom-4 right-4 w-1/3 h-1/3 bg-surface-dark/90 border border-white/10 rounded-lg p-3 flex flex-col justify-center">
+<div class="h-1.5 w-full bg-accent-purple/30 rounded mb-2"></div>
+<div class="h-1.5 w-2/3 bg-accent-purple/30 rounded"></div>
+</div>
+</div>
+</div>
+<div class="absolute top-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 flex items-center gap-2">
+<div class="w-2 h-2 rounded-full bg-primary animate-pulse"></div>
+<span class="text-[10px] font-bold text-white uppercase tracking-tighter">Ready for Export</span>
+</div>
+</div>
+<div class="p-8 grid grid-cols-1 md:grid-cols-3 gap-6 bg-surface-darker/30">
+<button class="flex flex-col items-center gap-4 p-6 rounded-xl bg-primary hover:bg-primary-dark text-background-dark transition-all transform hover:-translate-y-1 group shadow-[0_0_20px_rgba(19,236,91,0.2)]">
+<div class="w-12 h-12 rounded-full bg-white/20 flex items-center justify-center group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined font-bold">hub</span>
+</div>
+<div class="text-center">
+<div class="font-bold text-base">Share to Workspace</div>
+<p class="text-[11px] opacity-80 font-medium">Sync with the Tech Team</p>
+</div>
+</button>
+<button class="flex flex-col items-center gap-4 p-6 rounded-xl bg-surface-dark border border-primary/20 hover:border-primary/60 text-white transition-all transform hover:-translate-y-1 group">
+<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-primary">image</span>
+</div>
+<div class="text-center">
+<div class="font-bold text-base">Preview Image</div>
+<p class="text-[11px] text-gray-400 font-medium">Download for Social Media</p>
+</div>
+</button>
+<button class="flex flex-col items-center gap-4 p-6 rounded-xl bg-surface-dark border border-primary/20 hover:border-primary/60 text-white transition-all transform hover:-translate-y-1 group">
+<div class="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+<span class="material-symbols-outlined text-primary">data_object</span>
+</div>
+<div class="text-center">
+<div class="font-bold text-base">Backup Config</div>
+<p class="text-[11px] text-gray-400 font-medium">Export as JSON File</p>
+</div>
+</button>
+</div>
+</div>
+<div class="glass-panel border-dashed border-2 border-primary/20 rounded-2xl p-10 text-center group hover:border-primary/50 transition-colors">
+<div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-surface-darker border border-primary/10 mb-4 group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary text-3xl">upload_file</span>
+</div>
+<h3 class="text-white font-semibold mb-1 text-lg">Import Existing Layout</h3>
+<p class="text-gray-400 text-sm mb-6 max-w-sm mx-auto">Drag and drop your .json layout files here to restore a previous session or import from another team.</p>
+<button class="px-6 py-2.5 bg-surface-darker hover:bg-surface-dark border border-gray-700 text-gray-300 text-sm font-medium rounded-lg transition-all">
+                Browse Files
+            </button>
+</div>
+<div class="flex flex-col md:flex-row items-center justify-between gap-6 pt-4 border-t border-white/5">
+<div class="flex items-center gap-4">
+<div class="flex -space-x-3">
+<div class="w-10 h-10 rounded-full border-2 border-background-dark bg-gray-600 flex items-center justify-center text-[10px] font-bold">MK</div>
+<div class="w-10 h-10 rounded-full border-2 border-background-dark bg-accent-purple flex items-center justify-center text-[10px] font-bold">SJ</div>
+<div class="w-10 h-10 rounded-full border-2 border-background-dark bg-primary text-background-dark flex items-center justify-center text-[10px] font-bold">TS</div>
+</div>
+<p class="text-xs text-gray-500">3 team members have active access to this layout.</p>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-green-500"></span>
+<span class="text-xs font-medium text-gray-400">Team Workspace: <span class="text-white">Main Sanctuary</span></span>
+</div>
+</div>
+</div>
+</main>
+<footer class="h-8 bg-surface-dark border-t border-primary/10 flex items-center px-4 justify-between text-[10px] uppercase tracking-widest text-gray-500 shrink-0">
+<div class="flex gap-6">
+<span class="flex items-center gap-1.5"><span class="w-1 h-1 rounded-full bg-primary"></span> Cloud Synced</span>
+<span>Version 2.4.0-build</span>
+</div>
+<div class="flex items-center gap-4">
+<span>Church ID: #7742</span>
+<span class="text-primary font-bold">Secure Broadcast Enabled</span>
+</div>
+</footer>
+
+</body></html>

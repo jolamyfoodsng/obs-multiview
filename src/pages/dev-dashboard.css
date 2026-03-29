@@ -1,0 +1,406 @@
+/**
+ * dev-dashboard.css — Database Inspector styling
+ * Uses unified CSS variables from App.css.
+ */
+
+.dev-db-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  font-family: inherit;
+}
+
+/* ── Header ── */
+.dev-db-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-dark);
+  flex-shrink: 0;
+}
+
+.dev-db-header-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.dev-db-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.dev-db-logo svg {
+  width: 24px; height: 24px;
+  color: #fff;
+}
+
+.dev-db-header h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.dev-db-header p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.dev-db-header p code {
+  font-family: "SF Mono", "Fira Code", monospace;
+  background: var(--surface-hover);
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--primary);
+}
+
+.dev-db-header-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ── Buttons ── */
+.dev-db-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-dark);
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 120ms;
+  font-family: inherit;
+}
+
+.dev-db-btn:hover:not(:disabled) {
+  background: var(--surface-hover);
+  border-color: var(--text-muted);
+  color: var(--text-primary);
+}
+
+.dev-db-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dev-db-btn svg {
+  width: 16px; height: 16px;
+}
+
+.dev-db-btn--accent {
+  background: var(--primary-soft, rgba(74, 222, 128, 0.1));
+  border-color: var(--border-primary);
+  color: var(--primary);
+}
+
+.dev-db-btn--accent:hover:not(:disabled) {
+  background: rgba(var(--primary-rgb), 0.18);
+  border-color: var(--primary);
+}
+
+.dev-db-btn--sm {
+  padding: 4px 8px;
+  font-size: 11px;
+  border-radius: 6px;
+}
+
+/* ── Migration result ── */
+.dev-db-migration-result {
+  margin: 12px 24px 0;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-dark);
+  position: relative;
+}
+
+.dev-db-migration-ok,
+.dev-db-migration-err {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.dev-db-migration-ok svg {
+  color: var(--primary);
+  width: 18px; height: 18px;
+  margin-top: 1px;
+}
+
+.dev-db-migration-err svg {
+  color: var(--error);
+  width: 18px; height: 18px;
+  margin-top: 1px;
+}
+
+.dev-db-migration-result ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+  color: var(--text-secondary);
+}
+
+.dev-db-dismiss {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+}
+
+.dev-db-dismiss:hover {
+  color: var(--text-primary);
+}
+
+/* ── Loading ── */
+.dev-db-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 60px 20px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+.dev-db-loading svg {
+  animation: devDbSpin 1s linear infinite;
+}
+
+@keyframes devDbSpin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* ── Body ── */
+.dev-db-body {
+  padding: 16px 24px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* ── Category ── */
+.dev-db-category-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  margin: 0 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+}
+
+.dev-db-category-title svg {
+  width: 18px; height: 18px;
+  color: var(--primary);
+}
+
+.dev-db-category-count {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* ── Store cards ── */
+.dev-db-stores {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dev-db-store {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-dark);
+  overflow: hidden;
+  transition: border-color 120ms;
+}
+
+.dev-db-store.is-expanded {
+  border-color: var(--border-primary);
+}
+
+.dev-db-store-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  transition: background 80ms;
+}
+
+.dev-db-store-header:hover {
+  background: var(--surface-hover);
+}
+
+.dev-db-store-icon {
+  font-size: 18px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.dev-db-store.is-expanded .dev-db-store-icon {
+  color: var(--primary);
+}
+
+.dev-db-store-name {
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.dev-db-store-count {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--primary-soft, rgba(74, 222, 128, 0.08));
+  padding: 2px 8px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.dev-db-store-indexes {
+  font-size: 10px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* ── Store body (expanded) ── */
+.dev-db-store-body {
+  border-top: 1px solid var(--border);
+  padding: 12px 14px;
+}
+
+.dev-db-store-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.dev-db-store-info {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ── Table ── */
+.dev-db-table-wrap {
+  overflow-x: auto;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+
+.dev-db-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.dev-db-table th {
+  background: var(--surface-dark);
+  color: var(--text-secondary);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  white-space: nowrap;
+}
+
+.dev-db-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dev-db-table tr:hover td {
+  background: var(--surface-hover);
+}
+
+.dev-db-td-idx {
+  color: var(--text-muted);
+  font-weight: 600;
+  width: 30px;
+}
+
+.dev-db-td-obj {
+  color: var(--text-muted);
+  font-style: italic;
+  font-size: 11px;
+}
+
+/* ── JSON view ── */
+.dev-db-json {
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 14px;
+  font-size: 11px;
+  font-family: "SF Mono", "Fira Code", monospace;
+  color: var(--text-secondary);
+  overflow-x: auto;
+  max-height: 400px;
+  overflow-y: auto;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── Empty ── */
+.dev-db-empty {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-style: italic;
+}

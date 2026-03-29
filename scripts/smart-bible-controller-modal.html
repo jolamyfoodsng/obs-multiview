@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sunday Switcher</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              "primary": "#1931e6",
+              "primary-dark": "#1020a1",
+              "primary-light": "#eef0ff",
+              "background-light": "#f6f6f8",
+              "surface-dark": "#1e2030",
+              "text-main": "#0e0f1b",
+              "border-light": "#e7e9f3",
+            },
+            fontFamily: {
+              "sans": ["Inter", "sans-serif"]
+            }
+          }
+        }
+      }
+    </script>
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+
+    <!-- React & Babel Standalone -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+      body {
+        font-family: 'Inter', sans-serif;
+      }
+      /* Custom scrollbar */
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: #1e2030;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: #33364a;
+        border-radius: 3px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: #4b4f69;
+      }
+      .glass-panel {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(10px);
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.4",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.4/",
+    "react/": "https://esm.sh/react@^19.2.4/"
+  }
+}
+</script>
+</head>
+  <body class="bg-background-light text-text-main h-screen overflow-hidden antialiased">
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect, useRef } = React;
+
+      // --- Constants & Data ---
+
+      const Theme = {
+        MODERN_GLASS: "Modern Glass",
+        SIMPLE_LOWER: "Simple Lower Third",
+        FULL_SCREEN: "Full Screen (Dark)",
+        MINIMAL_TEXT: "Minimal Text",
+      };
+
+      const MOCK_VERSES = [
+        {
+          id: 'j316',
+          reference: 'John 3:16',
+          text: 'For God so loved the world that He gave His only begotten Son, that whoever believes in Him should not perish but have everlasting life.',
+          version: 'NKJV',
+          book: 'John',
+          chapter: 3,
+          verse: 16
+        },
+        {
+          id: 'job316',
+          reference: 'Job 3:16',
+          text: 'Or why was I not hidden away like a stillborn child, like infants who never saw light?',
+          version: 'NKJV',
+          book: 'Job',
+          chapter: 3,
+          verse: 16
+        },
+        {
+          id: 'j315',
+          reference: 'John 3:15',
+          text: '...that whoever believes in Him should not perish but have eternal life.',
+          version: 'NKJV',
+          book: 'John',
+          chapter: 3,
+          verse: 15
+        },
+        {
+          id: 'j317',
+          reference: 'John 3:17',
+          text: 'For God did not send His Son into the world to condemn the world, but that the world through Him might be saved.',
+          version: 'NKJV',
+          book: 'John',
+          chapter: 3,
+          verse: 17
+        },
+        {
+          id: 'rom828',
+          reference: 'Romans 8:28',
+          text: 'And we know that all things work together for good to those who love God, to those who are the called according to His purpose.',
+          version: 'NKJV',
+          book: 'Romans',
+          chapter: 8,
+          verse: 28
+        }
+      ];
+
+      const PREVIEW_BG_IMAGE = "https://lh3.googleusercontent.com/aida-public/AB6AXuBRvpEBamCACJmO1OdLUQ8UCauGPI0Ggg_uQrglaPwfp-0-YDYj9rkM60bSvzPX1MsN3r4EP0x4S_FoX5-Ay74pmnZe1s2iiFxDwheDWENoyh2RvUFADX96YTU0yhiI6niL1mWmMcpnNOjOS_YkvaX2vWLvjp4T4u7XtSHPv1eOtxnijPxU6C_-IupgSDPkt1HizRdwLJs7Wl9JCvAQGoqq7vQiYMjjMVE26Ijw4gwkmNuB8_Kb4FrMJdEYgQPnWwFX-CsBnIj0uw";
+
+      const INITIAL_QUERY = "j316";
+
+      // --- Components ---
+
+      const HeaderButton = ({ icon }) => (
+        <button className="flex items-center justify-center overflow-hidden rounded h-9 bg-border-light hover:bg-[#dbe0ed] transition-colors text-text-main gap-2 text-sm font-bold min-w-0 px-3">
+          <span className="material-symbols-outlined text-[20px]">{icon}</span>
+        </button>
+      );
+
+      const SearchPanel = ({ onVerseSelect, selectedVerseId, initialQuery = '' }) => {
+        const [query, setQuery] = useState(initialQuery);
+        const [isFocused, setIsFocused] = useState(true);
+        const searchRef = useRef(null);
+
+        useEffect(() => {
+          const handleClickOutside = (event) => {
+            if (searchRef.current && !searchRef.current.contains(event.target)) {
+              setIsFocused(false);
+            }
+          };
+
+          document.addEventListener('mousedown', handleClickOutside);
+          return () => document.removeEventListener('mousedown', handleClickOutside);
+        }, []);
+
+        const bestMatch = MOCK_VERSES.find(v =>
+          v.id === query.toLowerCase() ||
+          v.reference.toLowerCase().replace(/\s/g, '') === query.toLowerCase().replace(/\s/g, '')
+        );
+
+        const closeMatches = MOCK_VERSES.filter(v => v !== bestMatch).slice(0, 3);
+        const showDropdown = isFocused && query.length > 0;
+
+        return (
+          <div className="flex-1 flex flex-col relative bg-[#f8f9fc] h-full">
+            {/* Sticky Search Header */}
+            <div className="px-8 pt-8 pb-4 z-40 bg-[#f8f9fc]" ref={searchRef}>
+              <div className="relative w-full max-w-3xl mx-auto">
+                <label className={`flex flex-col w-full shadow-lg rounded-lg overflow-hidden ring-4 transition-all duration-200 ${isFocused ? 'ring-primary/10' : 'ring-transparent'}`}>
+                  <div className="flex w-full items-stretch h-16 bg-white border border-border-light">
+                    <div className="text-[#4e5797] flex items-center justify-center pl-5 pr-3">
+                      <span className="material-symbols-outlined text-3xl text-primary">search</span>
+                    </div>
+                    <input
+                      autoFocus
+                      className="flex-1 min-w-0 bg-transparent text-text-main text-2xl font-medium placeholder:text-[#9ea3c0] focus:outline-0 px-2 h-full"
+                      placeholder="Search scripture (e.g. Matt 5:1)..."
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      onFocus={() => setIsFocused(true)}
+                    />
+                    <div className="flex items-center pr-4 gap-2">
+                      <span className="px-2 py-1 rounded text-xs font-bold text-gray-400 bg-gray-100 border border-gray-200">
+                        ESC
+                      </span>
+                      {query && (
+                        <button
+                          onClick={() => setQuery('')}
+                          className="text-gray-400 hover:text-red-500 transition-colors"
+                        >
+                          <span className="material-symbols-outlined">cancel</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </label>
+
+                {/* Suggestions Dropdown */}
+                {showDropdown && (
+                  <div className="absolute top-full left-0 w-full mt-2 bg-surface-dark rounded-lg shadow-2xl border border-[#33364a] overflow-hidden flex flex-col max-h-[calc(100vh-250px)] z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+
+                    {bestMatch && (
+                      <>
+                        <div className="flex items-center justify-between px-4 py-2 bg-[#151725] border-b border-[#33364a]">
+                          <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Best Match</span>
+                          <span className="text-[10px] bg-primary text-white px-1.5 rounded font-bold">ENTER</span>
+                        </div>
+                        <div
+                          onClick={() => onVerseSelect(bestMatch)}
+                          className="group flex items-start gap-4 p-4 bg-primary/10 border-l-4 border-primary cursor-pointer transition-colors hover:bg-primary/20"
+                        >
+                          <div className="mt-1">
+                            <span className="material-symbols-outlined text-primary">bookmark</span>
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex justify-between items-baseline mb-1">
+                              <h3 className="text-white text-lg font-bold">{bestMatch.reference}</h3>
+                              <span className="text-xs text-primary-200 font-medium">{bestMatch.version}</span>
+                            </div>
+                            <p className="text-gray-300 text-sm leading-relaxed">
+                              {bestMatch.text}
+                            </p>
+                          </div>
+                        </div>
+                      </>
+                    )}
+
+                    {/* Close Matches Section */}
+                    <div className="flex items-center justify-between px-4 py-2 bg-[#151725] border-y border-[#33364a] mt-0">
+                      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Close Matches</span>
+                    </div>
+
+                    <div className="overflow-y-auto custom-scrollbar">
+                      {closeMatches.map((verse) => (
+                         <div
+                           key={verse.id}
+                           onClick={() => onVerseSelect(verse)}
+                           className="group flex items-center gap-4 px-4 py-3 hover:bg-[#2a2d40] border-l-4 border-transparent hover:border-gray-500 cursor-pointer transition-colors"
+                         >
+                          <div className="mt-0.5">
+                            <span className="material-symbols-outlined text-gray-500 group-hover:text-gray-300">
+                              {verse.book === 'Job' ? 'find_in_page' : 'format_quote'}
+                            </span>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex justify-between items-baseline">
+                              <h4 className="text-gray-200 text-base font-medium truncate">{verse.reference}</h4>
+                              {verse.version && <span className="text-xs text-gray-600">{verse.version}</span>}
+                            </div>
+                            <p className="text-gray-500 text-xs truncate">{verse.text}</p>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Navigation Section */}
+                      <div className="flex items-center justify-between px-4 py-2 bg-[#151725] border-y border-[#33364a]">
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Navigation</span>
+                      </div>
+
+                      <div className="group flex items-center gap-4 px-4 py-3 hover:bg-[#2a2d40] border-l-4 border-transparent hover:border-gray-500 cursor-pointer transition-colors">
+                        <div className="mt-0.5">
+                          <span className="material-symbols-outlined text-gray-500 group-hover:text-gray-300">library_books</span>
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4 className="text-gray-200 text-base font-medium truncate">Open Book: John</h4>
+                        </div>
+                        <span className="text-[10px] text-gray-600 bg-[#151725] px-1.5 py-0.5 rounded border border-[#33364a]">CMD+B</span>
+                      </div>
+                    </div>
+
+                    {/* Footer Hints */}
+                    <div className="bg-[#151725] px-4 py-2 flex items-center gap-4 border-t border-[#33364a] text-[10px] text-gray-500">
+                      <span className="flex items-center gap-1"><span className="bg-[#2a2d40] px-1 rounded text-gray-300">↑</span> <span className="bg-[#2a2d40] px-1 rounded text-gray-300">↓</span> Navigate</span>
+                      <span className="flex items-center gap-1"><span className="bg-[#2a2d40] px-1 rounded text-gray-300">↵</span> Select</span>
+                      <span className="flex items-center gap-1"><span className="bg-[#2a2d40] px-1 rounded text-gray-300">TAB</span> Quick Look</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Example Chips */}
+                <div className="mt-3 flex justify-end">
+                  <div className="inline-flex items-center gap-2 bg-white px-3 py-1 rounded-full border border-border-light shadow-sm cursor-pointer hover:bg-gray-50"
+                       onClick={() => setQuery("Ps 23")}
+                  >
+                    <span className="material-symbols-outlined text-primary text-sm">lightbulb</span>
+                    <span className="text-xs font-medium text-gray-500">Try: "Ps 23", "Matt 5", "1 Cor 13"</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Background Decoration */}
+            <div className="flex-1 flex items-center justify-center opacity-30 pointer-events-none select-none">
+              <div className="text-center">
+                <span className="material-symbols-outlined text-9xl text-gray-300 mb-4">book_2</span>
+                <p className="text-gray-400 font-medium">Start typing to search scriptures</p>
+              </div>
+            </div>
+          </div>
+        );
+      };
+
+      const PreviewControl = ({ verse }) => {
+        const [activeTheme, setActiveTheme] = useState(Theme.MODERN_GLASS);
+        const [isLive, setIsLive] = useState(true);
+
+        return (
+          <div className="w-[480px] bg-white border-l border-border-light flex flex-col z-30 shadow-xl shrink-0">
+            {/* Controls Header */}
+            <div className="p-6 pb-2">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-sm font-bold uppercase tracking-wider text-gray-500">Live Preview Output</h3>
+                <div className="flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${isLive ? 'bg-red-500 animate-pulse' : 'bg-gray-400'}`}></span>
+                  <span className={`text-xs font-bold ${isLive ? 'text-red-500' : 'text-gray-400'}`}>
+                    {isLive ? 'LIVE' : 'OFFLINE'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Theme Selector */}
+              <div className="flex gap-2 mb-4">
+                <div className="relative flex-1">
+                  <select
+                    value={activeTheme}
+                    onChange={(e) => setActiveTheme(e.target.value)}
+                    className="w-full h-10 pl-3 pr-10 text-sm font-medium bg-[#f8f9fc] border border-border-light rounded hover:border-primary/50 focus:border-primary focus:ring-0 transition-colors appearance-none cursor-pointer text-text-main"
+                  >
+                    {Object.values(Theme).map((theme) => (
+                      <option key={theme} value={theme}>{theme}</option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+                    <span className="material-symbols-outlined text-sm">expand_more</span>
+                  </div>
+                </div>
+                <button className="flex items-center justify-center w-10 h-10 rounded bg-[#f8f9fc] border border-border-light hover:border-primary/50 text-gray-600 hover:text-primary transition-colors" title="Edit Theme">
+                  <span className="material-symbols-outlined text-[20px]">edit</span>
+                </button>
+                <button
+                  onClick={() => setIsLive(!isLive)}
+                  className="flex items-center justify-center w-10 h-10 rounded bg-[#f8f9fc] border border-border-light hover:border-primary/50 text-gray-600 hover:text-primary transition-colors" title="Toggle Live/Clear">
+                  <span className="material-symbols-outlined text-[20px]">layers_clear</span>
+                </button>
+              </div>
+            </div>
+
+            {/* 16:9 Monitor */}
+            <div className="px-6 relative">
+              <div className="aspect-video w-full rounded-lg overflow-hidden relative shadow-md ring-1 ring-black/5 bg-gray-900 group">
+                {/* Background Image (Simulated Camera Feed) */}
+                <div
+                  className="absolute inset-0 bg-cover bg-center opacity-80"
+                  style={{ backgroundImage: `url('${PREVIEW_BG_IMAGE}')` }}
+                ></div>
+
+                {/* Overlay Content */}
+                <div className="absolute bottom-6 left-6 right-6 z-10 transition-transform duration-300 group-hover:scale-[1.02]">
+                  <div className="glass-panel p-4 rounded-r-md rounded-bl-md shadow-lg border-l-4 border-primary">
+                    <h2 className="text-white font-bold text-xl mb-1 drop-shadow-md flex items-baseline gap-2">
+                      {verse.reference}
+                      <span className="text-sm font-normal text-gray-200 opacity-80 uppercase">{verse.version}</span>
+                    </h2>
+                    <p className="text-white text-sm font-medium leading-snug drop-shadow-md">
+                      "{verse.text}"
+                    </p>
+                  </div>
+                </div>
+
+                {/* Monitor UI Overlays */}
+                <div className="absolute top-2 left-2 bg-black/60 px-1.5 py-0.5 rounded text-[10px] font-mono text-white/80">
+                  1920x1080 @ 60fps
+                </div>
+              </div>
+            </div>
+
+            {/* Primary Actions */}
+            <div className="p-6 flex flex-col gap-3 mt-auto">
+              <button className="w-full h-14 bg-primary hover:bg-primary-dark text-white rounded-lg font-bold text-lg shadow-lg shadow-primary/20 flex items-center justify-center gap-3 transition-all active:scale-[0.98]">
+                <span className="material-symbols-outlined text-[28px]">cast</span>
+                SEND TO OBS
+              </button>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button className="w-full h-12 bg-white border-2 border-border-light hover:border-primary hover:text-primary text-text-main rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all">
+                  <span className="material-symbols-outlined">queue</span>
+                  ADD TO QUEUE
+                </button>
+                <button className="w-full h-12 bg-white border-2 border-border-light hover:border-primary hover:text-primary text-text-main rounded-lg font-bold text-sm flex items-center justify-center gap-2 transition-all">
+                  <span className="material-symbols-outlined">content_copy</span>
+                  COPY TEXT
+                </button>
+              </div>
+            </div>
+
+            {/* Footer Status */}
+            <div className="bg-[#f8f9fc] border-t border-border-light px-6 py-3 text-xs text-gray-500 flex justify-between items-center">
+              <div className="flex items-center gap-4">
+                <span className="flex items-center gap-1">
+                  <kbd className="font-sans border border-gray-300 bg-white rounded px-1 min-w-[1.2em] text-center">F5</kbd>
+                  Go Live
+                </span>
+                <span className="flex items-center gap-1">
+                  <kbd className="font-sans border border-gray-300 bg-white rounded px-1 min-w-[1.2em] text-center">F1</kbd>
+                  Black
+                </span>
+              </div>
+              <div>v2.4.1</div>
+            </div>
+          </div>
+        );
+      };
+
+      const App = () => {
+        const initialVerse = MOCK_VERSES.find(v => v.id === INITIAL_QUERY) || MOCK_VERSES[0];
+        const [selectedVerse, setSelectedVerse] = useState(initialVerse);
+
+        const handleVerseSelect = (verse) => {
+          setSelectedVerse(verse);
+        };
+
+        return (
+          <div className="flex flex-col h-screen overflow-hidden">
+
+            <main className="flex flex-1 overflow-hidden relative">
+              <SearchPanel
+                onVerseSelect={handleVerseSelect}
+                selectedVerseId={selectedVerse.id}
+                initialQuery={INITIAL_QUERY}
+              />
+              <PreviewControl verse={selectedVerse} />
+            </main>
+          </div>
+        );
+      };
+
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(<App />);
+    </script>
+  </body>
+</html>

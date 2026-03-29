@@ -1,0 +1,85 @@
+import React from 'react';
+
+interface AddStepModalProps {
+  onClose: () => void;
+  onNext: () => void;
+}
+
+const AddStepModal: React.FC<AddStepModalProps> = ({ onClose, onNext }) => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-[2px]">
+      <div className="bg-[#182e21] w-full max-w-4xl rounded-2xl shadow-2xl border border-[#28392e] overflow-hidden flex flex-col animate-in fade-in zoom-in duration-200">
+        <div className="px-8 py-6 border-b border-[#28392e] flex items-center justify-between bg-[#14261b]">
+          <div>
+            <h3 className="text-white text-2xl font-bold tracking-tight">Add New Step</h3>
+            <p className="text-[#9cbaa6] text-sm mt-1">
+              Select the type of automation step to add to your sequence.
+            </p>
+          </div>
+          <button onClick={onClose} className="text-[#9cbaa6] hover:text-white transition-colors">
+            <span className="material-symbols-outlined text-2xl">close</span>
+          </button>
+        </div>
+
+        <div className="p-8 bg-[#102216] grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div
+            onClick={onNext}
+            className="group cursor-pointer relative rounded-xl border-2 border-primary bg-[#1f382a] p-5 transition-all hover:shadow-[0_0_20px_rgba(13,242,89,0.1)]"
+          >
+            <div className="absolute top-3 right-3">
+              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-background-dark">
+                <span className="material-symbols-outlined text-sm font-bold">check</span>
+              </div>
+            </div>
+            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/20 text-primary mb-4">
+              <span className="material-symbols-outlined text-3xl">play_circle</span>
+            </div>
+            <h4 className="text-lg font-bold text-white mb-2">Video Player</h4>
+            <p className="text-sm text-[#9cbaa6] leading-snug">
+              Play one or more videos from your library or stream URL.
+            </p>
+          </div>
+
+          {[
+            { icon: 'image', title: 'Image/Slide', desc: 'Display a static image, announcement slide, or overlay.' },
+            { icon: 'hourglass_empty', title: 'Countdown Timer', desc: 'Add a customizable countdown clock to the start time.' },
+            { icon: 'music_note', title: 'Audio Clip', desc: 'Play a standalone audio track, sound effect, or padding.' },
+            { icon: 'switch_video', title: 'Scene Switch', desc: 'Automate switching to a specific OBS scene configuration.' },
+            { icon: 'dashboard_customize', title: 'Template Preset', desc: 'Load a pre-configured group of steps from your templates.' },
+          ].map((item, i) => (
+            <div
+              key={i}
+              className="group cursor-pointer relative rounded-xl border border-[#28392e] bg-card-dark p-5 transition-all hover:border-[#3b5443] hover:bg-[#1f382a]"
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-[#28392e] text-[#9cbaa6] group-hover:bg-[#3b5443] group-hover:text-white transition-colors mb-4">
+                <span className="material-symbols-outlined text-3xl">{item.icon}</span>
+              </div>
+              <h4 className="text-lg font-bold text-white mb-2">{item.title}</h4>
+              <p className="text-sm text-[#5a7a66] group-hover:text-[#9cbaa6] leading-snug">
+                {item.desc}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        <div className="px-8 py-5 border-t border-[#28392e] bg-[#14261b] flex items-center justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="px-5 py-2.5 rounded-lg text-[#9cbaa6] font-medium hover:text-white hover:bg-[#28392e] transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onNext}
+            className="px-6 py-2.5 rounded-lg bg-primary text-[#102216] font-bold hover:bg-[#0bc94a] transition-all flex items-center gap-2 shadow-[0_0_15px_rgba(13,242,89,0.3)] hover:shadow-[0_0_20px_rgba(13,242,89,0.5)]"
+          >
+            Next
+            <span className="material-symbols-outlined text-sm">arrow_forward</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AddStepModal;

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Sunday Switcher - Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec37",
+                        "primary-dark": "#0ea626",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#102213",
+                        "surface-dark": "#162e1a",
+                        "surface-dark-hover": "#1c3b21",
+                        "muted": "#92c99b",
+                        "charcoal": "#1f2937",
+                        "charcoal-dark": "#111827",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"],
+                        "sans": ["Inter", "sans-serif"],
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "2xl": "1rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .glow-hover:hover {
+            box-shadow: 0 0 30px rgba(19, 236, 55, 0.15);
+        }
+        .sidebar-link {
+            transition: all 0.2s ease-in-out;
+        }
+        .sidebar-link:hover, .sidebar-link.active {
+            background-color: rgba(19, 236, 55, 0.1);
+            color: #13ec37;
+        }
+    </style>
+</head>
+<body class="bg-charcoal-dark text-slate-100 min-h-screen flex font-display selection:bg-primary selection:text-background-dark overflow-hidden">
+<nav class="w-20 lg:w-64 h-screen border-r border-white/5 bg-surface-dark/30 flex flex-col justify-between shrink-0">
+<div class="flex flex-col gap-8 p-4">
+<div class="h-12 flex items-center gap-3 px-2">
+<div class="size-8 rounded flex items-center justify-center bg-primary/10 text-primary shrink-0">
+<span class="material-symbols-outlined text-2xl">switches</span>
+</div>
+<h1 class="text-lg font-bold tracking-tight text-white hidden lg:block">Sunday Switcher</h1>
+</div>
+<div class="flex flex-col gap-2">
+<a class="sidebar-link active flex items-center gap-3 px-3 py-3 rounded-lg text-white" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-medium hidden lg:block">Dashboard</span>
+</a>
+<a class="sidebar-link flex items-center gap-3 px-3 py-3 rounded-lg text-muted hover:text-white" href="#">
+<span class="material-symbols-outlined">grid_view</span>
+<span class="font-medium hidden lg:block">Templates</span>
+</a>
+<a class="sidebar-link flex items-center gap-3 px-3 py-3 rounded-lg text-muted hover:text-white" href="#">
+<span class="material-symbols-outlined">view_quilt</span>
+<span class="font-medium hidden lg:block">My Layouts</span>
+</a>
+<a class="sidebar-link flex items-center gap-3 px-3 py-3 rounded-lg text-muted hover:text-white" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span class="font-medium hidden lg:block">Settings</span>
+</a>
+</div>
+</div>
+<div class="p-4 border-t border-white/5">
+<div class="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors">
+<div class="size-8 rounded-full bg-cover bg-center border border-white/10" style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuCwJ1ZJRok4kslHjz7PowLjeObneJSi1ZPpanH-c08hqMpkOsawCPtugjaCmXZR8n4-_JwQtlFyi_HSNhh0EaUIohZntMmVseEJmoST4jnLtyxgtjnzcLxZkDnuE6eFh02b0PVvkp6jYDE6XUEReaKeNsEdVdJ2q00H9gHlPrm0BWUYBYJs-AX5ue0-C8UbaNSM9DII5aHtY_ttz18KcZvI8psYzQ0p04PKPbgkQiGhNV827SRD0FiOADqlmqHUThF3xcdt5LeBDA');"></div>
+<div class="hidden lg:block overflow-hidden">
+<p class="text-sm font-medium text-white truncate">Tech Director</p>
+<p class="text-xs text-muted truncate">Log out</p>
+</div>
+</div>
+</div>
+</nav>
+<div class="flex-1 flex flex-col relative h-screen overflow-hidden bg-background-dark">
+<header class="h-16 w-full flex items-center justify-end px-8 z-10">
+<div class="flex items-center gap-6 text-xs font-mono text-muted/60">
+<div class="flex items-center gap-2 opacity-50 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">wifi</span>
+<span class="font-medium tracking-wide">OBS: Connected</span>
+</div>
+<div class="h-4 w-px bg-white/5"></div>
+<div class="flex items-center gap-2 opacity-50 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">memory</span>
+<span>CPU: 12%</span>
+</div>
+<div class="h-4 w-px bg-white/5"></div>
+<div class="flex items-center gap-2 opacity-50 hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-[16px]">hard_drive</span>
+<span>Storage: 820GB free</span>
+</div>
+</div>
+</header>
+<main class="flex-1 flex flex-col items-center justify-center p-6 lg:p-12 relative overflow-y-auto">
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/5 rounded-full blur-[100px] pointer-events-none"></div>
+<div class="w-full max-w-4xl flex flex-col gap-8 relative z-10">
+<div class="group relative w-full bg-surface-dark border border-white/10 rounded-2xl p-1 shadow-2xl glow-hover transition-all duration-300">
+<div class="bg-gradient-to-br from-[#1a2c20] to-[#0f1f12] rounded-xl p-8 lg:p-10 flex flex-col md:flex-row items-center gap-8 lg:gap-12">
+<div class="shrink-0 relative">
+<div class="absolute inset-0 bg-primary/20 rounded-full blur-2xl opacity-40 group-hover:opacity-80 transition-opacity duration-500"></div>
+<button class="relative size-24 rounded-full bg-surface-dark border-2 border-primary/30 flex items-center justify-center group-hover:border-primary group-hover:bg-primary/10 transition-all duration-300 cursor-pointer">
+<span class="material-symbols-outlined text-6xl text-primary pl-1 group-hover:scale-110 transition-transform">play_arrow</span>
+</button>
+</div>
+<div class="flex-1 text-center md:text-left space-y-4">
+<div>
+<h2 class="text-3xl lg:text-4xl font-bold text-white tracking-tight mb-2">Start Service</h2>
+<p class="text-muted text-lg">Prepare and begin today’s service.</p>
+</div>
+<div class="flex flex-col sm:flex-row gap-4 justify-center md:justify-start pt-2">
+<button class="h-12 px-8 rounded bg-primary hover:bg-primary-dark text-background-dark font-bold tracking-wide text-sm transition-all shadow-lg shadow-primary/20 hover:shadow-primary/40 flex items-center justify-center gap-2 uppercase">
+                                    Start Service
+                                </button>
+</div>
+</div>
+</div>
+</div>
+<div class="w-full grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="col-span-full mb-1">
+<h3 class="text-sm font-semibold text-muted tracking-wider uppercase">Service Modules</h3>
+</div>
+<button class="bg-surface-dark/40 border border-white/5 rounded-xl p-5 hover:bg-surface-dark/80 hover:border-white/20 transition-all group text-left flex items-start gap-4">
+<div class="size-10 rounded bg-indigo-500/10 text-indigo-400 flex items-center justify-center group-hover:bg-indigo-500 group-hover:text-white transition-colors shrink-0">
+<span class="material-symbols-outlined text-xl">auto_stories</span>
+</div>
+<div>
+<h4 class="font-medium text-white mb-1">Display Scripture</h4>
+<p class="text-xs text-muted leading-relaxed">Present Bible verses on the main screen.</p>
+</div>
+</button>
+<button class="bg-surface-dark/40 border border-white/5 rounded-xl p-5 hover:bg-surface-dark/80 hover:border-white/20 transition-all group text-left flex items-start gap-4">
+<div class="size-10 rounded bg-rose-500/10 text-rose-400 flex items-center justify-center group-hover:bg-rose-500 group-hover:text-white transition-colors shrink-0">
+<span class="material-symbols-outlined text-xl">music_note</span>
+</div>
+<div>
+<h4 class="font-medium text-white mb-1">Start Song</h4>
+<p class="text-xs text-muted leading-relaxed">Launch lyric presentation for worship.</p>
+</div>
+</button>
+<button class="bg-surface-dark/40 border border-white/5 rounded-xl p-5 hover:bg-surface-dark/80 hover:border-white/20 transition-all group text-left flex items-start gap-4">
+<div class="size-10 rounded bg-amber-500/10 text-amber-400 flex items-center justify-center group-hover:bg-amber-500 group-hover:text-white transition-colors shrink-0">
+<span class="material-symbols-outlined text-xl">campaign</span>
+</div>
+<div>
+<h4 class="font-medium text-white mb-1">Show Announcement</h4>
+<p class="text-xs text-muted leading-relaxed">Display notices and upcoming events.</p>
+</div>
+</button>
+</div>
+<div class="w-full pt-4 border-t border-white/5">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-sm font-semibold text-muted tracking-wider uppercase">Setup &amp; Tools</h3>
+</div>
+<button class="w-full bg-surface-dark/20 border border-dashed border-white/10 rounded-xl p-4 hover:bg-surface-dark/40 hover:border-white/30 hover:border-solid transition-all group flex items-center justify-center gap-2 text-muted hover:text-white">
+<span class="material-symbols-outlined text-lg">add_circle</span>
+<span class="font-medium text-sm">Create New Layout</span>
+</button>
+</div>
+</div>
+</main>
+<footer class="absolute bottom-4 right-6 pointer-events-none">
+<p class="text-[10px] text-white/10 font-mono">v2.5.0-idle</p>
+</footer>
+</div>
+</body></html>

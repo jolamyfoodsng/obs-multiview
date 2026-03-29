@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1920,height=1080">
+<title>Bible Overlay — Lower Third</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  @import url('/fonts/cmg-sans-fonts.css');
+
+  body {
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    background: transparent;
+    font-family: var(--font-family, "CMG Sans", sans-serif);
+  }
+
+  /* Background layer — STATIC, never animates */
+  #background {
+    position: absolute;
+    inset: 0;
+    background-color: var(--bg-color, transparent);
+    background-image: var(--bg-image, none);
+    background-size: cover;
+    background-position: center;
+    z-index: 0;
+  }
+
+  #overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: flex-end;
+    justify-content: var(--lt-justify, flex-start);
+    padding: 0 var(--safe-area, 40px) var(--safe-area, 40px);
+    z-index: 1;
+    transition: transform var(--anim-duration, 400ms) ease,
+                opacity var(--anim-duration, 400ms) ease;
+  }
+
+  #overlay.hidden {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+
+  #overlay.blank {
+    opacity: 0;
+  }
+
+  #bar {
+    padding: var(--padding, 30px) var(--padding, 40px);
+    width: max(480px, calc(100% - var(--lt-width-reduction, 0px)));
+    max-width: 100%;
+    box-sizing: border-box;
+    border-radius: var(--border-radius, 12px);
+    /* Lower-third max height — controlled by lowerThirdSize preset */
+    max-height: var(--lt-max-height, 486px);
+    min-height: var(--lt-min-height, 0px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    position: relative;
+    left: var(--lt-offset-x, 0px);
+    isolation: isolate;
+    transition: left 160ms ease;
+  }
+
+  #bar::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: var(--box-background, rgba(0,0,0,0.75));
+    background-image: var(--box-bg-image, none);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    opacity: var(--box-opacity, 1);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    z-index: 0;
+  }
+
+  #bar > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  #verse-text {
+    font-size: var(--font-size, 36px);
+    font-weight: var(--font-weight, normal);
+    color: var(--font-color, #FFFFFF);
+    line-height: var(--line-height, 1.5);
+    text-shadow: var(--text-shadow, none);
+    text-align: var(--text-align, left);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    text-transform: var(--text-transform, none);
+    width: 100%;
+  }
+
+  #reference {
+    margin-top: 12px;
+    font-size: var(--ref-font-size, 18px);
+    font-weight: var(--ref-font-weight, bold);
+    color: var(--ref-font-color, #e0e0e0);
+    text-align: var(--text-align, left);
+    display: block;
+    width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  #reference.top { order: -1; margin-top: 0; margin-bottom: 12px; }
+
+  #ref-text {
+    display: block;
+    width: 100%;
+    text-align: inherit;
+  }
+
+  #slide-counter {
+    font-size: 14px;
+    color: rgba(255,255,255,0.4);
+    display: none !important;
+  }
+
+  #logo {
+    position: absolute;
+    width: var(--logo-size, 60px);
+    height: auto;
+    opacity: 0.7;
+    display: none;
+  }
+  #logo.visible { display: block; }
+  #logo.top-left { top: 20px; left: 20px; }
+  #logo.top-right { top: 20px; right: 20px; }
+  #logo.bottom-left { bottom: 20px; left: 20px; }
+  #logo.bottom-right { bottom: 20px; right: 20px; }
+
+  /* Animations */
+  .anim-slide-up-enter {
+    animation: slideUp var(--anim-duration, 400ms) ease forwards;
+  }
+  .anim-slide-left-enter {
+    animation: slideLeft var(--anim-duration, 400ms) ease forwards;
+  }
+  .anim-fade-enter {
+    animation: fadeIn var(--anim-duration, 400ms) ease forwards;
+  }
+  .anim-scale-in-enter {
+    animation: scaleIn var(--anim-duration, 400ms) ease forwards;
+  }
+  .anim-reveal-bg-enter {
+    animation: revealBg var(--bg-enter-duration, 220ms) ease forwards;
+  }
+  .anim-text-delayed-enter {
+    opacity: 0;
+    animation: delayedText var(--text-enter-duration, 320ms) ease var(--text-enter-delay, 120ms) forwards;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes slideLeft {
+    from { opacity: 0; transform: translateX(-26px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.96); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  @keyframes revealBg {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes delayedText {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+<div id="background"></div>
+<div id="overlay" class="hidden">
+  <div id="bar">
+    <div id="verse-text"></div>
+    <div id="reference">
+      <span id="ref-text"></span>
+      <span id="slide-counter"></span>
+    </div>
+  </div>
+</div>
+<img id="logo" src="" alt="">
+
+<script>
+  /**
+   * Bible Overlay — Lower Third
+   *
+   * Data delivery (in priority order):
+   * 1. CSS custom property --overlay-data  (injected by bibleObsService via OBS SetInputSettings)
+   * 2. BroadcastChannel  (same-origin popup windows)
+   * 3. localStorage polling  (fallback for same-origin contexts)
+   *
+   * No external WebSocket / HTTP server required.
+   */
+
+  const POLL_INTERVAL = 300;
+  const FONT_SIZE_MIN = 12;
+  const REF_FONT_SIZE_MIN = 10;
+
+  // Lower-third size presets — must match LOWER_THIRD_SIZE_PRESETS in types.ts
+  const SIZE_PRESETS = {
+    smallest: { maxHeight: 180, padding: 14, fontSize: 24, refFontSize: 13, safeArea: 30 },
+    smaller:  { maxHeight: 240, padding: 20, fontSize: 28, refFontSize: 14, safeArea: 35 },
+    small:    { maxHeight: 320, padding: 24, fontSize: 32, refFontSize: 16, safeArea: 38 },
+    medium:   { maxHeight: 400, padding: 30, fontSize: 36, refFontSize: 18, safeArea: 40 },
+    big:      { maxHeight: 486, padding: 36, fontSize: 42, refFontSize: 20, safeArea: 44 },
+    bigger:   { maxHeight: 560, padding: 42, fontSize: 48, refFontSize: 22, safeArea: 48 },
+    biggest:  { maxHeight: 650, padding: 50, fontSize: 56, refFontSize: 26, safeArea: 52 },
+  };
+  const WIDTH_PRESETS = {
+    full: 0,
+    sm: 120,
+    md: 240,
+    lg: 360,
+    xl: 520,
+    xxl: 680,
+  };
+
+  let barMaxHeight = 400; // updated by size preset
+
+  const overlay = document.getElementById('overlay');
+  const verseText = document.getElementById('verse-text');
+  const refText = document.getElementById('ref-text');
+  const slideCounter = document.getElementById('slide-counter');
+  const logo = document.getElementById('logo');
+  const reference = document.getElementById('reference');
+  const bar = document.getElementById('bar');
+
+  let currentSlideId = null;
+  let lastTimestamp = 0;
+  let baseFontSize = 36; // set by theme
+  let baseRefFontSize = 18;
+  let hasShownOnce = false;  // Track first show vs subsequent verse changes
+
+  function toCssFontWeight(weight, fallback) {
+    if (weight === "light") return "300";
+    if (weight === "bold") return "700";
+    if (weight === "normal") return "400";
+    const asString = String(weight || "").trim();
+    if (/^\d{3}$/.test(asString)) return asString;
+    return fallback;
+  }
+
+  function ensureCmgSansFont(fontFamily) {
+    const raw = String(fontFamily || "").trim();
+    return /cmg\s*sans/i.test(raw) ? raw : '"CMG Sans", sans-serif';
+  }
+
+  function clamp(value, min, max) {
+    return Math.min(Math.max(value, min), max);
+  }
+
+  function applyTheme(theme) {
+    if (!theme) return;
+    const s = theme;
+    const root = document.documentElement.style;
+
+    // ── Apply lower-third size preset if specified ──
+    const sizeKey = s.lowerThirdSize || 'medium';
+    const preset = SIZE_PRESETS[sizeKey] || SIZE_PRESETS.medium;
+    barMaxHeight = preset.maxHeight;
+    root.setProperty('--lt-max-height', preset.maxHeight + 'px');
+
+    // Use preset values as defaults — explicit theme values override
+    const effectiveFontSize = s.fontSize || preset.fontSize;
+    const effectiveRefFontSize = s.refFontSize || preset.refFontSize;
+    const effectivePadding = s.padding || preset.padding;
+    const effectiveSafeArea = s.safeArea || preset.safeArea;
+    const widthReduction = WIDTH_PRESETS[s.lowerThirdWidthPreset || 'full'] || 0;
+    const paddedWidth = Math.max(480, 1920 - effectiveSafeArea * 2);
+    const safeWidthReduction = clamp(widthReduction, 0, Math.max(0, paddedWidth - 480));
+    const freeSpace = safeWidthReduction;
+    let minOffset = 0;
+    let maxOffset = 0;
+
+    if (s.lowerThirdPosition === 'center') {
+      minOffset = -freeSpace / 2;
+      maxOffset = freeSpace / 2;
+    } else if (s.lowerThirdPosition === 'right') {
+      minOffset = -freeSpace;
+      maxOffset = 0;
+    } else {
+      minOffset = 0;
+      maxOffset = freeSpace;
+    }
+
+    const safeOffset = Math.round(clamp(Number(s.lowerThirdOffsetX) || 0, minOffset, maxOffset));
+
+    root.setProperty('--font-family', ensureCmgSansFont(s.fontFamily));
+    baseFontSize = effectiveFontSize;
+    root.setProperty('--font-size', baseFontSize + 'px');
+    root.setProperty('--font-weight', toCssFontWeight(s.fontWeight, "400"));
+    root.setProperty('--font-color', s.fontColor || '#FFFFFF');
+    root.setProperty('--line-height', String(s.lineHeight || 1.5));
+    root.setProperty('--text-align', s.textAlign || 'left');
+    root.setProperty('--text-shadow', s.textShadow || 'none');
+
+    baseRefFontSize = effectiveRefFontSize;
+    root.setProperty('--ref-font-size', effectiveRefFontSize + 'px');
+    root.setProperty('--ref-font-weight', toCssFontWeight(s.refFontWeight, "700"));
+    root.setProperty('--ref-font-color', s.refFontColor || '#e0e0e0');
+
+    root.setProperty('--box-background', s.boxBackground || 'rgba(0,0,0,0.75)');
+    root.setProperty('--box-opacity', String(s.boxOpacity ?? 1));
+    root.setProperty('--border-radius', (s.borderRadius || 12) + 'px');
+    root.setProperty('--padding', effectivePadding + 'px');
+    root.setProperty('--safe-area', effectiveSafeArea + 'px');
+    root.setProperty('--anim-duration', (s.animationDuration || 400) + 'ms');
+    root.setProperty('--bg-enter-duration', Math.max(180, Math.round((s.animationDuration || 400) * 0.6)) + 'ms');
+    root.setProperty('--text-enter-duration', Math.max(180, Math.round((s.animationDuration || 400) * 0.75)) + 'ms');
+    root.setProperty('--text-enter-delay', Math.max(80, Math.round((s.animationDuration || 400) * 0.28)) + 'ms');
+    root.setProperty('--lt-justify',
+      s.lowerThirdPosition === 'center'
+        ? 'center'
+        : s.lowerThirdPosition === 'right'
+          ? 'flex-end'
+          : 'flex-start'
+    );
+    root.setProperty('--lt-width-reduction', safeWidthReduction + 'px');
+    root.setProperty('--lt-offset-x', safeOffset + 'px');
+    root.setProperty('--lt-min-height', Math.max(0, Number(s.lowerThirdHeight) || 0) + 'px');
+
+    // Text transform
+    root.setProperty('--text-transform', s.textTransform || 'none');
+
+    // Box background image (for lower-third)
+    if (s.boxBackgroundImage) {
+      let boxBgUrl = s.boxBackgroundImage;
+      if (boxBgUrl === '__FROM_CSS__') {
+        const cssVal = getComputedStyle(document.documentElement).getPropertyValue('--box-bg-image').trim();
+        root.setProperty('--box-bg-image', cssVal || 'none');
+      } else {
+        if (boxBgUrl === '__FROM_LOCALSTORAGE__') {
+          const stored = localStorage.getItem('bible-overlay-box-bg-image');
+          boxBgUrl = stored || '';
+        }
+        if (boxBgUrl) {
+          root.setProperty('--box-bg-image', 'url(' + boxBgUrl + ')');
+        } else {
+          root.setProperty('--box-bg-image', 'none');
+        }
+      }
+    } else {
+      root.setProperty('--box-bg-image', 'none');
+    }
+
+    // Background color
+    root.setProperty('--bg-color', s.backgroundColor || 'transparent');
+
+    // Background image — handled by a separate OBS image_source behind
+    // this browser source when the marker is "__BG_SOURCE__"
+    if (s.backgroundImage) {
+      let bgUrl = s.backgroundImage;
+      if (bgUrl === '__BG_SOURCE__') {
+        // Separate OBS source handles the BG image — keep transparent
+        root.setProperty('--bg-image', 'none');
+        root.setProperty('--bg-color', 'transparent');
+        root.setProperty('--bg-opacity', '1');
+      } else if (bgUrl === '__FROM_CSS__') {
+        const cssVal = getComputedStyle(document.documentElement).getPropertyValue('--bg-image').trim();
+        root.setProperty('--bg-image', cssVal || 'none');
+        if (cssVal) {
+          root.setProperty('--bg-color', 'transparent');
+        }
+      } else {
+        if (bgUrl === '__FROM_LOCALSTORAGE__') {
+          const stored = localStorage.getItem('bible-overlay-bg-image');
+          bgUrl = stored || '';
+        }
+        if (bgUrl) {
+          root.setProperty('--bg-image', 'url(' + bgUrl + ')');
+        } else {
+          root.setProperty('--bg-image', 'none');
+        }
+      }
+    } else {
+      root.setProperty('--bg-image', 'none');
+    }
+
+    if (s.refPosition === 'top') {
+      reference.classList.add('top');
+    } else {
+      reference.classList.remove('top');
+    }
+
+    if (s.logoUrl) {
+      if (s.logoUrl === '__FROM_CSS__') {
+        const cssVal = getComputedStyle(document.documentElement).getPropertyValue('--logo-data-uri').trim();
+        if (cssVal && cssVal.startsWith('url(')) {
+          const inner = cssVal.slice(4, -1).replace(/^["']|["']$/g, '');
+          logo.src = inner;
+        }
+      } else {
+        logo.src = s.logoUrl;
+      }
+      logo.className = 'visible ' + (s.logoPosition || 'bottom-right');
+      root.setProperty('--logo-size', (s.logoSize || 60) + 'px');
+    } else {
+      logo.className = '';
+    }
+  }
+
+  /**
+   * Auto-scale font size down so the bar never exceeds barMaxHeight.
+   * Starts from the theme's baseFontSize and steps down until it fits.
+   */
+  function autoScaleFont() {
+    if (!bar) return;
+    let size = baseFontSize;
+    let refSize = Math.max(REF_FONT_SIZE_MIN, Math.round(baseRefFontSize));
+    const ratio = baseFontSize > 0 ? (baseRefFontSize / baseFontSize) : 0.5;
+    verseText.style.fontSize = size + 'px';
+    reference.style.fontSize = refSize + 'px';
+    // Measure after setting — allow reflow
+    while (bar.scrollHeight > barMaxHeight && (size > FONT_SIZE_MIN || refSize > REF_FONT_SIZE_MIN)) {
+      if (size > FONT_SIZE_MIN) {
+        size -= 1;
+      }
+      refSize = Math.max(REF_FONT_SIZE_MIN, Math.round(size * ratio));
+      verseText.style.fontSize = size + 'px';
+      reference.style.fontSize = refSize + 'px';
+    }
+  }
+
+  function clearEntranceAnimationClasses() {
+    bar.classList.remove('anim-slide-up-enter', 'anim-slide-left-enter', 'anim-fade-enter', 'anim-scale-in-enter', 'anim-reveal-bg-enter');
+    verseText.classList.remove('anim-text-delayed-enter');
+    reference.classList.remove('anim-text-delayed-enter');
+  }
+
+  function runEntranceAnimation(anim) {
+    clearEntranceAnimationClasses();
+    void bar.offsetWidth;
+
+    if (anim === 'none') return;
+
+    if (anim === 'reveal-bg-then-text') {
+      bar.classList.add('anim-reveal-bg-enter');
+      verseText.classList.add('anim-text-delayed-enter');
+      reference.classList.add('anim-text-delayed-enter');
+      return;
+    }
+
+    if (anim === 'fade') {
+      bar.classList.add('anim-fade-enter');
+      return;
+    }
+
+    if (anim === 'scale-in') {
+      bar.classList.add('anim-scale-in-enter');
+      return;
+    }
+
+    if (anim === 'slide-left') {
+      bar.classList.add('anim-slide-left-enter');
+      return;
+    }
+
+    bar.classList.add('anim-slide-up-enter');
+  }
+
+  function applySlide(data) {
+    if (!data) return;
+    // De-duplicate by timestamp
+    if (data.timestamp && data.timestamp <= lastTimestamp) return;
+    lastTimestamp = data.timestamp || 0;
+
+    if (!data.slide) {
+      overlay.classList.add('hidden');
+      currentSlideId = null;
+      hasShownOnce = false;  // Reset so next appearance animates
+      return;
+    }
+
+    const slide = data.slide;
+    const isNew = slide.id !== currentSlideId;
+    currentSlideId = slide.id;
+
+    if (data.theme) applyTheme(data.theme);
+
+    if (data.blanked) {
+      overlay.classList.add('blank');
+      return;
+    } else {
+      overlay.classList.remove('blank');
+    }
+
+    // Always show the overlay when we have a slide — the dock/app controls
+    // visibility via OBS scene item enabled state, not via this flag.
+    overlay.classList.remove('hidden');
+
+    const displayText = slide.text.replace(/\[(\d+)\]\s*/g, '<sup>$1</sup> ');
+    verseText.innerHTML = displayText;
+    const referenceText = typeof slide.reference === "string" ? slide.reference.trim() : "";
+    refText.textContent = referenceText;
+    reference.style.display = referenceText ? "block" : "none";
+    // slideCounter.textContent = `${slide.index + 1} / ${slide.total}`;
+
+    // Auto-scale: shrink font so bar stays within max height
+    autoScaleFont();
+
+    if (isNew) {
+      // Only animate on FIRST show (overlay appearing).
+      // Subsequent verse changes just update text — no re-animation.
+      if (!hasShownOnce) {
+        hasShownOnce = true;
+        const anim = data.theme?.animation || 'slide-up';
+        runEntranceAnimation(anim);
+      }
+    }
+  }
+
+  // --- Method 1: Read from URL hash (OBS updates URL via SetInputSettings) ---
+  function readFromUrlHash() {
+    try {
+      const hash = window.location.hash;
+      if (hash && hash.startsWith('#data=')) {
+        const encoded = hash.slice(6); // remove '#data='
+        const data = JSON.parse(decodeURIComponent(encoded));
+        applySlide(data);
+        return true;
+      }
+    } catch { /* parse error */ }
+    return false;
+  }
+
+  // --- Method 2: BroadcastChannel (same-origin windows) ---
+  try {
+    const bc = new BroadcastChannel('obs-church-studio-bible-overlay');
+    bc.onmessage = (e) => { applySlide(e.data); };
+  } catch { /* not supported */ }
+
+  // --- Method 3: localStorage polling (same-origin fallback) ---
+  function readFromLocalStorage() {
+    try {
+      const raw = localStorage.getItem('bible-overlay-data');
+      if (raw) {
+        const data = JSON.parse(raw);
+        applySlide(data);
+        return true;
+      }
+    } catch { /* parse error */ }
+    return false;
+  }
+
+  // --- hashchange listener: OBS updates the URL hash without reloading ---
+  // This is the primary update path. When bibleObsService calls SetInputSettings
+  // with only the hash fragment changed, OBS/CEF fires hashchange instead of
+  // reloading the page. The background stays static and only text updates.
+  window.addEventListener('hashchange', () => {
+    readFromUrlHash();
+  });
+
+  // --- Unified polling loop ---
+  setInterval(() => {
+    // Try URL hash first (OBS), then localStorage (same-origin)
+    if (!readFromUrlHash()) {
+      readFromLocalStorage();
+    }
+  }, POLL_INTERVAL);
+
+  // Initial read
+  readFromUrlHash() || readFromLocalStorage();
+</script>
+</body>
+</html>

@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Scenes &amp; Output Sync Tool - OBS Church Studio</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style type="text/tailwindcss">
+        @layer base {
+            body {
+                @apply bg-[#102216] text-gray-200 font-['Inter'];
+            }
+        }
+        :root {
+            --primary: #13ec5b;
+            --primary-dark: #0eb545;
+            --surface-dark: #152e1e;
+            --surface-darker: #0a160e;
+            --accent-purple: #a855f7;
+        }
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #102216;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1f422b;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #2a5a3a;
+        }
+    </style>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec5b",
+                        "primary-dark": "#0eb545",
+                        "background-dark": "#102216",
+                        "surface-dark": "#152e1e",
+                        "surface-darker": "#0a160e",
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "2xl": "1rem",
+                    }
+                },
+            },
+        }
+    </script>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+<header class="h-14 bg-surface-dark border-b border-primary/10 flex items-center justify-between px-6 z-20 shrink-0">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2">
+<span class="material-icons text-primary text-2xl">sync_alt</span>
+<h1 class="font-bold text-lg tracking-tight text-white">OBS Church Studio</h1>
+</div>
+<div class="h-6 w-px bg-primary/20"></div>
+<div class="flex items-center gap-2 px-3 py-1.5 bg-surface-darker rounded-full border border-primary/20">
+<div class="w-2.5 h-2.5 rounded-full bg-primary shadow-[0_0_8px_rgba(19,236,91,0.6)]"></div>
+<span class="text-xs font-medium text-primary uppercase tracking-wider">Connected to OBS</span>
+</div>
+</div>
+<div class="flex items-center gap-4 text-sm text-gray-400">
+<span class="hidden md:inline">Host: 127.0.0.1:4455</span>
+<button class="p-2 hover:bg-white/5 rounded-lg transition-colors">
+<span class="material-icons text-xl">settings</span>
+</button>
+</div>
+</header>
+<main class="flex-1 flex overflow-hidden">
+<aside class="w-1/3 min-w-[380px] bg-surface-darker border-r border-primary/10 flex flex-col">
+<div class="p-6 border-b border-primary/10">
+<h2 class="text-xl font-bold text-white mb-2">Layout Library</h2>
+<p class="text-sm text-gray-400">Select your prepared multi-view designs to map them to output scenes.</p>
+</div>
+<div class="flex-1 overflow-y-auto p-6 space-y-4">
+<div class="group bg-surface-dark p-4 rounded-xl border border-primary/10 hover:border-primary/40 transition-all cursor-pointer">
+<div class="flex gap-4">
+<div class="w-32 aspect-video bg-black rounded-lg overflow-hidden border border-white/10 shrink-0">
+<img alt="Layout Preview" class="w-full h-full object-cover opacity-60" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAIo7HXX2LY9yRbLpm74hk_QyJMVhcxdkFE9VCWfXKtqQPI_k-lOxBXVnwl9HZpWEv3zCdmCA3UZREvS3UvoivLrfuGgl9sNOvwXmtGhfjMFs8oiDFwYUop-Tx1_NoN0ogQH90KNyqvBPZAT9cYx7s5Xu0f0iYr5buKLV3AA_KG7N8eSyYoa5UWfcEYKlobOJ_z1y38QuY4TDBTuNLmC4KfcWzAY_QhJgHH1Bz4jhlSFjkBS1BNmisZWfwsV9yU0h_ExkxPxZEu"/>
+</div>
+<div class="flex flex-col justify-center">
+<h3 class="font-semibold text-white">Morning Service</h3>
+<p class="text-xs text-gray-500">2 Regions • Pastor + Scripture</p>
+<div class="mt-2 flex items-center gap-1.5 text-[10px] text-primary/80 uppercase font-bold">
+<span class="material-icons text-[12px]">check_circle</span>
+                                Validated
+                            </div>
+</div>
+</div>
+</div>
+<div class="group bg-surface-dark p-4 rounded-xl border border-primary/10 hover:border-primary/40 transition-all cursor-pointer ring-2 ring-primary/20">
+<div class="flex gap-4">
+<div class="w-32 aspect-video bg-black rounded-lg overflow-hidden border border-white/10 shrink-0">
+<img alt="Layout Preview" class="w-full h-full object-cover opacity-60" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDKEyu6QYYthNqFhciERmok96ztFjRcuj7Eo27DaTiuO9BNkot6b6ViUyXRRqpldUizfhSsSw45eaGXRrraMw2S7HzOv9bpfB9mEACx8OpLqbiiUkP0Glx6gqF6bgEUmNEZwM4SMLne8LAgvwu_Jp4QmqJKZVhueojGf1kxpeTUmjToGwK-wjVWfPJdNt61Js6PSq-yHj0WCClVWtcUQixeLblvT7-iAJDQJSvL0QCMGYD7cKnJbiSxGDeita3RpZVZgqJpq1OS"/>
+</div>
+<div class="flex flex-col justify-center">
+<h3 class="font-semibold text-white">Worship Set</h3>
+<p class="text-xs text-gray-500">1 Region • Full Camera</p>
+<div class="mt-2 flex items-center gap-1.5 text-[10px] text-primary/80 uppercase font-bold">
+<span class="material-icons text-[12px]">check_circle</span>
+                                Validated
+                            </div>
+</div>
+</div>
+</div>
+<div class="group bg-surface-dark p-4 rounded-xl border border-primary/10 hover:border-primary/40 transition-all cursor-pointer">
+<div class="flex gap-4">
+<div class="w-32 aspect-video bg-black rounded-lg overflow-hidden border border-white/10 shrink-0 flex items-center justify-center">
+<span class="material-icons text-gray-700 text-3xl">grid_view</span>
+</div>
+<div class="flex flex-col justify-center">
+<h3 class="font-semibold text-white">Split Interview</h3>
+<p class="text-xs text-gray-500">3 Regions • Guests</p>
+<div class="mt-2 flex items-center gap-1.5 text-[10px] text-gray-500 uppercase font-bold">
+<span class="material-icons text-[12px]">history</span>
+                                Draft
+                            </div>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<section class="flex-1 bg-background-dark flex flex-col relative">
+<div class="p-8 max-w-4xl mx-auto w-full flex-1 overflow-y-auto pb-32">
+<div class="mb-8">
+<h2 class="text-2xl font-bold text-white mb-3">Scene Mapping</h2>
+<div class="bg-blue-900/20 border border-blue-500/30 rounded-xl p-4 flex gap-4">
+<span class="material-icons text-blue-400">info</span>
+<div>
+<p class="text-sm text-blue-100 font-medium">How to Sync:</p>
+<p class="text-sm text-blue-200/80 leading-relaxed">Choose which OBS Scene should display each layout. When you're ready, click the green button below to push these changes directly to your OBS Studio instance.</p>
+</div>
+</div>
+</div>
+<div class="space-y-6">
+<div class="grid grid-cols-12 gap-6 items-center p-6 bg-surface-dark rounded-2xl border border-primary/10">
+<div class="col-span-5">
+<label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">OBS Scene Name</label>
+<div class="flex items-center gap-3 bg-surface-darker px-4 py-3 rounded-lg border border-white/5">
+<span class="material-icons text-gray-400">movie</span>
+<span class="text-white font-medium">LIVE_MAIN_OUTPUT</span>
+</div>
+</div>
+<div class="col-span-2 flex justify-center">
+<span class="material-icons text-primary/40">arrow_forward</span>
+</div>
+<div class="col-span-5">
+<label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Assigned Layout</label>
+<select class="w-full bg-surface-darker border border-primary/20 text-white rounded-lg px-4 py-3 focus:ring-2 focus:ring-primary focus:border-transparent outline-none appearance-none cursor-pointer">
+<option>Morning Service</option>
+<option>Worship Set</option>
+<option>Split Interview</option>
+<option selected="">--- None ---</option>
+</select>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-6 items-center p-6 bg-surface-dark rounded-2xl border border-primary/10">
+<div class="col-span-5">
+<label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">OBS Scene Name</label>
+<div class="flex items-center gap-3 bg-surface-darker px-4 py-3 rounded-lg border border-white/5">
+<span class="material-icons text-gray-400">movie</span>
+<span class="text-white font-medium">PREVIEW_STAGE</span>
+</div>
+</div>
+<div class="col-span-2 flex justify-center">
+<span class="material-icons text-primary/40">arrow_forward</span>
+</div>
+<div class="col-span-5">
+<label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Assigned Layout</label>
+<select class="w-full bg-surface-darker border border-primary/20 text-white rounded-lg px-4 py-3 focus:ring-2 focus:ring-primary focus:border-transparent outline-none appearance-none cursor-pointer">
+<option>Morning Service</option>
+<option selected="">Worship Set</option>
+<option>Split Interview</option>
+<option>--- None ---</option>
+</select>
+</div>
+</div>
+<div class="grid grid-cols-12 gap-6 items-center p-6 bg-surface-dark rounded-2xl border border-primary/10 opacity-60">
+<div class="col-span-5">
+<label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">OBS Scene Name</label>
+<div class="flex items-center gap-3 bg-surface-darker px-4 py-3 rounded-lg border border-white/5">
+<span class="material-icons text-gray-400">movie</span>
+<span class="text-white font-medium">LOBBY_OVERFLOW</span>
+</div>
+</div>
+<div class="col-span-2 flex justify-center">
+<span class="material-icons text-primary/40">arrow_forward</span>
+</div>
+<div class="col-span-5">
+<label class="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2">Assigned Layout</label>
+<select class="w-full bg-surface-darker border border-primary/20 text-white rounded-lg px-4 py-3 focus:ring-2 focus:ring-primary focus:border-transparent outline-none appearance-none cursor-pointer">
+<option>Morning Service</option>
+<option>Worship Set</option>
+<option>Split Interview</option>
+<option selected="">--- None ---</option>
+</select>
+</div>
+</div>
+<button class="w-full py-4 border-2 border-dashed border-white/10 rounded-2xl text-gray-500 hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-all font-medium flex items-center justify-center gap-2">
+<span class="material-icons">add_link</span>
+                        Refresh OBS Scenes List
+                    </button>
+</div>
+</div>
+<div class="absolute bottom-0 left-0 right-0 p-8 bg-gradient-to-t from-background-dark via-background-dark to-transparent">
+<div class="max-w-4xl mx-auto flex justify-end">
+<button class="flex items-center gap-3 px-8 py-4 bg-primary hover:bg-primary-dark text-background-dark font-bold text-lg rounded-xl shadow-[0_0_30px_rgba(19,236,91,0.2)] transition-all transform hover:-translate-y-1 active:translate-y-0">
+<span class="material-icons">cloud_upload</span>
+                        Update Scenes in OBS
+                    </button>
+</div>
+</div>
+</section>
+</main>
+<footer class="h-10 bg-surface-dark border-t border-primary/10 flex items-center px-6 justify-between text-[11px] text-gray-500 font-medium">
+<div class="flex gap-6 uppercase tracking-wider">
+<span>OBS Version: 30.1.2</span>
+<span>Websocket: v5.x</span>
+<span>Latency: 12ms</span>
+</div>
+<div class="flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+<span class="text-gray-400">Streaming Live Sync Enabled</span>
+</div>
+</footer>
+
+</body></html>

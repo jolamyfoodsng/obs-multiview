@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>OBS Dock - Welcome Intro Screen</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#3b82f6",
+                        "background-light": "#f6f6f8",
+                        "background-dark": "#1f212a",
+                        "surface-dark": "#2a2d3a",
+                        "surface-hover": "#363a4a",
+                        "brand-purple": "#a855f7",
+                        "brand-green": "#22c55e",
+                    },
+                    fontFamily: {
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {"DEFAULT": "0.125rem", "lg": "0.375rem", "xl": "0.5rem", "full": "9999px"},
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #1f212a;
+        }
+    </style>
+</head>
+<body class="text-slate-100 font-display h-screen flex justify-center items-center overflow-hidden bg-background-dark">
+<div class="w-full max-w-[340px] h-full flex flex-col bg-background-dark border-r border-white/5 relative shadow-2xl">
+<main class="flex-1 flex flex-col items-center justify-center p-6 text-center gap-8 relative z-10">
+<div class="relative group">
+<div class="absolute -inset-4 bg-gradient-to-r from-brand-green/20 to-brand-purple/20 rounded-full blur-xl opacity-50 group-hover:opacity-75 transition-opacity duration-1000"></div>
+<div class="relative w-20 h-20 bg-surface-dark rounded-2xl border border-white/10 flex items-center justify-center shadow-2xl overflow-hidden">
+<span class="material-symbols-outlined text-4xl bg-gradient-to-br from-brand-green to-brand-purple bg-clip-text text-transparent">church</span>
+<span class="material-symbols-outlined text-2xl absolute -top-1 -right-1 text-brand-green animate-pulse">rss_feed</span>
+</div>
+</div>
+<div class="space-y-3">
+<h1 class="text-2xl font-bold tracking-tight text-white leading-tight">
+                    Welcome to <br/>
+<span class="bg-gradient-to-r from-brand-green to-brand-purple bg-clip-text text-transparent">Sunday Switcher</span>
+</h1>
+<p class="text-slate-400 text-sm leading-relaxed px-2">
+                    Simplified Sunday morning production controls for your team.
+                </p>
+</div>
+<div class="w-full bg-surface-dark/50 border border-white/5 rounded-lg p-4 backdrop-blur-sm">
+<div class="flex flex-col items-center gap-2">
+<div class="flex gap-1 mb-1">
+<span class="material-symbols-outlined text-slate-500 text-lg">person</span>
+<span class="material-symbols-outlined text-slate-500 text-lg">title</span>
+<span class="material-symbols-outlined text-slate-500 text-lg">qr_code_2</span>
+</div>
+<p class="text-xs text-slate-300 font-medium leading-relaxed">
+                        Switch between Speaker, Sermon, and Giving tabs to manage your livestream overlays in seconds.
+                    </p>
+</div>
+</div>
+<button class="w-full bg-gradient-to-r from-brand-green to-green-600 hover:from-green-500 hover:to-green-500 text-white font-bold py-3.5 px-6 rounded shadow-lg shadow-green-900/20 transform transition-all active:scale-[0.98] hover:shadow-green-900/40 border border-white/10 group flex items-center justify-center gap-2 uppercase tracking-wide text-sm">
+<span>Get Started</span>
+<span class="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform">arrow_forward</span>
+</button>
+</main>
+<footer class="p-4 border-t border-white/5 bg-black/20 text-center">
+<div class="flex items-center justify-center gap-2 text-[10px] text-slate-500 font-mono">
+<span class="relative flex h-2 w-2">
+<span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand-green opacity-75"></span>
+<span class="relative inline-flex rounded-full h-2 w-2 bg-brand-green"></span>
+</span>
+<span>Engine Ready. Ensure OBS WebSocket is connected.</span>
+</div>
+</footer>
+<div class="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-brand-purple/5 to-transparent pointer-events-none"></div>
+<div class="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-brand-green/5 to-transparent pointer-events-none"></div>
+</div>
+
+</body></html>

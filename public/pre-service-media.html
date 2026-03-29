@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pre-Service Media</title>
+    <style>
+      @import url('/fonts/cmg-sans-fonts.css');
+
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+        font-family: "CMG Sans", sans-serif;
+      }
+
+      .stage {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        display: grid;
+        place-items: center;
+      }
+
+      video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        background: #000;
+      }
+
+      .fallback {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        color: #d6d6d6;
+        font-size: 30px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        text-align: center;
+        padding: 24px;
+        background: radial-gradient(circle at 50% 50%, #1a1a1a 0%, #000 70%);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage">
+      <video id="media" playsinline></video>
+      <div id="fallback" class="fallback" style="display: none">Pre-Service Media</div>
+    </div>
+
+    <script>
+      function parsePayload() {
+        try {
+          const hash = window.location.hash || "";
+          const encoded = hash.startsWith("#data=") ? hash.slice(6) : "";
+          if (!encoded) return null;
+          return JSON.parse(decodeURIComponent(encoded));
+        } catch {
+          return null;
+        }
+      }
+
+      const media = document.getElementById("media");
+      const fallback = document.getElementById("fallback");
+
+      function applyPayload() {
+        const data = parsePayload();
+        const src = data && typeof data.mediaUrl === "string" ? data.mediaUrl : "";
+        const label = data && typeof data.label === "string" ? data.label : "Pre-Service Media";
+
+        if (!src) {
+          media.removeAttribute("src");
+          media.load();
+          fallback.style.display = "grid";
+          fallback.textContent = label;
+          return;
+        }
+
+        fallback.style.display = "none";
+        media.src = src;
+        media.loop = !!(data && data.loop);
+        media.muted = !!(data && data.muted);
+
+        const playPromise = media.play();
+        if (playPromise && typeof playPromise.catch === "function") {
+          playPromise.catch(() => {
+            fallback.style.display = "grid";
+            fallback.textContent = label;
+          });
+        }
+      }
+
+      window.addEventListener("hashchange", applyPayload);
+      applyPayload();
+    </script>
+  </body>
+</html>

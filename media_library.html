@@ -1,0 +1,1475 @@
+<!-- Templates Quick Setup - Speaker View -->
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Church Studio Library - Media Tab</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec13",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#0a140a",
+                        "surface-dark": "#112211",
+                        "surface-accent": "#234823",
+                        "text-subtle": "#92c992",
+                    },
+                    fontFamily: {
+                        "sans": ["Inter", "sans-serif"],
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-dark text-slate-100 font-sans antialiased h-screen overflow-hidden flex flex-col relative">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-surface-accent bg-surface-dark px-6 py-3 shrink-0 select-none z-50">
+<div class="flex items-center gap-4 text-white">
+<div class="size-8 text-primary flex items-center justify-center bg-surface-accent rounded-lg">
+<span class="material-symbols-outlined">videocam</span>
+</div>
+<h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em]">Church OBS Helper</h2>
+</div>
+<div class="flex flex-1 justify-end gap-8">
+<nav class="flex items-center gap-6 hidden md:flex">
+<a class="text-text-subtle hover:text-white transition-colors text-sm font-medium leading-normal" href="#">Dashboard</a>
+<a class="text-text-subtle hover:text-white transition-colors text-sm font-medium leading-normal" href="#">Live</a>
+<a class="text-white text-sm font-bold leading-normal border-b-2 border-primary pb-0.5" href="#">Library</a>
+<a class="text-text-subtle hover:text-white transition-colors text-sm font-medium leading-normal" href="#">Settings</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-9 px-4 bg-primary hover:bg-green-400 transition-colors text-surface-dark text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Go Live</span>
+</button>
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-9 ring-2 ring-surface-accent" data-alt="User profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCsz1rzV3Vc9ykmJOTwUpARi7mqNT29SbICh3ht0BVJi4gp7Y4ouBz3d430OT00Z0Of6GGnB4uYY-DN9Xz6T_68tuLj5aVwSsoyCvzh6iMzsjSVT1jFQd3BJrQ5TVmRNMNx-7pgcz_BXJggmC_1U8uOe9C_XE03ELCKTdPpsoq-bpwPwDoT8o3XzVewsfK5sl3qfXci0E8drgX4AyXZhIwlkbsYcO8JfIMbjh4S-j88Vz07pecWrcct4DqVgAqceY3-MA6_h2VOVg");'></div>
+</div>
+</div>
+</header>
+<main class="flex flex-1 overflow-hidden">
+<aside class="w-64 bg-surface-dark border-r border-surface-accent flex flex-col p-4 gap-6 shrink-0 overflow-y-auto hidden md:flex">
+<div class="flex flex-col">
+<h1 class="text-white text-base font-bold leading-normal mb-1">Library Assets</h1>
+<p class="text-text-subtle text-xs font-normal leading-normal">Manage your content</p>
+</div>
+<div class="flex flex-col gap-1">
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/20 text-primary border border-primary/30 w-full text-left transition-all">
+<span class="material-symbols-outlined filled">perm_media</span>
+<span class="text-sm font-medium leading-normal">Media Files</span>
+</button>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-subtle hover:bg-surface-accent hover:text-white w-full text-left transition-colors group">
+<span class="material-symbols-outlined group-hover:text-white">music_note</span>
+<span class="text-sm font-medium leading-normal">Worship Songs</span>
+</button>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-subtle hover:bg-surface-accent hover:text-white w-full text-left transition-colors group">
+<span class="material-symbols-outlined group-hover:text-white">article</span>
+<span class="text-sm font-medium leading-normal">Scripts</span>
+</button>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-subtle hover:bg-surface-accent hover:text-white w-full text-left transition-colors group">
+<span class="material-symbols-outlined group-hover:text-white">folder</span>
+<span class="text-sm font-medium leading-normal">Archives</span>
+</button>
+</div>
+<div class="mt-auto pt-6 border-t border-surface-accent">
+<div class="p-3 bg-surface-accent/30 rounded-lg border border-surface-accent">
+<div class="flex items-center gap-2 mb-2 text-text-subtle">
+<span class="material-symbols-outlined text-sm">cloud_upload</span>
+<span class="text-xs font-medium">Storage</span>
+</div>
+<div class="w-full bg-surface-dark rounded-full h-1.5 mb-2">
+<div class="bg-primary h-1.5 rounded-full" style="width: 45%"></div>
+</div>
+<p class="text-xs text-text-subtle leading-relaxed">4.5 GB of 10 GB used</p>
+</div>
+</div>
+</aside>
+<div class="flex-1 flex flex-col bg-background-dark overflow-hidden relative">
+<div class="px-8 py-6 flex flex-col gap-6 shrink-0 z-10 bg-background-dark/95 backdrop-blur border-b border-surface-accent/50">
+<div class="flex justify-between items-center">
+<div>
+<h2 class="text-white tracking-tight text-3xl font-bold">Media Library</h2>
+<p class="text-text-subtle text-sm font-normal mt-1">Manage videos, images, and backgrounds for your service.</p>
+</div>
+<div class="bg-surface-dark p-1 rounded-lg border border-surface-accent inline-flex">
+<label class="cursor-pointer relative px-6 py-2 rounded-md transition-all">
+<input checked="" class="peer sr-only" name="library_tab" type="radio"/>
+<div class="absolute inset-0 bg-surface-accent rounded-md opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+<span class="relative z-10 text-text-subtle peer-checked:text-white text-sm font-bold">Media</span>
+</label>
+<label class="cursor-pointer relative px-6 py-2 rounded-md transition-all">
+<input class="peer sr-only" name="library_tab" type="radio"/>
+<div class="absolute inset-0 bg-surface-accent rounded-md opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+<span class="relative z-10 text-text-subtle peer-checked:text-white text-sm font-bold">Songs</span>
+</label>
+</div>
+</div>
+<div class="flex flex-col md:flex-row gap-4 items-center justify-between pt-2">
+<div class="flex items-center gap-4 flex-1 w-full md:w-auto">
+<div class="relative flex-1 md:max-w-md">
+<span class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-text-subtle">search</span>
+<input class="w-full bg-surface-dark border border-surface-accent rounded-lg py-2.5 pl-10 pr-4 text-sm text-white placeholder-text-subtle focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" placeholder="Search media..." type="text"/>
+</div>
+<div class="relative group">
+<button class="flex items-center gap-2 bg-surface-dark border border-surface-accent px-4 py-2.5 rounded-lg text-sm text-white hover:border-text-subtle transition-colors">
+<span class="material-symbols-outlined text-lg">filter_list</span>
+<span>Filter: All</span>
+<span class="material-symbols-outlined text-lg">arrow_drop_down</span>
+</button>
+</div>
+</div>
+<button class="flex items-center gap-2 bg-primary hover:bg-green-400 text-surface-dark font-bold px-5 py-2.5 rounded-lg transition-colors shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined">add</span>
+                    Add Media
+                </button>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+<div class="group bg-surface-dark rounded-xl border border-surface-accent hover:border-primary/50 transition-all overflow-hidden flex flex-col cursor-pointer shadow-lg hover:shadow-[0_0_15px_rgba(19,236,19,0.1)]">
+<div class="aspect-video bg-black relative overflow-hidden">
+<img alt="Welcome Loop" class="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBflD6XwEhIjGrOt32L_kvCn39PihIL6K3z1fmpzEib53MzrQnAYWVAE_TU-6pvQ6RhBaaweDRZ9WjEVGqK8j_sbQz4LVIyCQEkxczu1qSLRYChPS11JDfRBd-ecdlm5LdAi3CfZts_GiwJBdCwp3KtUHwEkN-LmxxaDH1rOYlfA3FA4CYQ_upPwQfBDJUcMV-yP27UmtwDSrM6of6E1DwG2_hBQJVXJ67RPq5ZOyXjkLEHL7sh5gEguPpHxzWOlqqJuxCyB9g9pg"/>
+<div class="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors"></div>
+<div class="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded border border-white/10">
+                        VIDEO
+                    </div>
+<div class="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-mono px-1.5 py-0.5 rounded">
+                        05:00
+                    </div>
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<div class="bg-primary/90 rounded-full p-2 text-surface-dark shadow-lg">
+<span class="material-symbols-outlined filled text-2xl">play_arrow</span>
+</div>
+</div>
+</div>
+<div class="p-3 flex items-start justify-between gap-2">
+<div class="overflow-hidden">
+<h4 class="text-white text-sm font-semibold truncate" title="Welcome_Loop.mp4">Welcome_Loop.mp4</h4>
+<p class="text-text-subtle text-xs mt-0.5">Added 2 hours ago</p>
+</div>
+<button class="text-text-subtle hover:text-white rounded p-1 hover:bg-surface-accent/50 transition-colors">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</div>
+</div>
+<div class="group bg-surface-dark rounded-xl border border-surface-accent hover:border-primary/50 transition-all overflow-hidden flex flex-col cursor-pointer shadow-lg hover:shadow-[0_0_15px_rgba(19,236,19,0.1)]">
+<div class="aspect-video bg-black relative overflow-hidden p-4 flex items-center justify-center">
+<div class="absolute inset-0 bg-[url('https://lh3.googleusercontent.com/aida-public/AB6AXuAsBZVbW_JLdEXJ2lnadi_Mdj6IKvEfBAsICBrRugYlcE21fZEYd_IdkLxHVzoQEa8ctqa7S81j5wbo8MH-dftJxL_kQkU_Job30b7WWZbzBCdz3bHJilSZEOhW-O77Ba4jwWKGdtG93yhLyWw52zMK9wVFonW96-oiY2QJhtMV_GBrdvdhUAe5p7QAkST0fG1Co3SEXzV_3zqehn7KrirojacvBTcJSe_K_IUrti1rHgAqscFtDpUwk7dReZK9hAQ1WKA0acmwXg')] bg-cover bg-center opacity-30 blur-sm"></div>
+<img alt="Church Logo" class="relative z-10 max-h-full max-w-full object-contain shadow-xl" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsBZVbW_JLdEXJ2lnadi_Mdj6IKvEfBAsICBrRugYlcE21fZEYd_IdkLxHVzoQEa8ctqa7S81j5wbo8MH-dftJxL_kQkU_Job30b7WWZbzBCdz3bHJilSZEOhW-O77Ba4jwWKGdtG93yhLyWw52zMK9wVFonW96-oiY2QJhtMV_GBrdvdhUAe5p7QAkST0fG1Co3SEXzV_3zqehn7KrirojacvBTcJSe_K_IUrti1rHgAqscFtDpUwk7dReZK9hAQ1WKA0acmwXg"/>
+<div class="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded border border-white/10 z-20">
+                        IMAGE
+                    </div>
+</div>
+<div class="p-3 flex items-start justify-between gap-2">
+<div class="overflow-hidden">
+<h4 class="text-white text-sm font-semibold truncate" title="Church_Logo.png">Church_Logo.png</h4>
+<p class="text-text-subtle text-xs mt-0.5">PNG • 1.2 MB</p>
+</div>
+<button class="text-text-subtle hover:text-white rounded p-1 hover:bg-surface-accent/50 transition-colors">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</div>
+</div>
+<div class="group bg-surface-dark rounded-xl border border-surface-accent hover:border-primary/50 transition-all overflow-hidden flex flex-col cursor-pointer shadow-lg hover:shadow-[0_0_15px_rgba(19,236,19,0.1)]">
+<div class="aspect-video bg-black relative overflow-hidden">
+<img alt="Worship Background Blue" class="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkDqbyhg4IlTL9BT1X4bWHog_wh5kCksMugpTRoFB0AIStYKFQfVd6RK0SSgl55ILAVuhF2-FoM0qAciJBg0trJt1HnHpg8brT6OKvtc0Hr6Tv-O4QBluUZjNz65MEa02BRpPH9xPHc2w65u0TGD4fexzlz6b1kEPR4mvTZ2KeCJrxfQb20DoTOIJtUM1R-hrHkqnYppJh9vvP1-7i_kT5vl6Cn5DokPIpupkWa-pU24f9b0kl8tmuUaanQjlN4giHl9SxMuZ1Dw"/>
+<div class="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded border border-white/10">
+                        VIDEO
+                    </div>
+<div class="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-mono px-1.5 py-0.5 rounded">
+                        03:45
+                    </div>
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<div class="bg-primary/90 rounded-full p-2 text-surface-dark shadow-lg">
+<span class="material-symbols-outlined filled text-2xl">play_arrow</span>
+</div>
+</div>
+</div>
+<div class="p-3 flex items-start justify-between gap-2">
+<div class="overflow-hidden">
+<h4 class="text-white text-sm font-semibold truncate" title="Worship_Motion_Blue.mp4">Worship_Motion_Blue.mp4</h4>
+<p class="text-text-subtle text-xs mt-0.5">Loop • 1080p</p>
+</div>
+<button class="text-text-subtle hover:text-white rounded p-1 hover:bg-surface-accent/50 transition-colors">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</div>
+</div>
+<div class="group bg-surface-dark rounded-xl border border-surface-accent hover:border-primary/50 transition-all overflow-hidden flex flex-col cursor-pointer shadow-lg hover:shadow-[0_0_15px_rgba(19,236,19,0.1)]">
+<div class="aspect-video bg-black relative overflow-hidden">
+<img alt="Sunday Service Thumbnail" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB2T4-uvgCv4wEzG2KqVUsLphnIRoYmWGu59R351cO656IDgo1etKS_hhXDm2aUpYgezij79LgTyB4PZuevGc3Gbgg3cFT6cjGLqg-qoiUlaI_snYh5YHCWKB3fLx6hfMvXBd660Ej0BzU9W_o9ovXW1VR1oL4rg5k71dX0xBiqOdLaLIWxE7uMm1janbzz--c05_qyocjf_CqG4zUKg8t6tTREnUHbW8gSQULnbvx_GqF6N-834OUj_P2mlbZDl9FCZw87oYfhTA"/>
+<div class="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded border border-white/10">
+                        IMAGE
+                    </div>
+</div>
+<div class="p-3 flex items-start justify-between gap-2">
+<div class="overflow-hidden">
+<h4 class="text-white text-sm font-semibold truncate" title="Service_Thumb_01.jpg">Service_Thumb_01.jpg</h4>
+<p class="text-text-subtle text-xs mt-0.5">JPG • 450 KB</p>
+</div>
+<button class="text-text-subtle hover:text-white rounded p-1 hover:bg-surface-accent/50 transition-colors">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</div>
+</div>
+<div class="group bg-surface-dark rounded-xl border border-surface-accent hover:border-primary/50 transition-all overflow-hidden flex flex-col cursor-pointer shadow-lg hover:shadow-[0_0_15px_rgba(19,236,19,0.1)]">
+<div class="aspect-video bg-black relative overflow-hidden">
+<img alt="Countdown Timer" class="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCws_il9bdYMoGvJbC7LMrUEfGTOrLtcRDUReEkKOezOOxlpY6CydaZXd8G6zxdxQihAWqZYXpjYU4gitdNs1Oc9hIGC6w8HdPWaFSGzWu_AINeJoZEnPlGxYsSqSVru7N0V4n-fsTkZ1WW7RufZ8dI5oikr249RnqJag7lZgvET1mr_fCgDahsMl6qpZsYx5Ez86_MsQX7AbLFm26g1My5SxDy3X5ZIZzUH2W5lPvDDmr3NUK4_x8OnB_lfjKdtV7JTaOrgOYF1w"/>
+<div class="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded border border-white/10">
+                        VIDEO
+                    </div>
+<div class="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-mono px-1.5 py-0.5 rounded">
+                        05:00
+                    </div>
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<div class="bg-primary/90 rounded-full p-2 text-surface-dark shadow-lg">
+<span class="material-symbols-outlined filled text-2xl">play_arrow</span>
+</div>
+</div>
+</div>
+<div class="p-3 flex items-start justify-between gap-2">
+<div class="overflow-hidden">
+<h4 class="text-white text-sm font-semibold truncate" title="Countdown_5min.mp4">Countdown_5min.mp4</h4>
+<p class="text-text-subtle text-xs mt-0.5">Timer</p>
+</div>
+<button class="text-text-subtle hover:text-white rounded p-1 hover:bg-surface-accent/50 transition-colors">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</div>
+</div>
+<div class="group bg-surface-dark rounded-xl border border-surface-accent hover:border-primary/50 transition-all overflow-hidden flex flex-col cursor-pointer shadow-lg hover:shadow-[0_0_15px_rgba(19,236,19,0.1)]">
+<div class="aspect-video bg-black relative overflow-hidden">
+<img alt="Announcement Slide" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB2T4-uvgCv4wEzG2KqVUsLphnIRoYmWGu59R351cO656IDgo1etKS_hhXDm2aUpYgezij79LgTyB4PZuevGc3Gbgg3cFT6cjGLqg-qoiUlaI_snYh5YHCWKB3fLx6hfMvXBd660Ej0BzU9W_o9ovXW1VR1oL4rg5k71dX0xBiqOdLaLIWxE7uMm1janbzz--c05_qyocjf_CqG4zUKg8t6tTREnUHbW8gSQULnbvx_GqF6N-834OUj_P2mlbZDl9FCZw87oYfhTA"/>
+<div class="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded border border-white/10">
+                        IMAGE
+                    </div>
+</div>
+<div class="p-3 flex items-start justify-between gap-2">
+<div class="overflow-hidden">
+<h4 class="text-white text-sm font-semibold truncate" title="Announcement_Picnic.png">Announcement_Picnic.png</h4>
+<p class="text-text-subtle text-xs mt-0.5">PNG • 2.1 MB</p>
+</div>
+<button class="text-text-subtle hover:text-white rounded p-1 hover:bg-surface-accent/50 transition-colors">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</div>
+</div>
+<div class="group bg-surface-dark rounded-xl border border-surface-accent hover:border-primary/50 transition-all overflow-hidden flex flex-col cursor-pointer shadow-lg hover:shadow-[0_0_15px_rgba(19,236,19,0.1)]">
+<div class="aspect-video bg-black relative overflow-hidden">
+<img alt="Grid Loop" class="w-full h-full object-cover opacity-80 group-hover:scale-105 transition-transform duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDeAyz1AFFKpXiVqJEm-0YzjF86hG4hLqkIUUNtyB5nRSJ-T4djqqncrclG__uitSiHohkuv4DByysbfhs_TNAX4WS56rxL15HunoecXku1emPUFbMzgyhnm5S9iXkSC8Vimj2ru2iOJdmbVZDiozwTM8e-JRkJkZhQW6Mx8J-Lx4LfQ2Ps29d8r6_-pE5UHHzAlK_xIaRZw4t512fzighLQM4e25q0Z3ohS7B0H1ClvYP157q_IiDXWDJy8xE1Ugv5zg-by5T1kg"/>
+<div class="absolute top-2 right-2 bg-black/60 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-0.5 rounded border border-white/10">
+                        VIDEO
+                    </div>
+<div class="absolute bottom-2 right-2 bg-black/80 text-white text-xs font-mono px-1.5 py-0.5 rounded">
+                        00:30
+                    </div>
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<div class="bg-primary/90 rounded-full p-2 text-surface-dark shadow-lg">
+<span class="material-symbols-outlined filled text-2xl">play_arrow</span>
+</div>
+</div>
+</div>
+<div class="p-3 flex items-start justify-between gap-2">
+<div class="overflow-hidden">
+<h4 class="text-white text-sm font-semibold truncate" title="Youth_Grid_Loop.mp4">Youth_Grid_Loop.mp4</h4>
+<p class="text-text-subtle text-xs mt-0.5">Short Loop</p>
+</div>
+<button class="text-text-subtle hover:text-white rounded p-1 hover:bg-surface-accent/50 transition-colors">
+<span class="material-symbols-outlined text-lg">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+
+</body></html>
+
+<!-- Templates Quick Setup - Speaker View -->
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Church Studio Library - Songs Tab</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec13",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#0a140a",
+                        "surface-dark": "#112211",
+                        "surface-accent": "#234823",
+                        "text-subtle": "#92c992",
+                    },
+                    fontFamily: {
+                        "sans": ["Inter", "sans-serif"],
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-dark text-slate-100 font-sans antialiased h-screen overflow-hidden flex flex-col relative">
+<header class="flex items-center justify-between whitespace-nowrap border-b border-surface-accent bg-surface-dark px-6 py-3 shrink-0 select-none">
+<div class="flex items-center gap-4 text-white">
+<div class="size-8 text-primary flex items-center justify-center bg-surface-accent rounded-lg">
+<span class="material-symbols-outlined">library_music</span>
+</div>
+<h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em]">Church Studio Library</h2>
+</div>
+<div class="flex flex-1 justify-end gap-8">
+<nav class="flex items-center gap-6 hidden md:flex">
+<a class="text-text-subtle hover:text-white transition-colors text-sm font-medium leading-normal" href="#">Dashboard</a>
+<a class="text-white text-sm font-bold leading-normal border-b-2 border-primary pb-0.5" href="#">Library</a>
+<a class="text-text-subtle hover:text-white transition-colors text-sm font-medium leading-normal" href="#">Services</a>
+<a class="text-text-subtle hover:text-white transition-colors text-sm font-medium leading-normal" href="#">Settings</a>
+</nav>
+<div class="flex items-center gap-4">
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-9 ring-2 ring-surface-accent" data-alt="User profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCsz1rzV3Vc9ykmJOTwUpARi7mqNT29SbICh3ht0BVJi4gp7Y4ouBz3d430OT00Z0Of6GGnB4uYY-DN9Xz6T_68tuLj5aVwSsoyCvzh6iMzsjSVT1jFQd3BJrQ5TVmRNMNx-7pgcz_BXJggmC_1U8uOe9C_XE03ELCKTdPpsoq-bpwPwDoT8o3XzVewsfK5sl3qfXci0E8drgX4AyXZhIwlkbsYcO8JfIMbjh4S-j88Vz07pecWrcct4DqVgAqceY3-MA6_h2VOVg");'></div>
+</div>
+</div>
+</header>
+<main class="flex flex-1 overflow-hidden">
+<aside class="w-64 bg-surface-dark border-r border-surface-accent flex flex-col p-4 gap-6 shrink-0 overflow-y-auto">
+<div class="flex flex-col">
+<h1 class="text-white text-base font-bold leading-normal mb-1">Library</h1>
+<p class="text-text-subtle text-xs font-normal leading-normal">Manage assets &amp; songs</p>
+</div>
+<div class="flex flex-col gap-1">
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-subtle hover:bg-surface-accent hover:text-white w-full text-left transition-colors group">
+<span class="material-symbols-outlined group-hover:text-white">folder</span>
+<span class="text-sm font-medium leading-normal">All Items</span>
+</button>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/20 text-primary border border-primary/30 w-full text-left transition-all">
+<span class="material-symbols-outlined filled">music_note</span>
+<span class="text-sm font-medium leading-normal">Songs</span>
+</button>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-subtle hover:bg-surface-accent hover:text-white w-full text-left transition-colors group">
+<span class="material-symbols-outlined group-hover:text-white">image</span>
+<span class="text-sm font-medium leading-normal">Media</span>
+</button>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-subtle hover:bg-surface-accent hover:text-white w-full text-left transition-colors group">
+<span class="material-symbols-outlined group-hover:text-white">movie</span>
+<span class="text-sm font-medium leading-normal">Videos</span>
+</button>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-subtle hover:bg-surface-accent hover:text-white w-full text-left transition-colors group">
+<span class="material-symbols-outlined group-hover:text-white">description</span>
+<span class="text-sm font-medium leading-normal">Documents</span>
+</button>
+</div>
+<div class="mt-auto pt-6 border-t border-surface-accent">
+<div class="p-3 bg-surface-accent/30 rounded-lg border border-surface-accent">
+<div class="flex items-center gap-2 mb-2 text-text-subtle">
+<span class="material-symbols-outlined text-sm">cloud_sync</span>
+<span class="text-xs font-medium">Sync Status</span>
+</div>
+<p class="text-xs text-text-subtle leading-relaxed">Library synced with cloud. Last update: Just now.</p>
+</div>
+</div>
+</aside>
+<div class="flex-1 flex flex-col bg-background-dark overflow-hidden relative">
+<div class="px-8 py-6 flex flex-col gap-6 shrink-0 z-10 bg-background-dark/95 backdrop-blur border-b border-surface-accent/50">
+<div class="flex justify-between items-start">
+<div class="flex flex-col gap-1">
+<h2 class="text-white tracking-tight text-3xl font-bold">Songs</h2>
+<p class="text-text-subtle text-sm font-normal">Manage your worship song database and lyrics.</p>
+</div>
+<div class="flex gap-4">
+<div class="bg-surface-dark p-1 rounded-lg border border-surface-accent inline-flex">
+<a class="cursor-pointer relative px-4 py-1.5 rounded-md transition-all text-text-subtle hover:text-white text-sm font-medium flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">image</span>
+                            Media
+                        </a>
+<div class="bg-surface-accent rounded-md px-4 py-1.5 flex items-center gap-2 text-white shadow-sm">
+<span class="material-symbols-outlined text-lg filled">music_note</span>
+<span class="text-sm font-medium">Songs</span>
+</div>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-between gap-4 mt-2">
+<div class="relative flex-1 max-w-md">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-text-subtle">search</span>
+<input class="w-full bg-surface-dark border border-surface-accent rounded-lg py-2.5 pl-10 pr-4 text-white placeholder-text-subtle/50 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm" placeholder="Search songs..." type="text"/>
+</div>
+<button class="flex items-center gap-2 bg-primary hover:bg-green-400 text-surface-dark font-bold text-sm px-5 py-2.5 rounded-lg shadow-lg hover:shadow-[0_0_15px_rgba(19,236,19,0.4)] transition-all transform active:scale-[0.98]">
+<span class="material-symbols-outlined text-xl">add</span>
+                    Add Song
+                </button>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-8 pt-4">
+<div class="flex flex-col gap-3">
+<div class="group flex items-center p-4 bg-surface-dark border border-surface-accent rounded-xl hover:border-primary/50 transition-all cursor-pointer">
+<div class="size-12 rounded-lg bg-surface-accent/30 flex items-center justify-center shrink-0 text-primary mr-4">
+<span class="material-symbols-outlined">lyrics</span>
+</div>
+<div class="flex-1 min-w-0 mr-4">
+<div class="flex items-center gap-3 mb-1">
+<h3 class="text-white font-bold text-lg truncate">Way Maker</h3>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-accent text-text-subtle border border-surface-accent/50 uppercase tracking-wide">
+                                Sinach
+                            </span>
+</div>
+<p class="text-text-subtle text-sm truncate">You are here, moving in our midst, I worship You, I worship You.</p>
+<p class="text-text-subtle/60 text-xs truncate mt-0.5">You are here, working in this place, I worship You, I worship You.</p>
+</div>
+<div class="flex items-center gap-6 shrink-0">
+<div class="flex flex-col items-end gap-1">
+<span class="text-xs text-text-subtle font-medium bg-surface-accent/20 px-2 py-1 rounded border border-surface-accent/40">
+                                8 slides
+                            </span>
+<span class="text-[10px] text-text-subtle/50 uppercase font-bold tracking-wider">Key: B</span>
+</div>
+<div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 text-text-subtle hover:text-white hover:bg-surface-accent rounded-lg transition-colors" title="Edit">
+<span class="material-symbols-outlined text-xl">edit</span>
+</button>
+<button class="p-2 text-text-subtle hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors" title="Delete">
+<span class="material-symbols-outlined text-xl">delete</span>
+</button>
+</div>
+<button class="p-2 text-text-subtle hover:text-white rounded-lg transition-colors md:hidden">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+<div class="group flex items-center p-4 bg-surface-dark border border-surface-accent rounded-xl hover:border-primary/50 transition-all cursor-pointer">
+<div class="size-12 rounded-lg bg-surface-accent/30 flex items-center justify-center shrink-0 text-primary mr-4">
+<span class="material-symbols-outlined">lyrics</span>
+</div>
+<div class="flex-1 min-w-0 mr-4">
+<div class="flex items-center gap-3 mb-1">
+<h3 class="text-white font-bold text-lg truncate">Goodness of God</h3>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-accent text-text-subtle border border-surface-accent/50 uppercase tracking-wide">
+                                Bethel Music
+                            </span>
+</div>
+<p class="text-text-subtle text-sm truncate">I love You, Lord, For Your mercy never fails me.</p>
+<p class="text-text-subtle/60 text-xs truncate mt-0.5">All my days, I've been held in Your hands.</p>
+</div>
+<div class="flex items-center gap-6 shrink-0">
+<div class="flex flex-col items-end gap-1">
+<span class="text-xs text-text-subtle font-medium bg-surface-accent/20 px-2 py-1 rounded border border-surface-accent/40">
+                                6 slides
+                            </span>
+<span class="text-[10px] text-text-subtle/50 uppercase font-bold tracking-wider">Key: Ab</span>
+</div>
+<div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 text-text-subtle hover:text-white hover:bg-surface-accent rounded-lg transition-colors" title="Edit">
+<span class="material-symbols-outlined text-xl">edit</span>
+</button>
+<button class="p-2 text-text-subtle hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors" title="Delete">
+<span class="material-symbols-outlined text-xl">delete</span>
+</button>
+</div>
+<button class="p-2 text-text-subtle hover:text-white rounded-lg transition-colors md:hidden">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+<div class="group flex items-center p-4 bg-surface-dark border border-surface-accent rounded-xl hover:border-primary/50 transition-all cursor-pointer">
+<div class="size-12 rounded-lg bg-surface-accent/30 flex items-center justify-center shrink-0 text-primary mr-4">
+<span class="material-symbols-outlined">lyrics</span>
+</div>
+<div class="flex-1 min-w-0 mr-4">
+<div class="flex items-center gap-3 mb-1">
+<h3 class="text-white font-bold text-lg truncate">Build My Life</h3>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-accent text-text-subtle border border-surface-accent/50 uppercase tracking-wide">
+                                Housefires
+                            </span>
+</div>
+<p class="text-text-subtle text-sm truncate">Worthy of every song we could ever sing.</p>
+<p class="text-text-subtle/60 text-xs truncate mt-0.5">Worthy of all the praise we could ever bring.</p>
+</div>
+<div class="flex items-center gap-6 shrink-0">
+<div class="flex flex-col items-end gap-1">
+<span class="text-xs text-text-subtle font-medium bg-surface-accent/20 px-2 py-1 rounded border border-surface-accent/40">
+                                5 slides
+                            </span>
+<span class="text-[10px] text-text-subtle/50 uppercase font-bold tracking-wider">Key: G</span>
+</div>
+<div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 text-text-subtle hover:text-white hover:bg-surface-accent rounded-lg transition-colors" title="Edit">
+<span class="material-symbols-outlined text-xl">edit</span>
+</button>
+<button class="p-2 text-text-subtle hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors" title="Delete">
+<span class="material-symbols-outlined text-xl">delete</span>
+</button>
+</div>
+<button class="p-2 text-text-subtle hover:text-white rounded-lg transition-colors md:hidden">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+<div class="group flex items-center p-4 bg-surface-dark border border-surface-accent rounded-xl hover:border-primary/50 transition-all cursor-pointer">
+<div class="size-12 rounded-lg bg-surface-accent/30 flex items-center justify-center shrink-0 text-primary mr-4">
+<span class="material-symbols-outlined">lyrics</span>
+</div>
+<div class="flex-1 min-w-0 mr-4">
+<div class="flex items-center gap-3 mb-1">
+<h3 class="text-white font-bold text-lg truncate">Great Are You Lord</h3>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-accent text-text-subtle border border-surface-accent/50 uppercase tracking-wide">
+                                All Sons &amp; Daughters
+                            </span>
+</div>
+<p class="text-text-subtle text-sm truncate">You give life, You are love, You bring light to the darkness.</p>
+<p class="text-text-subtle/60 text-xs truncate mt-0.5">You give hope, You restore, every heart that is broken.</p>
+</div>
+<div class="flex items-center gap-6 shrink-0">
+<div class="flex flex-col items-end gap-1">
+<span class="text-xs text-text-subtle font-medium bg-surface-accent/20 px-2 py-1 rounded border border-surface-accent/40">
+                                4 slides
+                            </span>
+<span class="text-[10px] text-text-subtle/50 uppercase font-bold tracking-wider">Key: A</span>
+</div>
+<div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 text-text-subtle hover:text-white hover:bg-surface-accent rounded-lg transition-colors" title="Edit">
+<span class="material-symbols-outlined text-xl">edit</span>
+</button>
+<button class="p-2 text-text-subtle hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors" title="Delete">
+<span class="material-symbols-outlined text-xl">delete</span>
+</button>
+</div>
+<button class="p-2 text-text-subtle hover:text-white rounded-lg transition-colors md:hidden">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+<div class="group flex items-center p-4 bg-surface-dark border border-surface-accent rounded-xl hover:border-primary/50 transition-all cursor-pointer">
+<div class="size-12 rounded-lg bg-surface-accent/30 flex items-center justify-center shrink-0 text-primary mr-4">
+<span class="material-symbols-outlined">lyrics</span>
+</div>
+<div class="flex-1 min-w-0 mr-4">
+<div class="flex items-center gap-3 mb-1">
+<h3 class="text-white font-bold text-lg truncate">Living Hope</h3>
+<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-surface-accent text-text-subtle border border-surface-accent/50 uppercase tracking-wide">
+                                Phil Wickham
+                            </span>
+</div>
+<p class="text-text-subtle text-sm truncate">How great the chasm that lay between us.</p>
+<p class="text-text-subtle/60 text-xs truncate mt-0.5">How high the mountain I could not climb.</p>
+</div>
+<div class="flex items-center gap-6 shrink-0">
+<div class="flex flex-col items-end gap-1">
+<span class="text-xs text-text-subtle font-medium bg-surface-accent/20 px-2 py-1 rounded border border-surface-accent/40">
+                                7 slides
+                            </span>
+<span class="text-[10px] text-text-subtle/50 uppercase font-bold tracking-wider">Key: Eb</span>
+</div>
+<div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+<button class="p-2 text-text-subtle hover:text-white hover:bg-surface-accent rounded-lg transition-colors" title="Edit">
+<span class="material-symbols-outlined text-xl">edit</span>
+</button>
+<button class="p-2 text-text-subtle hover:text-red-400 hover:bg-red-900/20 rounded-lg transition-colors" title="Delete">
+<span class="material-symbols-outlined text-xl">delete</span>
+</button>
+</div>
+<button class="p-2 text-text-subtle hover:text-white rounded-lg transition-colors md:hidden">
+<span class="material-symbols-outlined">more_vert</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>
+
+<!-- Templates Quick Setup - Speaker View -->
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Templates Quick Setup - Speaker View</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec13",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#0a140a",
+                        "surface-dark": "#112211",
+                        "surface-accent": "#234823",
+                        "text-subtle": "#92c992",
+                    },
+                    fontFamily: {
+                        "sans": ["Inter", "sans-serif"],
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-dark text-slate-100 font-sans antialiased h-screen overflow-hidden flex flex-col relative">
+<div class="absolute inset-0 bg-black/70 z-40 backdrop-blur-sm flex items-center justify-center p-4">
+<div class="bg-surface-dark/95 backdrop-blur-xl border border-surface-accent rounded-xl shadow-2xl w-full max-w-lg flex flex-col transform transition-all duration-300 scale-100 relative overflow-hidden">
+<div class="flex items-center justify-between px-6 py-5 border-b border-surface-accent">
+<h3 class="text-white text-xl font-bold">Add Media to Library</h3>
+<button class="text-text-subtle hover:text-white transition-colors p-1 rounded-md hover:bg-surface-accent/50">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="p-6 flex flex-col gap-6">
+<div class="w-full">
+<label class="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-surface-accent rounded-xl cursor-pointer bg-surface-accent/10 hover:bg-surface-accent/20 hover:border-primary/50 transition-all group">
+<div class="flex flex-col items-center justify-center pt-5 pb-6">
+<div class="w-12 h-12 mb-3 rounded-full bg-surface-accent/30 flex items-center justify-center group-hover:scale-110 transition-transform">
+<span class="material-symbols-outlined text-primary text-3xl">cloud_upload</span>
+</div>
+<p class="mb-1 text-sm text-white font-medium">Drag &amp; drop media here or <span class="text-primary hover:underline">browse</span></p>
+<p class="text-xs text-text-subtle">PNG, JPG, MP4, MOV up to 50MB</p>
+</div>
+<input class="hidden" type="file"/>
+</label>
+</div>
+<div class="flex flex-col gap-5">
+<div class="flex flex-col gap-2">
+<label class="text-sm font-medium text-text-subtle">File Name</label>
+<div class="relative">
+<input class="w-full bg-background-dark border border-surface-accent text-white text-sm rounded-lg focus:ring-primary focus:border-primary block p-2.5 pr-10 placeholder-gray-500" placeholder="Enter file name" type="text" value="worship_background_01.mp4"/>
+<span class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-text-subtle">
+<span class="material-symbols-outlined text-sm">edit</span>
+</span>
+</div>
+</div>
+<div class="flex flex-col gap-2">
+<label class="text-sm font-medium text-text-subtle">Category</label>
+<div class="flex p-1 bg-background-dark rounded-lg border border-surface-accent w-full">
+<label class="cursor-pointer flex-1 relative">
+<input class="peer sr-only" name="media-category" type="radio"/>
+<div class="flex items-center justify-center py-2 rounded-md transition-all text-text-subtle hover:text-white peer-checked:bg-surface-accent peer-checked:text-white peer-checked:shadow-sm">
+<span class="material-symbols-outlined text-sm mr-2">image</span>
+<span class="text-sm font-medium">Image</span>
+</div>
+</label>
+<label class="cursor-pointer flex-1 relative">
+<input checked="" class="peer sr-only" name="media-category" type="radio"/>
+<div class="flex items-center justify-center py-2 rounded-md transition-all text-text-subtle hover:text-white peer-checked:bg-surface-accent peer-checked:text-white peer-checked:shadow-sm">
+<span class="material-symbols-outlined text-sm mr-2">videocam</span>
+<span class="text-sm font-medium">Video</span>
+</div>
+</label>
+</div>
+</div>
+</div>
+</div>
+<div class="flex items-center justify-end gap-3 px-6 py-4 bg-background-dark/50 border-t border-surface-accent">
+<button class="px-5 py-2.5 rounded-lg text-sm font-medium text-text-subtle hover:text-white transition-colors hover:bg-surface-accent/20">
+                Cancel
+            </button>
+<button class="px-5 py-2.5 rounded-lg text-sm font-bold text-surface-dark bg-primary hover:bg-green-400 transition-colors shadow-[0_0_15px_rgba(19,236,19,0.2)] hover:shadow-[0_0_20px_rgba(19,236,19,0.4)] active:scale-[0.98]">
+                Save to Library
+            </button>
+</div>
+</div>
+</div>
+<header class="flex items-center justify-between whitespace-nowrap border-b border-surface-accent bg-surface-dark px-6 py-3 shrink-0 blur-[2px] opacity-80 pointer-events-none select-none">
+<div class="flex items-center gap-4 text-white">
+<div class="size-8 text-primary flex items-center justify-center bg-surface-accent rounded-lg">
+<span class="material-symbols-outlined">videocam</span>
+</div>
+<h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em]">Church OBS Helper</h2>
+</div>
+<div class="flex flex-1 justify-end gap-8">
+<nav class="flex items-center gap-6 hidden md:flex">
+<a class="text-text-subtle hover:text-white transition-colors text-sm font-medium leading-normal" href="#">Dashboard</a>
+<a class="text-text-subtle hover:text-white transition-colors text-sm font-medium leading-normal" href="#">Live</a>
+<a class="text-white text-sm font-bold leading-normal border-b-2 border-primary pb-0.5" href="#">Templates</a>
+<a class="text-text-subtle hover:text-white transition-colors text-sm font-medium leading-normal" href="#">Settings</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-9 px-4 bg-primary hover:bg-green-400 transition-colors text-surface-dark text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Go Live</span>
+</button>
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-9 ring-2 ring-surface-accent" data-alt="User profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCsz1rzV3Vc9ykmJOTwUpARi7mqNT29SbICh3ht0BVJi4gp7Y4ouBz3d430OT00Z0Of6GGnB4uYY-DN9Xz6T_68tuLj5aVwSsoyCvzh6iMzsjSVT1jFQd3BJrQ5TVmRNMNx-7pgcz_BXJggmC_1U8uOe9C_XE03ELCKTdPpsoq-bpwPwDoT8o3XzVewsfK5sl3qfXci0E8drgX4AyXZhIwlkbsYcO8JfIMbjh4S-j88Vz07pecWrcct4DqVgAqceY3-MA6_h2VOVg");'></div>
+</div>
+</div>
+</header>
+<main class="flex flex-1 overflow-hidden blur-[2px] opacity-80 pointer-events-none select-none">
+<aside class="w-64 bg-surface-dark border-r border-surface-accent flex flex-col p-4 gap-6 shrink-0 overflow-y-auto">
+<div class="flex flex-col">
+<h1 class="text-white text-base font-bold leading-normal mb-1">Overlay Types</h1>
+<p class="text-text-subtle text-xs font-normal leading-normal">Select category to configure</p>
+</div>
+<div class="flex flex-col gap-1">
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/20 text-primary border border-primary/30 w-full text-left transition-all">
+<span class="material-symbols-outlined filled">mic</span>
+<span class="text-sm font-medium leading-normal">Speaker</span>
+</button>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-subtle hover:bg-surface-accent hover:text-white w-full text-left transition-colors group">
+<span class="material-symbols-outlined group-hover:text-white">menu_book</span>
+<span class="text-sm font-medium leading-normal">Sermon</span>
+</button>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-subtle hover:bg-surface-accent hover:text-white w-full text-left transition-colors group">
+<span class="material-symbols-outlined group-hover:text-white">volunteer_activism</span>
+<span class="text-sm font-medium leading-normal">Giving</span>
+</button>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-subtle hover:bg-surface-accent hover:text-white w-full text-left transition-colors group">
+<span class="material-symbols-outlined group-hover:text-white">group</span>
+<span class="text-sm font-medium leading-normal">Connect</span>
+</button>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-subtle hover:bg-surface-accent hover:text-white w-full text-left transition-colors group">
+<span class="material-symbols-outlined group-hover:text-white">calendar_month</span>
+<span class="text-sm font-medium leading-normal">Events</span>
+</button>
+</div>
+<div class="mt-auto pt-6 border-t border-surface-accent">
+<div class="p-3 bg-surface-accent/30 rounded-lg border border-surface-accent">
+<div class="flex items-center gap-2 mb-2 text-text-subtle">
+<span class="material-symbols-outlined text-sm">info</span>
+<span class="text-xs font-medium">Tip</span>
+</div>
+<p class="text-xs text-text-subtle leading-relaxed">Customize global styles in the "Template Studio" tab for granular control.</p>
+</div>
+</div>
+</aside>
+<div class="flex-1 flex flex-col bg-background-dark overflow-hidden relative">
+<div class="px-8 py-6 flex flex-col gap-6 shrink-0 z-10 bg-background-dark/95 backdrop-blur border-b border-surface-accent/50">
+<div class="flex justify-between items-start">
+<div class="flex flex-col gap-1">
+<h2 class="text-white tracking-tight text-3xl font-bold">Templates</h2>
+<p class="text-text-subtle text-sm font-normal">Pick how overlays should look and behave during service.</p>
+</div>
+<div class="bg-surface-dark p-1 rounded-lg border border-surface-accent inline-flex">
+<label class="cursor-pointer relative px-4 py-1.5 rounded-md transition-all">
+<input checked="" class="peer sr-only" name="mode" type="radio"/>
+<div class="absolute inset-0 bg-surface-accent rounded-md opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+<span class="relative z-10 text-text-subtle peer-checked:text-white text-sm font-medium">Quick Setup</span>
+</label>
+<label class="cursor-pointer relative px-4 py-1.5 rounded-md transition-all">
+<input class="peer sr-only" name="mode" type="radio"/>
+<div class="absolute inset-0 bg-surface-accent rounded-md opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+<span class="relative z-10 text-text-subtle peer-checked:text-white text-sm font-medium">Template Studio</span>
+</label>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-8 pt-2 grid grid-cols-1 lg:grid-cols-3 gap-8">
+<div class="lg:col-span-2">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-lg font-semibold text-white">Speaker Templates</h3>
+<span class="text-xs font-mono text-text-subtle bg-surface-accent px-2 py-1 rounded">6 Available</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="group relative flex flex-col gap-3 p-3 rounded-xl bg-surface-dark border-2 border-primary shadow-[0_0_15px_rgba(19,236,19,0.15)] transition-all cursor-pointer">
+<div class="absolute top-5 right-5 z-10">
+<span class="bg-primary text-surface-dark text-xs font-bold px-2 py-1 rounded-md shadow-sm">Active</span>
+</div>
+<div class="w-full aspect-video rounded-lg overflow-hidden relative bg-black">
+<img class="w-full h-full object-cover opacity-60" data-alt="Abstract gradient preview for lower third" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBflD6XwEhIjGrOt32L_kvCn39PihIL6K3z1fmpzEib53MzrQnAYWVAE_TU-6pvQ6RhBaaweDRZ9WjEVGqK8j_sbQz4LVIyCQEkxczu1qSLRYChPS11JDfRBd-ecdlm5LdAi3CfZts_GiwJBdCwp3KtUHwEkN-LmxxaDH1rOYlfA3FA4CYQ_upPwQfBDJUcMV-yP27UmtwDSrM6of6E1DwG2_hBQJVXJ67RPq5ZOyXjkLEHL7sh5gEguPpHxzWOlqqJuxCyB9g9pg"/>
+<div class="absolute bottom-4 left-4 right-4 h-12 bg-white/90 rounded flex items-center px-4">
+<div class="h-2 w-24 bg-slate-800 rounded mr-2"></div>
+<div class="h-2 w-16 bg-slate-400 rounded"></div>
+</div>
+</div>
+<div class="flex justify-between items-end px-1">
+<div>
+<p class="text-white text-base font-medium">Clean Lower Third</p>
+<p class="text-text-subtle text-xs">Standard clean look</p>
+</div>
+<div class="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-surface-dark text-sm font-bold">check</span>
+</div>
+</div>
+</div>
+<div class="group relative flex flex-col gap-3 p-3 rounded-xl bg-surface-dark border border-surface-accent hover:border-primary/50 transition-all cursor-pointer">
+<div class="w-full aspect-video rounded-lg overflow-hidden relative bg-black">
+<img class="w-full h-full object-cover opacity-60" data-alt="Dark modern gradient background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB2T4-uvgCv4wEzG2KqVUsLphnIRoYmWGu59R351cO656IDgo1etKS_hhXDm2aUpYgezij79LgTyB4PZuevGc3Gbgg3cFT6cjGLqg-qoiUlaI_snYh5YHCWKB3fLx6hfMvXBd660Ej0BzU9W_o9ovXW1VR1oL4rg5k71dX0xBiqOdLaLIWxE7uMm1janbzz--c05_qyocjf_CqG4zUKg8t6tTREnUHbW8gSQULnbvx_GqF6N-834OUj_P2mlbZDl9FCZw87oYfhTA"/>
+<div class="absolute bottom-4 left-4 h-14 w-48 bg-surface-dark/80 border-l-4 border-primary p-2 backdrop-blur-sm">
+<div class="h-2 w-20 bg-white rounded mb-2"></div>
+<div class="h-2 w-12 bg-slate-500 rounded"></div>
+</div>
+</div>
+<div class="flex justify-between items-end px-1">
+<div>
+<p class="text-white text-base font-medium">Modern Box</p>
+<p class="text-text-subtle text-xs">Boxed style with shadow</p>
+</div>
+<button class="text-xs font-medium text-text-subtle hover:text-white bg-surface-accent hover:bg-surface-accent/80 px-3 py-1.5 rounded transition-colors opacity-0 group-hover:opacity-100">
+                                Set Default
+                            </button>
+</div>
+</div>
+<div class="group relative flex flex-col gap-3 p-3 rounded-xl bg-surface-dark border border-surface-accent hover:border-primary/50 transition-all cursor-pointer">
+<div class="w-full aspect-video rounded-lg overflow-hidden relative bg-black">
+<img class="w-full h-full object-cover opacity-60" data-alt="Abstract fluid blue shapes" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkDqbyhg4IlTL9BT1X4bWHog_wh5kCksMugpTRoFB0AIStYKFQfVd6RK0SSgl55ILAVuhF2-FoM0qAciJBg0trJt1HnHpg8brT6OKvtc0Hr6Tv-O4QBluUZjNz65MEa02BRpPH9xPHc2w65u0TGD4fexzlz6b1kEPR4mvTZ2KeCJrxfQb20DoTOIJtUM1R-hrHkqnYppJh9vvP1-7i_kT5vl6Cn5DokPIpupkWa-pU24f9b0kl8tmuUaanQjlN4giHl9SxMuZ1Dw"/>
+<div class="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-r from-blue-900/80 to-transparent flex items-center px-6">
+<div class="h-2 w-32 bg-white rounded"></div>
+</div>
+</div>
+<div class="flex justify-between items-end px-1">
+<div>
+<p class="text-white text-base font-medium">Minimal Gradient</p>
+<p class="text-text-subtle text-xs">Gradient background</p>
+</div>
+<button class="text-xs font-medium text-text-subtle hover:text-white bg-surface-accent hover:bg-surface-accent/80 px-3 py-1.5 rounded transition-colors opacity-0 group-hover:opacity-100">
+                                Set Default
+                            </button>
+</div>
+</div>
+<div class="group relative flex flex-col gap-3 p-3 rounded-xl bg-surface-dark border border-surface-accent hover:border-primary/50 transition-all cursor-pointer">
+<div class="w-full aspect-video rounded-lg overflow-hidden relative bg-black">
+<img class="w-full h-full object-cover opacity-60" data-alt="Dark texture pattern" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsBZVbW_JLdEXJ2lnadi_Mdj6IKvEfBAsICBrRugYlcE21fZEYd_IdkLxHVzoQEa8ctqa7S81j5wbo8MH-dftJxL_kQkU_Job30b7WWZbzBCdz3bHJilSZEOhW-O77Ba4jwWKGdtG93yhLyWw52zMK9wVFonW96-oiY2QJhtMV_GBrdvdhUAe5p7QAkST0fG1Co3SEXzV_3zqehn7KrirojacvBTcJSe_K_IUrti1rHgAqscFtDpUwk7dReZK9hAQ1WKA0acmwXg"/>
+<div class="absolute bottom-6 right-6 bg-white text-black font-bold px-4 py-2 transform -skew-x-12">
+                                NAMEPLATE
+                            </div>
+</div>
+<div class="flex justify-between items-end px-1">
+<div>
+<p class="text-white text-base font-medium">Bold Nameplate</p>
+<p class="text-text-subtle text-xs">High contrast text</p>
+</div>
+<button class="text-xs font-medium text-text-subtle hover:text-white bg-surface-accent hover:bg-surface-accent/80 px-3 py-1.5 rounded transition-colors opacity-0 group-hover:opacity-100">
+                                Set Default
+                            </button>
+</div>
+</div>
+<div class="group relative flex flex-col gap-3 p-3 rounded-xl bg-surface-dark border border-surface-accent hover:border-primary/50 transition-all cursor-pointer">
+<div class="w-full aspect-video rounded-lg overflow-hidden relative bg-black">
+<img class="w-full h-full object-cover opacity-60" data-alt="Cyberpunk dark grid" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDeAyz1AFFKpXiVqJEm-0YzjF86hG4hLqkIUUNtyB5nRSJ-T4djqqncrclG__uitSiHohkuv4DByysbfhs_TNAX4WS56rxL15HunoecXku1emPUFbMzgyhnm5S9iXkSC8Vimj2ru2iOJdmbVZDiozwTM8e-JRkJkZhQW6Mx8J-Lx4LfQ2Ps29d8r6_-pE5UHHzAlK_xIaRZw4t512fzighLQM4e25q0Z3ohS7B0H1ClvYP157q_IiDXWDJy8xE1Ugv5zg-by5T1kg"/>
+<div class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/40 border border-white/20 backdrop-blur rounded-full px-6 py-2">
+<div class="h-1.5 w-24 bg-white/80 rounded"></div>
+</div>
+</div>
+<div class="flex justify-between items-end px-1">
+<div>
+<p class="text-white text-base font-medium">Center Floating</p>
+<p class="text-text-subtle text-xs">Subtle pill shape</p>
+</div>
+<button class="text-xs font-medium text-text-subtle hover:text-white bg-surface-accent hover:bg-surface-accent/80 px-3 py-1.5 rounded transition-colors opacity-0 group-hover:opacity-100">
+                                Set Default
+                            </button>
+</div>
+</div>
+<div class="group relative flex flex-col gap-3 p-3 rounded-xl bg-surface-dark border border-surface-accent hover:border-primary/50 transition-all cursor-pointer">
+<div class="w-full aspect-video rounded-lg overflow-hidden relative bg-black">
+<img class="w-full h-full object-cover opacity-60" data-alt="Multi color gradient" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCws_il9bdYMoGvJbC7LMrUEfGTOrLtcRDUReEkKOezOOxlpY6CydaZXd8G6zxdxQihAWqZYXpjYU4gitdNs1Oc9hIGC6w8HdPWaFSGzWu_AINeJoZEnPlGxYsSqSVru7N0V4n-fsTkZ1WW7RufZ8dI5oikr249RnqJag7lZgvET1mr_fCgDahsMl6qpZsYx5Ez86_MsQX7AbLFm26g1My5SxDy3X5ZIZzUH2W5lPvDDmr3NUK4_x8OnB_lfjKdtV7JTaOrgOYF1w"/>
+<div class="absolute top-0 bottom-0 left-0 w-16 bg-white/10 backdrop-blur flex flex-col justify-end pb-4 items-center border-r border-white/10">
+<div class="h-8 w-8 rounded-full bg-white/20 mb-2"></div>
+<div class="h-1 w-8 bg-white/50 rounded"></div>
+</div>
+</div>
+<div class="flex justify-between items-end px-1">
+<div>
+<p class="text-white text-base font-medium">Sidebar Info</p>
+<p class="text-text-subtle text-xs">Vertical layout</p>
+</div>
+<button class="text-xs font-medium text-text-subtle hover:text-white bg-surface-accent hover:bg-surface-accent/80 px-3 py-1.5 rounded transition-colors opacity-0 group-hover:opacity-100">
+                                Set Default
+                            </button>
+</div>
+</div>
+</div>
+</div>
+<div class="lg:col-span-1">
+<div class="bg-surface-dark border border-surface-accent rounded-xl p-5 sticky top-0">
+<div class="flex items-center gap-2 mb-6 border-b border-surface-accent pb-4">
+<span class="material-symbols-outlined text-primary">tune</span>
+<h3 class="text-white font-bold text-lg">Speaker Defaults</h3>
+</div>
+<div class="flex flex-col gap-6">
+<div class="flex flex-col gap-3">
+<label class="text-text-subtle text-sm font-medium">Position</label>
+<div class="grid grid-cols-3 gap-2 p-1 bg-background-dark rounded-lg border border-surface-accent">
+<label class="cursor-pointer">
+<input checked="" class="peer sr-only" name="position" type="radio"/>
+<div class="flex flex-col items-center justify-center py-2 rounded transition-colors hover:bg-surface-accent/50 peer-checked:bg-surface-accent peer-checked:text-white text-text-subtle">
+<span class="material-symbols-outlined text-lg mb-1">align_horizontal_left</span>
+<span class="text-[10px] font-semibold uppercase">Left</span>
+</div>
+</label>
+<label class="cursor-pointer">
+<input class="peer sr-only" name="position" type="radio"/>
+<div class="flex flex-col items-center justify-center py-2 rounded transition-colors hover:bg-surface-accent/50 peer-checked:bg-surface-accent peer-checked:text-white text-text-subtle">
+<span class="material-symbols-outlined text-lg mb-1">align_horizontal_center</span>
+<span class="text-[10px] font-semibold uppercase">Center</span>
+</div>
+</label>
+<label class="cursor-pointer">
+<input class="peer sr-only" name="position" type="radio"/>
+<div class="flex flex-col items-center justify-center py-2 rounded transition-colors hover:bg-surface-accent/50 peer-checked:bg-surface-accent peer-checked:text-white text-text-subtle">
+<span class="material-symbols-outlined text-lg mb-1">align_horizontal_right</span>
+<span class="text-[10px] font-semibold uppercase">Right</span>
+</div>
+</label>
+</div>
+</div>
+<div class="flex flex-col gap-3">
+<label class="text-text-subtle text-sm font-medium">Size</label>
+<div class="flex gap-2 p-1 bg-background-dark rounded-lg border border-surface-accent">
+<label class="cursor-pointer flex-1">
+<input class="peer sr-only" name="size" type="radio"/>
+<div class="flex items-center justify-center py-2 rounded transition-colors hover:bg-surface-accent/50 peer-checked:bg-surface-accent peer-checked:text-white text-text-subtle text-sm font-medium">
+                                        Small
+                                    </div>
+</label>
+<label class="cursor-pointer flex-1">
+<input checked="" class="peer sr-only" name="size" type="radio"/>
+<div class="flex items-center justify-center py-2 rounded transition-colors hover:bg-surface-accent/50 peer-checked:bg-surface-accent peer-checked:text-white text-text-subtle text-sm font-medium">
+                                        Medium
+                                    </div>
+</label>
+<label class="cursor-pointer flex-1">
+<input class="peer sr-only" name="size" type="radio"/>
+<div class="flex items-center justify-center py-2 rounded transition-colors hover:bg-surface-accent/50 peer-checked:bg-surface-accent peer-checked:text-white text-text-subtle text-sm font-medium">
+                                        Large
+                                    </div>
+</label>
+</div>
+</div>
+<div class="flex flex-col gap-3">
+<label class="text-text-subtle text-sm font-medium">Duration</label>
+<div class="flex flex-col gap-2">
+<label class="flex items-center p-3 border border-surface-accent rounded-lg bg-background-dark cursor-pointer hover:border-primary/50 transition-colors has-[:checked]:border-primary has-[:checked]:bg-surface-accent/10">
+<input checked="" class="w-4 h-4 text-primary bg-surface-accent border-gray-600 focus:ring-primary focus:ring-offset-surface-dark" name="duration" type="radio"/>
+<div class="ml-3 flex-1">
+<span class="block text-sm font-medium text-white">Timed (8s)</span>
+<span class="block text-xs text-text-subtle">Hides automatically</span>
+</div>
+<span class="material-symbols-outlined text-text-subtle text-lg">timer</span>
+</label>
+<label class="flex items-center p-3 border border-surface-accent rounded-lg bg-background-dark cursor-pointer hover:border-primary/50 transition-colors has-[:checked]:border-primary has-[:checked]:bg-surface-accent/10">
+<input class="w-4 h-4 text-primary bg-surface-accent border-gray-600 focus:ring-primary focus:ring-offset-surface-dark" name="duration" type="radio"/>
+<div class="ml-3 flex-1">
+<span class="block text-sm font-medium text-white">Manual</span>
+<span class="block text-xs text-text-subtle">You must hide it</span>
+</div>
+<span class="material-symbols-outlined text-text-subtle text-lg">pan_tool_alt</span>
+</label>
+</div>
+</div>
+<div class="flex items-center justify-between py-2 border-t border-surface-accent mt-2 pt-4">
+<div class="flex flex-col">
+<span class="text-sm font-medium text-white">Auto-Replace</span>
+<span class="text-xs text-text-subtle">Replace existing overlay</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-surface-accent peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<button class="w-full mt-4 bg-white text-surface-dark font-bold py-2.5 rounded-lg hover:bg-gray-200 transition-colors shadow-sm text-sm">
+                            Save Defaults
+                        </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>
+
+<!-- Templates Quick Setup - Speaker View -->
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Templates Quick Setup - Speaker View</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "primary": "#13ec13",
+                        "background-light": "#f6f8f6",
+                        "background-dark": "#0a140a",
+                        "surface-dark": "#112211",
+                        "surface-accent": "#234823",
+                        "text-subtle": "#92c992",
+                    },
+                    fontFamily: {
+                        "sans": ["Inter", "sans-serif"],
+                        "display": ["Inter", "sans-serif"]
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                },
+            },
+        }
+    </script>
+</head>
+<body class="bg-background-dark text-slate-100 font-sans antialiased h-screen overflow-hidden flex flex-col relative">
+<div class="absolute inset-0 bg-black/70 z-40 flex items-center justify-center p-4 backdrop-blur-sm">
+<div class="w-full max-w-2xl bg-surface-dark border border-surface-accent rounded-xl shadow-2xl flex flex-col max-h-[90vh]">
+<div class="flex items-center justify-between px-6 py-5 border-b border-surface-accent bg-surface-dark rounded-t-xl">
+<h3 class="text-white text-xl font-bold tracking-tight">Add New Song</h3>
+<button class="text-text-subtle hover:text-white transition-colors p-1 rounded hover:bg-surface-accent/30">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
+<div class="grid grid-cols-1 md:grid-cols-12 gap-5">
+<div class="md:col-span-6 flex flex-col gap-1.5">
+<label class="text-xs font-semibold text-text-subtle uppercase tracking-wider" for="song-title">Song Title <span class="text-primary">*</span></label>
+<input class="w-full bg-background-dark border border-surface-accent rounded-lg px-4 py-2.5 text-white placeholder-text-subtle/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" id="song-title" placeholder="e.g. Way Maker" type="text"/>
+</div>
+<div class="md:col-span-2 flex flex-col gap-1.5">
+<label class="text-xs font-semibold text-text-subtle uppercase tracking-wider" for="song-key">Key</label>
+<div class="relative">
+<select class="w-full bg-background-dark border border-surface-accent rounded-lg px-3 py-2.5 text-white appearance-none focus:border-primary focus:ring-1 focus:ring-primary outline-none cursor-pointer transition-all pr-8" id="song-key">
+<option>C</option>
+<option>D</option>
+<option>E</option>
+<option>F</option>
+<option selected="">G</option>
+<option>A</option>
+<option>B</option>
+</select>
+<span class="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-text-subtle pointer-events-none text-lg">expand_more</span>
+</div>
+</div>
+<div class="md:col-span-4 flex flex-col gap-1.5">
+<label class="text-xs font-semibold text-text-subtle uppercase tracking-wider" for="worship-leader">Worship Leader</label>
+<input class="w-full bg-background-dark border border-surface-accent rounded-lg px-4 py-2.5 text-white placeholder-text-subtle/50 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all" id="worship-leader" placeholder="Optional" type="text"/>
+</div>
+</div>
+<div class="flex flex-col gap-2 flex-1 min-h-[300px]">
+<div class="flex items-center justify-between">
+<label class="text-xs font-semibold text-text-subtle uppercase tracking-wider" for="lyrics-editor">Lyrics &amp; Structure</label>
+<div class="flex gap-2">
+<button class="text-xs font-medium text-text-subtle hover:text-white px-2 py-1 bg-surface-accent/20 hover:bg-surface-accent/40 rounded transition-colors">Import from CCLI</button>
+</div>
+</div>
+<textarea class="w-full flex-1 bg-background-dark/50 border border-surface-accent rounded-lg p-4 text-white font-mono text-sm leading-relaxed placeholder-text-subtle/30 focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all resize-none" id="lyrics-editor" placeholder="Verse 1:
+Line 1 lyrics goes here...
+Line 2 lyrics goes here...
+Chorus:
+Chorus line 1..."></textarea>
+<p class="text-xs text-text-subtle">Use labels like <span class="text-white font-mono">Verse 1:</span>, <span class="text-white font-mono">Chorus:</span>, <span class="text-white font-mono">Bridge:</span> to automatically section lyrics.</p>
+</div>
+<div class="bg-surface-accent/10 border border-surface-accent rounded-lg p-3 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-text-subtle">splitscreen</span>
+<div class="flex flex-col">
+<span class="text-sm font-medium text-white">Auto-split into slides</span>
+<span class="text-xs text-text-subtle">Optimizes lyrics for readability (2-3 lines per slide)</span>
+</div>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-accent/50 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-primary/20 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+</div>
+<div class="flex items-center justify-end gap-4 px-6 py-5 border-t border-surface-accent bg-surface-dark rounded-b-xl">
+<a class="text-sm font-medium text-text-subtle hover:text-white transition-colors" href="#">Cancel</a>
+<button class="bg-primary hover:bg-green-400 text-surface-dark font-bold text-sm px-6 py-2.5 rounded-lg shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all transform active:scale-95 flex items-center gap-2">
+<span class="material-symbols-outlined text-lg">save</span>
+                Save Song
+            </button>
+</div>
+</div>
+</div>
+<div class="absolute left-0 top-0 bottom-0 w-[480px] bg-surface-dark border-r border-surface-accent z-30 shadow-2xl flex flex-col transform transition-transform duration-300 -translate-x-full">
+<div class="flex items-center justify-between px-6 py-4 border-b border-surface-accent">
+<h3 class="text-white text-lg font-bold">Preview Template</h3>
+<button class="text-text-subtle hover:text-white transition-colors">
+<span class="material-symbols-outlined">close</span>
+</button>
+</div>
+<div class="flex-1 overflow-y-auto p-6 flex flex-col gap-6">
+<div class="w-full aspect-video rounded-xl overflow-hidden relative shadow-lg ring-1 ring-white/10 group">
+<img alt="Church video background" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB2T4-uvgCv4wEzG2KqVUsLphnIRoYmWGu59R351cO656IDgo1etKS_hhXDm2aUpYgezij79LgTyB4PZuevGc3Gbgg3cFT6cjGLqg-qoiUlaI_snYh5YHCWKB3fLx6hfMvXBd660Ej0BzU9W_o9ovXW1VR1oL4rg5k71dX0xBiqOdLaLIWxE7uMm1janbzz--c05_qyocjf_CqG4zUKg8t6tTREnUHbW8gSQULnbvx_GqF6N-834OUj_P2mlbZDl9FCZw87oYfhTA"/>
+<div class="absolute inset-0 bg-black/20 flex flex-col justify-end p-6">
+<div class="bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-4 max-w-[80%] shadow-xl">
+<h4 class="text-white font-bold text-lg mb-1 drop-shadow-md">Pastor Michael Scott</h4>
+<p class="text-white/90 text-sm font-medium drop-shadow-md">Lead Pastor • Sunday Service</p>
+</div>
+</div>
+<div class="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/20">
+<div class="bg-primary text-surface-dark rounded-full p-3 shadow-lg transform hover:scale-110 transition-transform">
+<span class="material-symbols-outlined filled text-3xl">play_arrow</span>
+</div>
+</div>
+</div>
+<div class="flex flex-col gap-4">
+<div>
+<h2 class="text-2xl font-bold text-white mb-2">Modern Glass Worship</h2>
+<p class="text-text-subtle leading-relaxed text-sm">
+                    A sleek, modern lower-third template featuring a frosted glass effect (glassmorphism). Perfect for contemporary worship services, offering high readability with a sophisticated, subtle aesthetic that blends seamlessly with live video feeds.
+                </p>
+</div>
+<div class="flex flex-wrap gap-2">
+<span class="px-2.5 py-1 rounded bg-surface-accent/40 border border-surface-accent text-xs font-medium text-primary">
+                    Speaker
+                </span>
+<span class="px-2.5 py-1 rounded bg-surface-accent/40 border border-surface-accent text-xs font-medium text-text-subtle">
+                    Lower Third
+                </span>
+<span class="px-2.5 py-1 rounded bg-surface-accent/40 border border-surface-accent text-xs font-medium text-text-subtle">
+                    Animated
+                </span>
+</div>
+<div class="h-px bg-surface-accent w-full my-2"></div>
+<div>
+<h4 class="text-sm font-semibold text-white mb-3 uppercase tracking-wider">Supported Slots</h4>
+<div class="grid grid-cols-2 gap-3">
+<div class="flex items-center gap-3 p-2 rounded bg-surface-accent/20 border border-surface-accent/50">
+<span class="material-symbols-outlined text-primary text-xl">person</span>
+<span class="text-sm text-gray-200">Speaker Name</span>
+</div>
+<div class="flex items-center gap-3 p-2 rounded bg-surface-accent/20 border border-surface-accent/50">
+<span class="material-symbols-outlined text-primary text-xl">title</span>
+<span class="text-sm text-gray-200">Sermon Title</span>
+</div>
+<div class="flex items-center gap-3 p-2 rounded bg-surface-accent/20 border border-surface-accent/50">
+<span class="material-symbols-outlined text-gray-500 text-xl">qr_code</span>
+<span class="text-sm text-gray-500 line-through">QR Code</span>
+</div>
+<div class="flex items-center gap-3 p-2 rounded bg-surface-accent/20 border border-surface-accent/50">
+<span class="material-symbols-outlined text-primary text-xl">schedule</span>
+<span class="text-sm text-gray-200">Countdown</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="p-6 border-t border-surface-accent bg-surface-dark/95 backdrop-blur mt-auto">
+<button class="w-full flex items-center justify-center gap-2 bg-primary hover:bg-green-400 text-surface-dark font-bold text-base py-3.5 rounded-lg shadow-[0_0_20px_rgba(19,236,19,0.3)] hover:shadow-[0_0_25px_rgba(19,236,19,0.5)] transition-all transform active:scale-[0.98]">
+<span class="material-symbols-outlined filled text-xl">star</span>
+            ADD TO FAVORITES
+        </button>
+<button class="w-full mt-3 text-text-subtle hover:text-white text-sm font-medium py-2 transition-colors">
+            Cancel
+        </button>
+</div>
+</div>
+<header class="flex items-center justify-between whitespace-nowrap border-b border-surface-accent bg-surface-dark px-6 py-3 shrink-0 blur-[2px] opacity-80 pointer-events-none select-none">
+<div class="flex items-center gap-4 text-white">
+<div class="size-8 text-primary flex items-center justify-center bg-surface-accent rounded-lg">
+<span class="material-symbols-outlined">videocam</span>
+</div>
+<h2 class="text-white text-lg font-bold leading-tight tracking-[-0.015em]">Church OBS Helper</h2>
+</div>
+<div class="flex flex-1 justify-end gap-8">
+<nav class="flex items-center gap-6 hidden md:flex">
+<a class="text-text-subtle hover:text-white transition-colors text-sm font-medium leading-normal" href="#">Dashboard</a>
+<a class="text-text-subtle hover:text-white transition-colors text-sm font-medium leading-normal" href="#">Live</a>
+<a class="text-white text-sm font-bold leading-normal border-b-2 border-primary pb-0.5" href="#">Templates</a>
+<a class="text-text-subtle hover:text-white transition-colors text-sm font-medium leading-normal" href="#">Settings</a>
+</nav>
+<div class="flex items-center gap-4">
+<button class="flex min-w-[84px] cursor-pointer items-center justify-center overflow-hidden rounded-lg h-9 px-4 bg-primary hover:bg-green-400 transition-colors text-surface-dark text-sm font-bold leading-normal tracking-[0.015em]">
+<span class="truncate">Go Live</span>
+</button>
+<div class="bg-center bg-no-repeat bg-cover rounded-full size-9 ring-2 ring-surface-accent" data-alt="User profile picture" style='background-image: url("https://lh3.googleusercontent.com/aida-public/AB6AXuCsz1rzV3Vc9ykmJOTwUpARi7mqNT29SbICh3ht0BVJi4gp7Y4ouBz3d430OT00Z0Of6GGnB4uYY-DN9Xz6T_68tuLj5aVwSsoyCvzh6iMzsjSVT1jFQd3BJrQ5TVmRNMNx-7pgcz_BXJggmC_1U8uOe9C_XE03ELCKTdPpsoq-bpwPwDoT8o3XzVewsfK5sl3qfXci0E8drgX4AyXZhIwlkbsYcO8JfIMbjh4S-j88Vz07pecWrcct4DqVgAqceY3-MA6_h2VOVg");'></div>
+</div>
+</div>
+</header>
+<main class="flex flex-1 overflow-hidden blur-[2px] opacity-80 pointer-events-none select-none">
+<aside class="w-64 bg-surface-dark border-r border-surface-accent flex flex-col p-4 gap-6 shrink-0 overflow-y-auto">
+<div class="flex flex-col">
+<h1 class="text-white text-base font-bold leading-normal mb-1">Overlay Types</h1>
+<p class="text-text-subtle text-xs font-normal leading-normal">Select category to configure</p>
+</div>
+<div class="flex flex-col gap-1">
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-primary/20 text-primary border border-primary/30 w-full text-left transition-all">
+<span class="material-symbols-outlined filled">mic</span>
+<span class="text-sm font-medium leading-normal">Speaker</span>
+</button>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-subtle hover:bg-surface-accent hover:text-white w-full text-left transition-colors group">
+<span class="material-symbols-outlined group-hover:text-white">menu_book</span>
+<span class="text-sm font-medium leading-normal">Sermon</span>
+</button>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-subtle hover:bg-surface-accent hover:text-white w-full text-left transition-colors group">
+<span class="material-symbols-outlined group-hover:text-white">volunteer_activism</span>
+<span class="text-sm font-medium leading-normal">Giving</span>
+</button>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-subtle hover:bg-surface-accent hover:text-white w-full text-left transition-colors group">
+<span class="material-symbols-outlined group-hover:text-white">group</span>
+<span class="text-sm font-medium leading-normal">Connect</span>
+</button>
+<button class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-text-subtle hover:bg-surface-accent hover:text-white w-full text-left transition-colors group">
+<span class="material-symbols-outlined group-hover:text-white">calendar_month</span>
+<span class="text-sm font-medium leading-normal">Events</span>
+</button>
+</div>
+<div class="mt-auto pt-6 border-t border-surface-accent">
+<div class="p-3 bg-surface-accent/30 rounded-lg border border-surface-accent">
+<div class="flex items-center gap-2 mb-2 text-text-subtle">
+<span class="material-symbols-outlined text-sm">info</span>
+<span class="text-xs font-medium">Tip</span>
+</div>
+<p class="text-xs text-text-subtle leading-relaxed">Customize global styles in the "Template Studio" tab for granular control.</p>
+</div>
+</div>
+</aside>
+<div class="flex-1 flex flex-col bg-background-dark overflow-hidden relative">
+<div class="px-8 py-6 flex flex-col gap-6 shrink-0 z-10 bg-background-dark/95 backdrop-blur border-b border-surface-accent/50">
+<div class="flex justify-between items-start">
+<div class="flex flex-col gap-1">
+<h2 class="text-white tracking-tight text-3xl font-bold">Templates</h2>
+<p class="text-text-subtle text-sm font-normal">Pick how overlays should look and behave during service.</p>
+</div>
+<div class="bg-surface-dark p-1 rounded-lg border border-surface-accent inline-flex">
+<label class="cursor-pointer relative px-4 py-1.5 rounded-md transition-all">
+<input checked="" class="peer sr-only" name="mode" type="radio"/>
+<div class="absolute inset-0 bg-surface-accent rounded-md opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+<span class="relative z-10 text-text-subtle peer-checked:text-white text-sm font-medium">Quick Setup</span>
+</label>
+<label class="cursor-pointer relative px-4 py-1.5 rounded-md transition-all">
+<input class="peer sr-only" name="mode" type="radio"/>
+<div class="absolute inset-0 bg-surface-accent rounded-md opacity-0 peer-checked:opacity-100 transition-opacity"></div>
+<span class="relative z-10 text-text-subtle peer-checked:text-white text-sm font-medium">Template Studio</span>
+</label>
+</div>
+</div>
+</div>
+<div class="flex-1 overflow-y-auto p-8 pt-2 grid grid-cols-1 lg:grid-cols-3 gap-8">
+<div class="lg:col-span-2">
+<div class="flex items-center justify-between mb-4">
+<h3 class="text-lg font-semibold text-white">Speaker Templates</h3>
+<span class="text-xs font-mono text-text-subtle bg-surface-accent px-2 py-1 rounded">6 Available</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="group relative flex flex-col gap-3 p-3 rounded-xl bg-surface-dark border-2 border-primary shadow-[0_0_15px_rgba(19,236,19,0.15)] transition-all cursor-pointer">
+<div class="absolute top-5 right-5 z-10">
+<span class="bg-primary text-surface-dark text-xs font-bold px-2 py-1 rounded-md shadow-sm">Active</span>
+</div>
+<div class="w-full aspect-video rounded-lg overflow-hidden relative bg-black">
+<img class="w-full h-full object-cover opacity-60" data-alt="Abstract gradient preview for lower third" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBflD6XwEhIjGrOt32L_kvCn39PihIL6K3z1fmpzEib53MzrQnAYWVAE_TU-6pvQ6RhBaaweDRZ9WjEVGqK8j_sbQz4LVIyCQEkxczu1qSLRYChPS11JDfRBd-ecdlm5LdAi3CfZts_GiwJBdCwp3KtUHwEkN-LmxxaDH1rOYlfA3FA4CYQ_upPwQfBDJUcMV-yP27UmtwDSrM6of6E1DwG2_hBQJVXJ67RPq5ZOyXjkLEHL7sh5gEguPpHxzWOlqqJuxCyB9g9pg"/>
+<div class="absolute bottom-4 left-4 right-4 h-12 bg-white/90 rounded flex items-center px-4">
+<div class="h-2 w-24 bg-slate-800 rounded mr-2"></div>
+<div class="h-2 w-16 bg-slate-400 rounded"></div>
+</div>
+</div>
+<div class="flex justify-between items-end px-1">
+<div>
+<p class="text-white text-base font-medium">Clean Lower Third</p>
+<p class="text-text-subtle text-xs">Standard clean look</p>
+</div>
+<div class="h-6 w-6 rounded-full bg-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-surface-dark text-sm font-bold">check</span>
+</div>
+</div>
+</div>
+<div class="group relative flex flex-col gap-3 p-3 rounded-xl bg-surface-dark border border-surface-accent hover:border-primary/50 transition-all cursor-pointer">
+<div class="w-full aspect-video rounded-lg overflow-hidden relative bg-black">
+<img class="w-full h-full object-cover opacity-60" data-alt="Dark modern gradient background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuB2T4-uvgCv4wEzG2KqVUsLphnIRoYmWGu59R351cO656IDgo1etKS_hhXDm2aUpYgezij79LgTyB4PZuevGc3Gbgg3cFT6cjGLqg-qoiUlaI_snYh5YHCWKB3fLx6hfMvXBd660Ej0BzU9W_o9ovXW1VR1oL4rg5k71dX0xBiqOdLaLIWxE7uMm1janbzz--c05_qyocjf_CqG4zUKg8t6tTREnUHbW8gSQULnbvx_GqF6N-834OUj_P2mlbZDl9FCZw87oYfhTA"/>
+<div class="absolute bottom-4 left-4 h-14 w-48 bg-surface-dark/80 border-l-4 border-primary p-2 backdrop-blur-sm">
+<div class="h-2 w-20 bg-white rounded mb-2"></div>
+<div class="h-2 w-12 bg-slate-500 rounded"></div>
+</div>
+</div>
+<div class="flex justify-between items-end px-1">
+<div>
+<p class="text-white text-base font-medium">Modern Box</p>
+<p class="text-text-subtle text-xs">Boxed style with shadow</p>
+</div>
+<button class="text-xs font-medium text-text-subtle hover:text-white bg-surface-accent hover:bg-surface-accent/80 px-3 py-1.5 rounded transition-colors opacity-0 group-hover:opacity-100">
+                                Set Default
+                            </button>
+</div>
+</div>
+<div class="group relative flex flex-col gap-3 p-3 rounded-xl bg-surface-dark border border-surface-accent hover:border-primary/50 transition-all cursor-pointer">
+<div class="w-full aspect-video rounded-lg overflow-hidden relative bg-black">
+<img class="w-full h-full object-cover opacity-60" data-alt="Abstract fluid blue shapes" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkDqbyhg4IlTL9BT1X4bWHog_wh5kCksMugpTRoFB0AIStYKFQfVd6RK0SSgl55ILAVuhF2-FoM0qAciJBg0trJt1HnHpg8brT6OKvtc0Hr6Tv-O4QBluUZjNz65MEa02BRpPH9xPHc2w65u0TGD4fexzlz6b1kEPR4mvTZ2KeCJrxfQb20DoTOIJtUM1R-hrHkqnYppJh9vvP1-7i_kT5vl6Cn5DokPIpupkWa-pU24f9b0kl8tmuUaanQjlN4giHl9SxMuZ1Dw"/>
+<div class="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-r from-blue-900/80 to-transparent flex items-center px-6">
+<div class="h-2 w-32 bg-white rounded"></div>
+</div>
+</div>
+<div class="flex justify-between items-end px-1">
+<div>
+<p class="text-white text-base font-medium">Minimal Gradient</p>
+<p class="text-text-subtle text-xs">Gradient background</p>
+</div>
+<button class="text-xs font-medium text-text-subtle hover:text-white bg-surface-accent hover:bg-surface-accent/80 px-3 py-1.5 rounded transition-colors opacity-0 group-hover:opacity-100">
+                                Set Default
+                            </button>
+</div>
+</div>
+<div class="group relative flex flex-col gap-3 p-3 rounded-xl bg-surface-dark border border-surface-accent hover:border-primary/50 transition-all cursor-pointer">
+<div class="w-full aspect-video rounded-lg overflow-hidden relative bg-black">
+<img class="w-full h-full object-cover opacity-60" data-alt="Dark texture pattern" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAsBZVbW_JLdEXJ2lnadi_Mdj6IKvEfBAsICBrRugYlcE21fZEYd_IdkLxHVzoQEa8ctqa7S81j5wbo8MH-dftJxL_kQkU_Job30b7WWZbzBCdz3bHJilSZEOhW-O77Ba4jwWKGdtG93yhLyWw52zMK9wVFonW96-oiY2QJhtMV_GBrdvdhUAe5p7QAkST0fG1Co3SEXzV_3zqehn7KrirojacvBTcJSe_K_IUrti1rHgAqscFtDpUwk7dReZK9hAQ1WKA0acmwXg"/>
+<div class="absolute bottom-6 right-6 bg-white text-black font-bold px-4 py-2 transform -skew-x-12">
+                                NAMEPLATE
+                            </div>
+</div>
+<div class="flex justify-between items-end px-1">
+<div>
+<p class="text-white text-base font-medium">Bold Nameplate</p>
+<p class="text-text-subtle text-xs">High contrast text</p>
+</div>
+<button class="text-xs font-medium text-text-subtle hover:text-white bg-surface-accent hover:bg-surface-accent/80 px-3 py-1.5 rounded transition-colors opacity-0 group-hover:opacity-100">
+                                Set Default
+                            </button>
+</div>
+</div>
+<div class="group relative flex flex-col gap-3 p-3 rounded-xl bg-surface-dark border border-surface-accent hover:border-primary/50 transition-all cursor-pointer">
+<div class="w-full aspect-video rounded-lg overflow-hidden relative bg-black">
+<img class="w-full h-full object-cover opacity-60" data-alt="Cyberpunk dark grid" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDeAyz1AFFKpXiVqJEm-0YzjF86hG4hLqkIUUNtyB5nRSJ-T4djqqncrclG__uitSiHohkuv4DByysbfhs_TNAX4WS56rxL15HunoecXku1emPUFbMzgyhnm5S9iXkSC8Vimj2ru2iOJdmbVZDiozwTM8e-JRkJkZhQW6Mx8J-Lx4LfQ2Ps29d8r6_-pE5UHHzAlK_xIaRZw4t512fzighLQM4e25q0Z3ohS7B0H1ClvYP157q_IiDXWDJy8xE1Ugv5zg-by5T1kg"/>
+<div class="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/40 border border-white/20 backdrop-blur rounded-full px-6 py-2">
+<div class="h-1.5 w-24 bg-white/80 rounded"></div>
+</div>
+</div>
+<div class="flex justify-between items-end px-1">
+<div>
+<p class="text-white text-base font-medium">Center Floating</p>
+<p class="text-text-subtle text-xs">Subtle pill shape</p>
+</div>
+<button class="text-xs font-medium text-text-subtle hover:text-white bg-surface-accent hover:bg-surface-accent/80 px-3 py-1.5 rounded transition-colors opacity-0 group-hover:opacity-100">
+                                Set Default
+                            </button>
+</div>
+</div>
+<div class="group relative flex flex-col gap-3 p-3 rounded-xl bg-surface-dark border border-surface-accent hover:border-primary/50 transition-all cursor-pointer">
+<div class="w-full aspect-video rounded-lg overflow-hidden relative bg-black">
+<img class="w-full h-full object-cover opacity-60" data-alt="Multi color gradient" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCws_il9bdYMoGvJbC7LMrUEfGTOrLtcRDUReEkKOezOOxlpY6CydaZXd8G6zxdxQihAWqZYXpjYU4gitdNs1Oc9hIGC6w8HdPWaFSGzWu_AINeJoZEnPlGxYsSqSVru7N0V4n-fsTkZ1WW7RufZ8dI5oikr249RnqJag7lZgvET1mr_fCgDahsMl6qpZsYx5Ez86_MsQX7AbLFm26g1My5SxDy3X5ZIZzUH2W5lPvDDmr3NUK4_x8OnB_lfjKdtV7JTaOrgOYF1w"/>
+<div class="absolute top-0 bottom-0 left-0 w-16 bg-white/10 backdrop-blur flex flex-col justify-end pb-4 items-center border-r border-white/10">
+<div class="h-8 w-8 rounded-full bg-white/20 mb-2"></div>
+<div class="h-1 w-8 bg-white/50 rounded"></div>
+</div>
+</div>
+<div class="flex justify-between items-end px-1">
+<div>
+<p class="text-white text-base font-medium">Sidebar Info</p>
+<p class="text-text-subtle text-xs">Vertical layout</p>
+</div>
+<button class="text-xs font-medium text-text-subtle hover:text-white bg-surface-accent hover:bg-surface-accent/80 px-3 py-1.5 rounded transition-colors opacity-0 group-hover:opacity-100">
+                                Set Default
+                            </button>
+</div>
+</div>
+</div>
+</div>
+<div class="lg:col-span-1">
+<div class="bg-surface-dark border border-surface-accent rounded-xl p-5 sticky top-0">
+<div class="flex items-center gap-2 mb-6 border-b border-surface-accent pb-4">
+<span class="material-symbols-outlined text-primary">tune</span>
+<h3 class="text-white font-bold text-lg">Speaker Defaults</h3>
+</div>
+<div class="flex flex-col gap-6">
+<div class="flex flex-col gap-3">
+<label class="text-text-subtle text-sm font-medium">Position</label>
+<div class="grid grid-cols-3 gap-2 p-1 bg-background-dark rounded-lg border border-surface-accent">
+<label class="cursor-pointer">
+<input checked="" class="peer sr-only" name="position" type="radio"/>
+<div class="flex flex-col items-center justify-center py-2 rounded transition-colors hover:bg-surface-accent/50 peer-checked:bg-surface-accent peer-checked:text-white text-text-subtle">
+<span class="material-symbols-outlined text-lg mb-1">align_horizontal_left</span>
+<span class="text-[10px] font-semibold uppercase">Left</span>
+</div>
+</label>
+<label class="cursor-pointer">
+<input class="peer sr-only" name="position" type="radio"/>
+<div class="flex flex-col items-center justify-center py-2 rounded transition-colors hover:bg-surface-accent/50 peer-checked:bg-surface-accent peer-checked:text-white text-text-subtle">
+<span class="material-symbols-outlined text-lg mb-1">align_horizontal_center</span>
+<span class="text-[10px] font-semibold uppercase">Center</span>
+</div>
+</label>
+<label class="cursor-pointer">
+<input class="peer sr-only" name="position" type="radio"/>
+<div class="flex flex-col items-center justify-center py-2 rounded transition-colors hover:bg-surface-accent/50 peer-checked:bg-surface-accent peer-checked:text-white text-text-subtle">
+<span class="material-symbols-outlined text-lg mb-1">align_horizontal_right</span>
+<span class="text-[10px] font-semibold uppercase">Right</span>
+</div>
+</label>
+</div>
+</div>
+<div class="flex flex-col gap-3">
+<label class="text-text-subtle text-sm font-medium">Size</label>
+<div class="flex gap-2 p-1 bg-background-dark rounded-lg border border-surface-accent">
+<label class="cursor-pointer flex-1">
+<input class="peer sr-only" name="size" type="radio"/>
+<div class="flex items-center justify-center py-2 rounded transition-colors hover:bg-surface-accent/50 peer-checked:bg-surface-accent peer-checked:text-white text-text-subtle text-sm font-medium">
+                                        Small
+                                    </div>
+</label>
+<label class="cursor-pointer flex-1">
+<input checked="" class="peer sr-only" name="size" type="radio"/>
+<div class="flex items-center justify-center py-2 rounded transition-colors hover:bg-surface-accent/50 peer-checked:bg-surface-accent peer-checked:text-white text-text-subtle text-sm font-medium">
+                                        Medium
+                                    </div>
+</label>
+<label class="cursor-pointer flex-1">
+<input class="peer sr-only" name="size" type="radio"/>
+<div class="flex items-center justify-center py-2 rounded transition-colors hover:bg-surface-accent/50 peer-checked:bg-surface-accent peer-checked:text-white text-text-subtle text-sm font-medium">
+                                        Large
+                                    </div>
+</label>
+</div>
+</div>
+<div class="flex flex-col gap-3">
+<label class="text-text-subtle text-sm font-medium">Duration</label>
+<div class="flex flex-col gap-2">
+<label class="flex items-center p-3 border border-surface-accent rounded-lg bg-background-dark cursor-pointer hover:border-primary/50 transition-colors has-[:checked]:border-primary has-[:checked]:bg-surface-accent/10">
+<input checked="" class="w-4 h-4 text-primary bg-surface-accent border-gray-600 focus:ring-primary focus:ring-offset-surface-dark" name="duration" type="radio"/>
+<div class="ml-3 flex-1">
+<span class="block text-sm font-medium text-white">Timed (8s)</span>
+<span class="block text-xs text-text-subtle">Hides automatically</span>
+</div>
+<span class="material-symbols-outlined text-text-subtle text-lg">timer</span>
+</label>
+<label class="flex items-center p-3 border border-surface-accent rounded-lg bg-background-dark cursor-pointer hover:border-primary/50 transition-colors has-[:checked]:border-primary has-[:checked]:bg-surface-accent/10">
+<input class="w-4 h-4 text-primary bg-surface-accent border-gray-600 focus:ring-primary focus:ring-offset-surface-dark" name="duration" type="radio"/>
+<div class="ml-3 flex-1">
+<span class="block text-sm font-medium text-white">Manual</span>
+<span class="block text-xs text-text-subtle">You must hide it</span>
+</div>
+<span class="material-symbols-outlined text-text-subtle text-lg">pan_tool_alt</span>
+</label>
+</div>
+</div>
+<div class="flex items-center justify-between py-2 border-t border-surface-accent mt-2 pt-4">
+<div class="flex flex-col">
+<span class="text-sm font-medium text-white">Auto-Replace</span>
+<span class="text-xs text-text-subtle">Replace existing overlay</span>
+</div>
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox" value=""/>
+<div class="w-11 h-6 bg-surface-accent peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+</label>
+</div>
+<button class="w-full mt-4 bg-white text-surface-dark font-bold py-2.5 rounded-lg hover:bg-gray-200 transition-colors shadow-sm text-sm">
+                            Save Defaults
+                        </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>

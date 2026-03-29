@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1920,height=1080">
+<title>Bible Overlay — Background Only</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  @import url('/fonts/cmg-sans-fonts.css');
+
+  body {
+    width: 1920px;
+    height: 1080px;
+    overflow: hidden;
+    background: transparent;
+    font-family: "CMG Sans", sans-serif;
+  }
+
+  #background {
+    position: absolute;
+    inset: 0;
+    background-color: var(--bg-color, transparent);
+    background-image: var(--bg-image, none);
+    background-size: cover;
+    background-position: center;
+    opacity: var(--bg-opacity, 1);
+    z-index: 0;
+    /* Smooth transition when theme background changes */
+    transition: background-color 0.4s ease, opacity 0.4s ease;
+  }
+</style>
+</head>
+<body>
+<div id="background"></div>
+
+<script>
+  /**
+   * Bible Background-Only Overlay
+   *
+   * A static layer that displays only the theme background.
+   * Updated only when the theme changes (not on every verse).
+   * This eliminates flicker since the background never reloads.
+   *
+   * Data format (same as main overlay):
+   *   { theme: { backgroundColor, backgroundImage, backgroundOpacity, ... }, timestamp }
+   */
+
+  let lastTimestamp = 0;
+
+  function applyBackground(data) {
+    if (!data) return;
+    if (data.timestamp && data.timestamp <= lastTimestamp) return;
+    lastTimestamp = data.timestamp || 0;
+
+    const theme = data.theme;
+    if (!theme) return;
+
+    const root = document.documentElement.style;
+    root.setProperty('--bg-color', theme.backgroundColor || 'transparent');
+    root.setProperty('--bg-opacity', String(theme.backgroundOpacity ?? 1));
+
+    if (theme.backgroundImage) {
+      let bgUrl = theme.backgroundImage;
+      if (bgUrl === '__BG_SOURCE__') return; // Separate OBS source handles BG
+      if (bgUrl === '__FROM_CSS__') {
+        const cssVal = getComputedStyle(document.documentElement).getPropertyValue('--bg-image').trim();
+        root.setProperty('--bg-image', cssVal || 'none');
+        if (cssVal) {
+          root.setProperty('--bg-color', 'transparent');
+        }
+        return;
+      }
+      if (bgUrl === '__FROM_LOCALSTORAGE__') {
+        const stored = localStorage.getItem('bible-overlay-bg-image');
+        bgUrl = stored || '';
+      }
+      if (bgUrl) {
+        root.setProperty('--bg-image', `url(${bgUrl})`);
+      } else {
+        root.setProperty('--bg-image', 'none');
+      }
+    } else {
+      root.setProperty('--bg-image', 'none');
+    }
+  }
+
+  // Read from URL hash
+  function readFromUrlHash() {
+    try {
+      const hash = window.location.hash;
+      if (hash && hash.startsWith('#data=')) {
+        const encoded = hash.slice(6);
+        const data = JSON.parse(decodeURIComponent(encoded));
+        applyBackground(data);
+        return true;
+      }
+    } catch { /* parse error */ }
+    return false;
+  }
+
+  // BroadcastChannel
+  try {
+    const bc = new BroadcastChannel('obs-church-studio-bible-bg');
+    bc.onmessage = (e) => { applyBackground(e.data); };
+  } catch { /* not supported */ }
+
+  window.addEventListener('hashchange', () => { readFromUrlHash(); });
+
+  // Initial read
+  readFromUrlHash();
+</script>
+</body>
+</html>

@@ -1,0 +1,57 @@
+/**
+ * CMG Sans Font Family — @font-face declarations
+ * All variants from the CMG Sans font collection.
+ * Referenced by overlay HTMLs and app CSS.
+ */
+
+/* ── Starter Set (Primary) ────────────────────────── */
+@font-face { font-family: "CMG Sans"; src: url("CMG Sans/Starter Set Styles/CMGSans-Regular.ttf") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "CMG Sans"; src: url("CMG Sans/Starter Set Styles/CMGSans-Italic.ttf") format("truetype"); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: "CMG Sans"; src: url("CMG Sans/Starter Set Styles/CMGSans-Bold.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "CMG Sans"; src: url("CMG Sans/Starter Set Styles/CMGSans-BoldItalic.ttf") format("truetype"); font-weight: 700; font-style: italic; font-display: swap; }
+
+/* ── Extended Set ────────────────────────────────── */
+@font-face { font-family: "CMG Sans"; src: url("CMG Sans/Extended Set Styles/CMGSans-Thin.ttf") format("truetype"); font-weight: 100; font-style: normal; font-display: swap; }
+@font-face { font-family: "CMG Sans"; src: url("CMG Sans/Extended Set Styles/CMGSans-ThinItalic.ttf") format("truetype"); font-weight: 100; font-style: italic; font-display: swap; }
+@font-face { font-family: "CMG Sans"; src: url("CMG Sans/Extended Set Styles/CMGSans-ExtraLight.ttf") format("truetype"); font-weight: 200; font-style: normal; font-display: swap; }
+@font-face { font-family: "CMG Sans"; src: url("CMG Sans/Extended Set Styles/CMGSans-ExtraLightItalic.ttf") format("truetype"); font-weight: 200; font-style: italic; font-display: swap; }
+@font-face { font-family: "CMG Sans Light"; src: url("CMG Sans/Extended Set Styles/CMGSans-Light.ttf") format("truetype"); font-weight: 300; font-style: normal; font-display: swap; }
+@font-face { font-family: "CMG Sans"; src: url("CMG Sans/Extended Set Styles/CMGSans-Light.ttf") format("truetype"); font-weight: 300; font-style: normal; font-display: swap; }
+@font-face { font-family: "CMG Sans"; src: url("CMG Sans/Extended Set Styles/CMGSans-LightItalic.ttf") format("truetype"); font-weight: 300; font-style: italic; font-display: swap; }
+@font-face { font-family: "CMG Sans"; src: url("CMG Sans/Extended Set Styles/CMGSans-Medium.ttf") format("truetype"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "CMG Sans"; src: url("CMG Sans/Extended Set Styles/CMGSans-MediumItalic.ttf") format("truetype"); font-weight: 500; font-style: italic; font-display: swap; }
+@font-face { font-family: "CMG Sans"; src: url("CMG Sans/Extended Set Styles/CMGSans-SemiBold.ttf") format("truetype"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "CMG Sans"; src: url("CMG Sans/Extended Set Styles/CMGSans-SemiBoldItalic.ttf") format("truetype"); font-weight: 600; font-style: italic; font-display: swap; }
+@font-face { font-family: "CMG Sans"; src: url("CMG Sans/Extended Set Styles/CMGSans-ExtraBold.ttf") format("truetype"); font-weight: 800; font-style: normal; font-display: swap; }
+@font-face { font-family: "CMG Sans"; src: url("CMG Sans/Extended Set Styles/CMGSans-ExtraBoldItalic.ttf") format("truetype"); font-weight: 800; font-style: italic; font-display: swap; }
+@font-face { font-family: "CMG Sans"; src: url("CMG Sans/Extended Set Styles/CMGSans-Black.ttf") format("truetype"); font-weight: 900; font-style: normal; font-display: swap; }
+@font-face { font-family: "CMG Sans"; src: url("CMG Sans/Extended Set Styles/CMGSans-BlackItalic.ttf") format("truetype"); font-weight: 900; font-style: italic; font-display: swap; }
+
+/* ── Bold alias ──────────────────────────────────── */
+@font-face { font-family: "CMG Sans Bold"; src: url("CMG Sans/Starter Set Styles/CMGSans-Bold.ttf") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+
+/* ── Condensed Set ───────────────────────────────── */
+@font-face { font-family: "CMG Sans Condensed"; src: url("CMG Sans/Condensed Set Styles/CMGSans-RegularCn.ttf") format("truetype"); font-weight: 400; font-style: normal; font-display: swap; }
+@font-face { font-family: "CMG Sans Condensed"; src: url("CMG Sans/Condensed Set Styles/CMGSansCn-Italic.ttf") format("truetype"); font-weight: 400; font-style: italic; font-display: swap; }
+@font-face { font-family: "CMG Sans Condensed"; src: url("CMG Sans/Condensed Set Styles/CMGSans-MediumCn.ttf") format("truetype"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "CMG Sans Condensed"; src: url("CMG Sans/Condensed Set Styles/CMGSansMediumCn-Italic.ttf") format("truetype"); font-weight: 500; font-style: italic; font-display: swap; }
+@font-face { font-family: "CMG Sans Condensed"; src: url("CMG Sans/Condensed Set Styles/CMGSans-SemiBoldCn.ttf") format("truetype"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "CMG Sans Condensed"; src: url("CMG Sans/Condensed Set Styles/CMGSansSemiBoldCn-Italic.ttf") format("truetype"); font-weight: 600; font-style: italic; font-display: swap; }
+@font-face { font-family: "CMG Sans Condensed"; src: url("CMG Sans/Condensed Set Styles/CMGSans-BoldCn.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "CMG Sans Condensed"; src: url("CMG Sans/Condensed Set Styles/CMGSansCn-BoldItalic.ttf") format("truetype"); font-weight: 700; font-style: italic; font-display: swap; }
+
+/* ── All Caps Set ────────────────────────────────── */
+@font-face { font-family: "CMG Sans Caps"; src: url("CMG Sans/All Caps Set Styles/CMGSans-MediumCAPS.ttf") format("truetype"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "CMG Sans Caps"; src: url("CMG Sans/All Caps Set Styles/CMGSans-SemiBoldCAPS.ttf") format("truetype"); font-weight: 600; font-style: normal; font-display: swap; }
+@font-face { font-family: "CMG Sans Caps"; src: url("CMG Sans/All Caps Set Styles/CMGSans-BoldCAPS.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "CMG Sans Caps"; src: url("CMG Sans/All Caps Set Styles/CMGSans-MediumCnCAPS.ttf") format("truetype"); font-weight: 500; font-style: normal; font-display: swap; }
+@font-face { font-family: "CMG Sans Caps"; src: url("CMG Sans/All Caps Set Styles/CMGSans-BoldCnCAPS.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
+
+/* ── Speciality Set ──────────────────────────────── */
+@font-face { font-family: "CMG Sans Rounded"; src: url("CMG Sans/Speciality Set Styles/CMGSans-BoldRounded.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "CMG Sans Slab"; src: url("CMG Sans/Speciality Set Styles/CMGSans-BoldSlab.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "CMG Sans Outline"; src: url("CMG Sans/Speciality Set Styles/CMGSans-BoldOutline.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
+@font-face { font-family: "CMG Sans Wide"; src: url("CMG Sans/Speciality Set Styles/CMGSans-ExtraBoldWide.ttf") format("truetype"); font-weight: 800; font-style: normal; font-display: swap; }
+@font-face { font-family: "CMG Sans Wide"; src: url("CMG Sans/Speciality Set Styles/CMGSans-ExtraBoldWideOutline.ttf") format("truetype"); font-weight: 800; font-style: normal; font-display: swap; }
+@font-face { font-family: "CMG Sans Backslant"; src: url("CMG Sans/Speciality Set Styles/CMGSans-BoldBackslant.ttf") format("truetype"); font-weight: 700; font-style: oblique; font-display: swap; }
+@font-face { font-family: "CMG Sans Mono"; src: url("CMG Sans/Speciality Set Styles/CMGSans-BoldMonoDigits.ttf") format("truetype"); font-weight: 700; font-style: normal; font-display: swap; }
