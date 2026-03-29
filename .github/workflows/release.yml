@@ -145,6 +145,10 @@ jobs:
     if: ${{ always() && needs.publish-windows.result != 'cancelled' && (github.event_name != 'workflow_dispatch' || github.event.inputs.platform != 'windows-only') }}
     strategy:
       fail-fast: false
+      # tauri-action updates the shared release/latest.json asset.
+      # Running these jobs in parallel can race on release asset replacement
+      # and cause 404s when one job deletes/recreates an asset mid-upload.
+      max-parallel: 1
       matrix:
         include:
           - platform: macos-latest
