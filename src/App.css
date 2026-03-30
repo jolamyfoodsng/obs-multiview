@@ -528,7 +528,7 @@ input[type="radio"] {
 .dash-main {
   flex: 1;
   display: block;
-  padding: 36px 32px 56px;
+  padding: 12px 32px 56px;
   position: relative;
   overflow: visible;
 }
@@ -551,7 +551,7 @@ input[type="radio"] {
   margin: 0 auto;
   display: flex;
   flex-direction: column;
-  gap: 28px;
+  gap: 12px;
   position: relative;
   z-index: 1;
 }
@@ -570,7 +570,7 @@ input[type="radio"] {
 .dash-hero-title {
   margin: 0 0 10px;
   color: var(--text-primary);
-  font-size: clamp(1.25rem, 4vw, 2rem);
+  font-size: clamp(1rem, 4vw, 1rem);
   line-height: 0.95;
   letter-spacing: -0.055em;
   font-weight: 800;
@@ -580,7 +580,7 @@ input[type="radio"] {
   margin: 0;
   max-width: 560px;
   color: color-mix(in srgb, var(--text-primary) 82%, var(--text-secondary) 18%);
-  font-size: 1.04rem;
+  font-size: 0.7rem;
   line-height: 1.7;
 }
 
@@ -589,14 +589,14 @@ input[type="radio"] {
   align-items: center;
   justify-content: center;
   gap: 12px;
-  min-height: 56px;
+  min-height: 32px;
   padding: 0 28px;
   border: 0;
   border-radius: 8px;
   background: linear-gradient(135deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 70%, var(--accent-blue) 30%) 100%);
   color: #ffffff;
   font-family: inherit;
-  font-size: 0.98rem;
+  font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.01em;
   cursor: pointer;
@@ -626,7 +626,7 @@ input[type="radio"] {
   flex-direction: column;
   align-items: flex-start;
   gap: 22px;
-  min-height: 240px;
+  min-height: 160px;
   padding: 28px;
   border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
   border-radius: 22px;
@@ -647,8 +647,8 @@ input[type="radio"] {
 }
 
 .dash-mod-icon {
-  width: 56px;
-  height: 56px;
+  width: 32px;
+  height: 32px;
   border-radius: 8px;
   display: flex;
   align-items: center;
@@ -684,7 +684,7 @@ input[type="radio"] {
 
 .dash-mod-info h2 {
   margin: 0;
-  font-size: 1.18rem;
+  font-size: 0.8rem;
   line-height: 1.15;
   font-weight: 800;
   color: var(--text-primary);
@@ -694,7 +694,7 @@ input[type="radio"] {
   margin: 0;
   color: color-mix(in srgb, var(--text-primary) 80%, var(--text-secondary) 20%);
   line-height: 1.7;
-  font-size: 0.95rem;
+  font-size: 0.6rem;
 }
 
 .dash-home-grid {

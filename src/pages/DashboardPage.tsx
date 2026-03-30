@@ -191,18 +191,7 @@ export default function DashboardPage() {
       <main className="dash-main">
         <div className="dash-glow" />
         <div className="dash-content">
-          <section className="dash-hero-row">
-            <div className="dash-hero-copy">
-              <h1 className="dash-hero-title">Welcome back, Curator</h1>
-              <p className="dash-hero-subtitle">
-                Your active service environment is ready. Select a module below to begin directing.
-              </p>
-            </div>
-            <button className="dash-hero-cta" onClick={handleHeroClick}>
-              <span>Open Service Hub</span>
-              <Icon name="arrow_forward" size={18} />
-            </button>
-          </section>
+    
 
           <section className="dash-modules-grid" aria-label="Service modules">
             <button
@@ -222,7 +211,7 @@ export default function DashboardPage() {
               onClick={() => handleModuleNav("/hub?mode=live&tab=worship", "Worship", "music_note")}
             >
               <div className="dash-mod-icon dash-mod-icon--worship">
-                <Icon name="music_note" size={24} />
+                <Icon name="music_note" size={10} style={{width:'12px', height:'12px'}} />
               </div>
               <div className="dash-mod-info">
                 <h2>Start Song</h2>
