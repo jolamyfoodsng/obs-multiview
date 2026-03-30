@@ -301,35 +301,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </section>
-              <section className="dash-status-card">
-                <div className="dash-section-heading dash-section-heading--compact">
-                  <span className="dash-section-rule" />
-                  <h3>Hub Status</h3>
-                </div>
-                <div className="dash-status-list">
-                  <div className="dash-status-row">
-                    <span>Service State</span>
-                    <strong>{formatServiceStatus(serviceState.status)}</strong>
-                  </div>
-                  <div className="dash-status-row">
-                    <span>OBS Connection</span>
-                    <strong>{obsConnected ? "Connected" : "Disconnected"}</strong>
-                  </div>
-                  <div className="dash-status-row">
-                    <span>Render Time</span>
-                    <strong>{renderTimeLabel}</strong>
-                  </div>
-                </div>
-                <div className="dash-status-note">
-                  <div className="dash-status-note-icon">
-                    <Icon name={statusNotice.icon} size={16} />
-                  </div>
-                  <div>
-                    <h4>{statusNotice.title}</h4>
-                    <p>{statusNotice.body}</p>
-                  </div>
-                </div>
-              </section>
+
             </aside>
           </section>
         </div>
