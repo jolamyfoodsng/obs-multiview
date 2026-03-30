@@ -812,7 +812,7 @@ input[type="radio"] {
   position: relative;
   overflow: hidden;
   border-radius: 26px;
-  padding: 14px;
+  padding: 28px;
   background: linear-gradient(160deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 78%, var(--accent-blue) 22%) 100%);
   color: #fff;
   box-shadow: 0 28px 56px rgba(var(--primary-rgb), 0.28);

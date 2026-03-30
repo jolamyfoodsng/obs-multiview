@@ -225,10 +225,10 @@ export default function DashboardPage() {
           <section className="dash-home-grid">
             <div className="dash-home-primary">
               <section className="dash-section">
-                <div className="dash-section-heading">
+                {/* <div className="dash-section-heading">
                   <span className="dash-section-rule" />
                   <h3>Quick Configuration</h3>
-                </div>
+                </div> */}
                 <div className="dash-action-list">
                   <button
                     className="dash-action-card"
