@@ -468,6 +468,7 @@ export default function ThemeCreatorModal({ onClose, onSaved, editTheme }: Props
     editTheme?.templateType === "lower-third" ? "lower-third" : "fullscreen"
   );
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // ── Theme metadata ──
   const [name, setName] = useState(editTheme?.name || "");
@@ -551,6 +552,7 @@ export default function ThemeCreatorModal({ onClose, onSaved, editTheme }: Props
   // ── Save ──
   const handleSave = useCallback(async () => {
     if (!name.trim()) return;
+    setSaveError(null);
     setSaving(true);
     try {
       const now = new Date().toISOString();
@@ -569,9 +571,16 @@ export default function ThemeCreatorModal({ onClose, onSaved, editTheme }: Props
       };
       await saveCustomTheme(theme);
       if (normalizedCategories.length > 1) {
-        addBibleFavorite(theme.id);
+        try {
+          addBibleFavorite(theme.id);
+        } catch (favoriteErr) {
+          console.warn("[ThemeCreatorModal] Saved theme but failed to auto-favorite it:", favoriteErr);
+        }
       }
       onSaved(theme);
+    } catch (err) {
+      console.error("[ThemeCreatorModal] Failed to save theme:", err);
+      setSaveError("Could not save this theme. Please try again.");
     } finally {
       setSaving(false);
     }
@@ -718,77 +727,83 @@ export default function ThemeCreatorModal({ onClose, onSaved, editTheme }: Props
                 </div>
               )}
 
-              {/* Background color */}
-              <label className="tc-label">
-                {tab === "fullscreen" ? "Background Color" : "Box Background"}
-              </label>
-              <div className="tc-color-row">
-                <input
-                  type="color"
-                  className="tc-swatch"
-                  value={
-                    tab === "fullscreen"
-                      ? settings.backgroundColor
-                      : (settings.boxBackground.startsWith("rgba") || !settings.boxBackground.startsWith("#"))
-                        ? "#000000"
-                        : settings.boxBackground
-                  }
-                  onChange={(e) =>
-                    patch(
-                      tab === "fullscreen"
-                        ? { backgroundColor: e.target.value }
-                        : { boxBackground: e.target.value }
-                    )
-                  }
-                />
-                <input
-                  type="text"
-                  className="tc-input tc-hex"
-                  value={
-                    tab === "fullscreen"
-                      ? settings.backgroundColor
-                      : settings.boxBackground
-                  }
-                  onChange={(e) =>
-                    patch(
-                      tab === "fullscreen"
-                        ? { backgroundColor: e.target.value }
-                        : { boxBackground: e.target.value }
-                    )
-                  }
-                  placeholder="#000000"
-                />
-              </div>
-
-              {/* Background image */}
-              <label className="tc-label">Background Image</label>
-              <div className="tc-upload-row">
-                <button
-                  className="tc-btn tc-btn--outline"
-                  onClick={() =>
-                    handleImageUpload(
-                      tab === "fullscreen" ? "backgroundImage" : "boxBackgroundImage"
-                    )
-                  }
-                >
-                  <Icon name="upload" size={14} />
-                  Upload Image
-                </button>
-                {(tab === "fullscreen" ? settings.backgroundImage : settings.boxBackgroundImage) && (
-                  <button
-                    className="tc-btn tc-btn--ghost"
-                    onClick={() =>
-                      patch(
+              <div className="tc-row-2 tc-row-2--collapse">
+                <div className="tc-field">
+                  <label className="tc-label">
+                    {tab === "fullscreen" ? "Background Color" : "Box Background"}
+                  </label>
+                  <div className="tc-color-row">
+                    <input
+                      type="color"
+                      className="tc-swatch"
+                      value={
                         tab === "fullscreen"
-                          ? { backgroundImage: "" }
-                          : { boxBackgroundImage: "" }
-                      )
-                    }
-                  >
-                    <Icon name="close" size={14} />
-                    Remove
-                  </button>
-                )}
+                          ? settings.backgroundColor
+                          : (settings.boxBackground.startsWith("rgba") || !settings.boxBackground.startsWith("#"))
+                            ? "#000000"
+                            : settings.boxBackground
+                      }
+                      onChange={(e) =>
+                        patch(
+                          tab === "fullscreen"
+                            ? { backgroundColor: e.target.value }
+                            : { boxBackground: e.target.value }
+                        )
+                      }
+                    />
+                    <input
+                      type="text"
+                      className="tc-input tc-hex"
+                      value={
+                        tab === "fullscreen"
+                          ? settings.backgroundColor
+                          : settings.boxBackground
+                      }
+                      onChange={(e) =>
+                        patch(
+                          tab === "fullscreen"
+                            ? { backgroundColor: e.target.value }
+                            : { boxBackground: e.target.value }
+                        )
+                      }
+                      placeholder="#000000"
+                    />
+                  </div>
+                </div>
+
+                <div className="tc-field">
+                  <label className="tc-label">Background Image</label>
+                  <div className="tc-upload-row">
+                    <button
+                      type="button"
+                      className="tc-btn tc-btn--outline"
+                      onClick={() =>
+                        handleImageUpload(
+                          tab === "fullscreen" ? "backgroundImage" : "boxBackgroundImage"
+                        )
+                      }
+                    >
+                      <Icon name="upload" size={14} />
+                      Upload Image
+                    </button>
+                    {(tab === "fullscreen" ? settings.backgroundImage : settings.boxBackgroundImage) && (
+                      <button
+                        type="button"
+                        className="tc-btn tc-btn--ghost"
+                        onClick={() =>
+                          patch(
+                            tab === "fullscreen"
+                              ? { backgroundImage: "" }
+                              : { boxBackgroundImage: "" }
+                          )
+                        }
+                      >
+                        <Icon name="close" size={14} />
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
               {(tab === "fullscreen" ? settings.backgroundImage : settings.boxBackgroundImage) && (
                 <div className="tc-img-preview">
@@ -1550,6 +1565,20 @@ export default function ThemeCreatorModal({ onClose, onSaved, editTheme }: Props
 
         {/* ── Footer ── */}
         <div className="tc-footer">
+          {saveError && (
+            <p
+              style={{
+                margin: 0,
+                marginRight: "auto",
+                color: "#fca5a5",
+                fontSize: 11,
+                fontWeight: 600,
+              }}
+              role="alert"
+            >
+              {saveError}
+            </p>
+          )}
           <button type="button" className="tc-btn tc-btn--ghost" onClick={onClose}>
             Cancel
           </button>

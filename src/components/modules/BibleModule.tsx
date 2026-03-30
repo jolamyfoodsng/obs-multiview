@@ -30,6 +30,7 @@ import BibleLibrary from "../../bible/components/BibleLibrary";
 import { obsService } from "../../services/obsService";
 import { serviceStore } from "../../services/serviceStore";
 import { ensureDockObsClientConnected } from "../../services/dockObsInterop";
+import { isUserSelectableObsScene, normalizeDockStageBaseScene } from "../../services/dockSceneNames";
 import { getInputBySlot, getSceneBySlot } from "../../services/obsRegistry";
 import { useServiceGate } from "../../hooks/useServiceGate";
 import { ObsScenesPanel } from "../shared/ObsScenesPanel";
@@ -355,20 +356,29 @@ export function BibleModule({
     try {
       const bibleOverlaySceneName = await resolveBibleOverlaySceneName();
       const scenes = await obsService.getSceneList();
-      const names = scenes.map(s => s.sceneName);
+      const visibleScenes = scenes.filter((scene) => isUserSelectableObsScene(scene.sceneName));
+      const names = visibleScenes.map((scene) => scene.sceneName);
       setLtScenes(names);
       setLtLiveScenes((prev) => prev.filter((sceneName) => names.includes(sceneName)));
       setFullLiveScenes((prev) => prev.filter((sceneName) => names.includes(sceneName)));
       const program = await obsService.getCurrentProgramScene();
-      setLtProgramScene(program);
-      if (program && !isBibleFullscreenSceneName(program, bibleOverlaySceneName)) {
-        lastNonBibleProgramSceneRef.current = program;
+      const normalizedProgram = normalizeDockStageBaseScene(program);
+      const displayProgram = names.includes(program)
+        ? program
+        : (names.includes(normalizedProgram) ? normalizedProgram : "");
+      setLtProgramScene(displayProgram);
+      if (normalizedProgram && !isBibleFullscreenSceneName(program, bibleOverlaySceneName)) {
+        lastNonBibleProgramSceneRef.current = normalizedProgram;
       }
       try {
         const preview = await obsService.getCurrentPreviewScene();
-        setLtPreviewScene(preview);
-        if (preview && !isBibleFullscreenSceneName(preview, bibleOverlaySceneName)) {
-          lastNonBiblePreviewSceneRef.current = preview;
+        const normalizedPreview = normalizeDockStageBaseScene(preview);
+        const displayPreview = names.includes(preview)
+          ? preview
+          : (names.includes(normalizedPreview) ? normalizedPreview : "");
+        setLtPreviewScene(displayPreview);
+        if (normalizedPreview && !isBibleFullscreenSceneName(preview, bibleOverlaySceneName)) {
+          lastNonBiblePreviewSceneRef.current = normalizedPreview;
         }
       } catch {
         setLtPreviewScene("");
@@ -1295,8 +1305,11 @@ export function BibleModule({
       obsService.getCurrentPreviewScene().catch(() => ltPreviewScene),
     ]);
 
-    if (sceneName && sceneName === programScene) return true;
-    if (sceneName && sceneName === previewScene) return false;
+    const normalizedProgramScene = normalizeDockStageBaseScene(programScene);
+    const normalizedPreviewScene = normalizeDockStageBaseScene(previewScene);
+
+    if (sceneName && (sceneName === programScene || sceneName === normalizedProgramScene)) return true;
+    if (sceneName && (sceneName === previewScene || sceneName === normalizedPreviewScene)) return false;
     return null;
   }, [ltProgramScene, ltPreviewScene]);
 

@@ -8840,12 +8840,13 @@ input[type="radio"] {
   display: flex;
   gap: 0;
   flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
 /* ── Controls panel (left) ── */
 .tc-controls {
-  width: 400px;
+  width: 650px;
   flex-shrink: 0;
   overflow-y: auto;
   padding: 20px 24px;
@@ -9049,6 +9050,10 @@ input[type="radio"] {
   gap: 4px;
 }
 
+.tc-row-2--collapse .tc-field {
+  min-width: 240px;
+}
+
 /* ── Segmented button group ── */
 .tc-btn-group {
   display: flex;
@@ -9104,6 +9109,8 @@ input[type="radio"] {
 .tc-upload-row {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 /* ── Image preview thumbnail ── */
@@ -9183,7 +9190,9 @@ input[type="radio"] {
   flex-direction: column;
   padding: 20px 24px;
   gap: 12px;
+  min-height: 0;
   min-width: 0;
+  overflow: hidden;
 }
 
 .tc-preview-label {
@@ -9396,6 +9405,7 @@ input[type="radio"] {
   border: none;
   position: absolute;
   inset: 0;
+  pointer-events: none;
 }
 
 .tc-preview-hint {
@@ -9413,6 +9423,15 @@ input[type="radio"] {
   gap: 10px;
   padding: 14px 24px;
   border-top: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 720px) {
+  .tc-row-2--collapse {
+    flex-direction: column;
+  }
 }
 
 /* ── Text Shadow Visual Builder ── */

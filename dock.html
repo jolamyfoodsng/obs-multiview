@@ -4,6 +4,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>OBS Church Studio — Dock</title>
+    <script>
+      (() => {
+        try {
+          const pref = localStorage.getItem("obs-church-studio.theme-preference");
+          const useLightMode =
+            pref === "light" ||
+            (pref === "system" && window.matchMedia("(prefers-color-scheme: light)").matches);
+
+          if (useLightMode) {
+            document.documentElement.classList.add("light");
+          }
+        } catch {
+          // Ignore storage access issues inside OBS.
+        }
+      })();
+    </script>
     <link
       href="https://fonts.googleapis.com/icon?family=Material+Icons"
       rel="stylesheet"
@@ -18,6 +34,11 @@
         font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
         height: 100%;
         overflow: hidden;
+      }
+
+      html.light, html.light body, html.light #dock-root {
+        background: #f4f5f7;
+        color: #1a1d23;
       }
     </style>
   </head>

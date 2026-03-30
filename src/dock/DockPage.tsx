@@ -27,9 +27,10 @@ import DockSermonTab from "./tabs/DockSermonTab";
 import DockEventTab from "./tabs/DockEventTab";
 import DockWorshipTab from "./tabs/DockWorshipTab";
 import DockMediaTab from "./tabs/DockMediaTab";
-import DockServiceTab from "./tabs/DockServiceTab";
 import DockMinistryTab from "./tabs/DockMinistryTab";
+import { useAppTheme } from "../hooks/useAppTheme";
 import "./dock.css";
+import "./dock-theme.css";
 import Icon from "./DockIcon";
 
 // ---------------------------------------------------------------------------
@@ -37,10 +38,10 @@ import Icon from "./DockIcon";
 // ---------------------------------------------------------------------------
 
 export default function DockPage() {
+  const { effective, setTheme } = useAppTheme();
   const [activeTab, setActiveTab] = useState<DockTab>("ministry");
   const [obsConnected, setObsConnected] = useState(false);
   const [obsError, setObsError] = useState("");
-  const [serviceStatus, setServiceStatus] = useState<string>("idle");
   const [staged, setStaged] = useState<DockStagedItem | null>(null);
   const [appConnected, setAppConnected] = useState(false);
   const [sending, setSending] = useState(false);
@@ -134,17 +135,11 @@ export default function DockPage() {
             setObsConnected((msg.payload as { connected: boolean }).connected);
           }
           break;
-        case "state:service-status": {
-          const p = msg.payload as { status: string };
-          setServiceStatus(p.status);
-          break;
-        }
         case "state:update": {
           const s = msg.payload as Record<string, unknown>;
           if (!dockObsClient.isConnected && typeof s.obsConnected === "boolean") {
             setObsConnected(s.obsConnected);
           }
-          if (typeof s.serviceStatus === "string") setServiceStatus(s.serviceStatus);
           setAppConnected(true);
           break;
         }
@@ -328,23 +323,6 @@ export default function DockPage() {
     }
   }, [staged]);
 
-  // ── Service badge ──
-  const serviceBadgeClass =
-    serviceStatus === "live"
-      ? "dock-service-badge--live"
-      : serviceStatus === "preservice"
-        ? "dock-service-badge--preservice"
-        : "dock-service-badge--idle";
-
-  const serviceBadgeLabel =
-    serviceStatus === "live"
-      ? "LIVE"
-      : serviceStatus === "preservice"
-        ? "Pre-Service"
-        : serviceStatus === "preparing"
-          ? "Preparing"
-          : "Standby";
-
   const stagedSubtitleStyle =
     staged?.type === "bible" && staged.subtitle
       ? {
@@ -378,9 +356,31 @@ export default function DockPage() {
           )}
         </div>
         <div className="dock-status-bar__right">
-          <span className={`dock-service-badge ${serviceBadgeClass}`}>
-            {serviceBadgeLabel}
-          </span>
+          <div
+            className="dock-theme-switch"
+            role="group"
+            aria-label="Dock color mode"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              type="button"
+              className={`dock-theme-switch__btn${effective === "light" ? " dock-theme-switch__btn--active" : ""}`}
+              onClick={() => setTheme("light")}
+              aria-pressed={effective === "light"}
+              title="Use light mode"
+            >
+              Light
+            </button>
+            <button
+              type="button"
+              className={`dock-theme-switch__btn${effective === "dark" ? " dock-theme-switch__btn--active" : ""}`}
+              onClick={() => setTheme("dark")}
+              aria-pressed={effective === "dark"}
+              title="Use dark mode"
+            >
+              Dark
+            </button>
+          </div>
           {appConnected && (
             <span className="dock-status-label" style={{ color: "var(--dock-green, #4ade80)", fontSize: 8 }}>
               Synced
@@ -465,9 +465,6 @@ export default function DockPage() {
         )}
         {activeTab === "media" && (
           <DockMediaTab staged={staged} onStage={handleStage} />
-        )}
-        {activeTab === "service" && (
-          <DockServiceTab />
         )}
       </div>
 

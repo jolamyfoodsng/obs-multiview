@@ -582,7 +582,13 @@ export default function TemplatesLibraryPage() {
           </p>
         </div>
         <div className="tlib-header-right">
-          <button className="tlib-create-btn" onClick={() => setShowCreator(true)}>
+          <button
+            className="tlib-create-btn"
+            onClick={() => {
+              setEditThemeData(null);
+              setShowCreator(true);
+            }}
+          >
             <Icon name="add" size={18} />
             Create Theme
           </button>

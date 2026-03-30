@@ -1,0 +1,135 @@
+:root {
+  color-scheme: dark;
+}
+
+:root.light {
+  color-scheme: light;
+}
+
+html,
+body,
+#dock-root {
+  width: 100%;
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #1a1c25;
+  color: #e8e8ea;
+  color-scheme: inherit;
+}
+
+:root.light body,
+:root.light #dock-root {
+  background: #f4f5f7;
+  color: #1a1d23;
+}
+
+:root.light .dock-root {
+  --dock-bg: #f4f5f7;
+  --dock-surface: #ffffff;
+  --dock-surface-alt: #f7f8fa;
+  --dock-surface-hover: #eef1f5;
+  --dock-border: #d8dee7;
+  --dock-text: #1a1d23;
+  --dock-text-dim: #5c6370;
+  --dock-accent: #2563eb;
+  --dock-accent-soft: rgba(37, 99, 235, 0.09);
+  --dock-green: #16a34a;
+  --dock-green-soft: rgba(22, 163, 74, 0.1);
+  --dock-red: #dc2626;
+  --dock-red-soft: rgba(220, 38, 38, 0.08);
+  --dock-yellow: #d97706;
+}
+
+.dock-status-bar__left,
+.dock-status-bar__right {
+  min-width: 0;
+}
+
+.dock-status-bar__right {
+  margin-left: auto;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.dock-theme-switch {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px;
+  border: 1px solid var(--dock-border);
+  border-radius: 999px;
+  background: var(--dock-surface-alt);
+}
+
+.dock-theme-switch__btn {
+  border: none;
+  background: transparent;
+  color: var(--dock-text-dim);
+  font: inherit;
+  font-size: 8px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 3px 7px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.dock-theme-switch__btn:hover {
+  color: var(--dock-text);
+}
+
+.dock-theme-switch__btn--active {
+  background: var(--dock-accent);
+  color: #fff;
+}
+
+:root.light .dock-subtab:hover {
+  background: rgba(37, 99, 235, 0.06);
+}
+
+:root.light .dock-subtab--active {
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+:root.light .dock-search-dropdown,
+:root.light .dock-theme-dropdown-list {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+:root.light .dtb-backdrop {
+  background: rgba(15, 23, 42, 0.24);
+}
+
+:root.light .dtb-modal {
+  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.18);
+}
+
+:root.light .dtb-card__logo-badge {
+  background: rgba(255, 255, 255, 0.88);
+  color: rgba(26, 29, 35, 0.72);
+}
+
+:root.light .dock-service-plan-btn,
+:root.light .dock-service-item {
+  background: #ffffff;
+}
+
+:root.light .dock-service-plan-btn:hover,
+:root.light .dock-service-item:hover {
+  border-color: rgba(37, 99, 235, 0.28);
+}
+
+:root.light .dock-service-progress-bar {
+  background: rgba(92, 99, 112, 0.16);
+}
+
+@media (max-width: 360px) {
+  .dock-theme-switch__btn {
+    padding-inline: 6px;
+  }
+}

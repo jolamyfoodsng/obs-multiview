@@ -43,8 +43,15 @@ function readSet(key: string): Set<string> {
   }
 }
 
-function writeSet(key: string, set: Set<string>): void {
-  localStorage.setItem(key, JSON.stringify([...set]));
+function writeSet(key: string, set: Set<string>): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    localStorage.setItem(key, JSON.stringify([...set]));
+    return true;
+  } catch (err) {
+    console.warn(`[favoriteThemes] Failed to persist favorites for ${key}:`, err);
+    return false;
+  }
 }
 
 function normalizeLtFavorites(set: Set<string>): Set<string> {

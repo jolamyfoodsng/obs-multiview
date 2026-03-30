@@ -29,6 +29,7 @@ interface ObsScenesPanelProps {
 }
 
 async function resolvePreviewScene(fallback: string): Promise<string> {
+  if (fallback) return fallback;
   try {
     const scene = await obsService.getCurrentPreviewScene();
     return scene || fallback;
@@ -38,6 +39,7 @@ async function resolvePreviewScene(fallback: string): Promise<string> {
 }
 
 async function resolveProgramScene(fallback: string): Promise<string> {
+  if (fallback) return fallback;
   try {
     const scene = await obsService.getCurrentProgramScene();
     return scene || fallback;

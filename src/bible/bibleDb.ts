@@ -14,8 +14,62 @@ import { serializeBibleThemesForDock } from "../services/dockBibleThemeAssets";
 
 const DB_NAME = "sunday-switcher-bible"; // legacy name — do not change (breaks existing user data)
 const DB_VERSION = 2;
+const CUSTOM_THEMES_STORAGE_KEY = "ocs-bible-custom-themes";
 
 let dbPromise: Promise<IDBPDatabase> | null = null;
+
+function normalizeTheme(theme: BibleTheme): BibleTheme {
+  return {
+    ...theme,
+    settings: { ...DEFAULT_THEME_SETTINGS, ...theme.settings },
+  };
+}
+
+function readCustomThemesFromLocalStorage(): BibleTheme[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = localStorage.getItem(CUSTOM_THEMES_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((theme): theme is BibleTheme => !!theme && typeof theme === "object" && "id" in theme)
+      .map((theme) => normalizeTheme(theme));
+  } catch {
+    return [];
+  }
+}
+
+function writeCustomThemesToLocalStorage(themes: BibleTheme[]): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    localStorage.setItem(
+      CUSTOM_THEMES_STORAGE_KEY,
+      JSON.stringify(themes.map((theme) => normalizeTheme(theme)))
+    );
+    return true;
+  } catch (err) {
+    console.warn("[bibleDb] Failed to mirror custom themes to localStorage:", err);
+    return false;
+  }
+}
+
+function upsertCustomThemeInLocalStorage(theme: BibleTheme): boolean {
+  const themes = readCustomThemesFromLocalStorage();
+  const index = themes.findIndex((item) => item.id === theme.id);
+  const nextTheme = normalizeTheme(theme);
+  if (index >= 0) {
+    themes[index] = nextTheme;
+  } else {
+    themes.push(nextTheme);
+  }
+  return writeCustomThemesToLocalStorage(themes);
+}
+
+function removeCustomThemeFromLocalStorage(id: string): boolean {
+  const themes = readCustomThemesFromLocalStorage().filter((theme) => theme.id !== id);
+  return writeCustomThemesToLocalStorage(themes);
+}
 
 function getDb(): Promise<IDBPDatabase> {
   if (!dbPromise) {
@@ -125,20 +179,34 @@ export async function clearHistory(): Promise<void> {
 // ---------------------------------------------------------------------------
 
 export async function getCustomThemes(): Promise<BibleTheme[]> {
-  const db = await getDb();
-  const themes = await db.getAll("themes");
-  return themes.map((theme) => ({
-    ...theme,
-    settings: { ...DEFAULT_THEME_SETTINGS, ...theme.settings },
-  }));
+  try {
+    const db = await getDb();
+    const themes = (await db.getAll("themes")).map((theme) => normalizeTheme(theme));
+    writeCustomThemesToLocalStorage(themes);
+    return themes;
+  } catch (err) {
+    console.warn("[bibleDb] Failed to load custom themes from IndexedDB, falling back to localStorage:", err);
+    return readCustomThemesFromLocalStorage();
+  }
 }
 
 export async function saveCustomTheme(theme: BibleTheme): Promise<void> {
-  const db = await getDb();
-  await db.put("themes", {
-    ...theme,
-    settings: { ...DEFAULT_THEME_SETTINGS, ...theme.settings },
-  });
+  const normalizedTheme = normalizeTheme(theme);
+  let savedToDb = false;
+
+  try {
+    const db = await getDb();
+    await db.put("themes", normalizedTheme);
+    savedToDb = true;
+  } catch (err) {
+    console.warn("[bibleDb] Failed to save custom theme to IndexedDB, falling back to localStorage:", err);
+  }
+
+  const savedToLocalStorage = upsertCustomThemeInLocalStorage(normalizedTheme);
+  if (!savedToDb && !savedToLocalStorage) {
+    throw new Error("Failed to save custom theme");
+  }
+
   syncCustomThemesToDock().catch((err) => {
     console.warn("[bibleDb] Failed to sync custom themes to dock:", err);
   });
@@ -148,8 +216,21 @@ export async function saveCustomTheme(theme: BibleTheme): Promise<void> {
 }
 
 export async function deleteCustomTheme(id: string): Promise<void> {
-  const db = await getDb();
-  await db.delete("themes", id);
+  let deletedFromDb = false;
+
+  try {
+    const db = await getDb();
+    await db.delete("themes", id);
+    deletedFromDb = true;
+  } catch (err) {
+    console.warn("[bibleDb] Failed to delete custom theme from IndexedDB, falling back to localStorage:", err);
+  }
+
+  const deletedFromLocalStorage = removeCustomThemeFromLocalStorage(id);
+  if (!deletedFromDb && !deletedFromLocalStorage) {
+    throw new Error("Failed to delete custom theme");
+  }
+
   syncCustomThemesToDock().catch((err) => {
     console.warn("[bibleDb] Failed to sync custom themes to dock:", err);
   });

@@ -21,6 +21,7 @@ import { worshipObsService } from "../../worship/worshipObsService";
 import { lowerThirdObsService } from "../../lowerthirds/lowerThirdObsService";
 import { dockObsClient } from "../../dock/dockObsClient";
 import { ensureDockObsClientConnected } from "../../services/dockObsInterop";
+import { isUserSelectableObsScene, normalizeDockStageBaseScene } from "../../services/dockSceneNames";
 import { obsService } from "../../services/obsService";
 import { serviceStore } from "../../services/serviceStore";
 import {
@@ -308,14 +309,26 @@ export function WorshipModule({
     }
     try {
       const scenes = await obsService.getSceneList();
-      const names = scenes.map((scene) => scene.sceneName);
-      setLtScenes(scenes.map((scene) => ({ sceneName: scene.sceneName, sceneIndex: scene.sceneIndex })));
+      const visibleScenes = scenes.filter((scene) => isUserSelectableObsScene(scene.sceneName));
+      const names = visibleScenes.map((scene) => scene.sceneName);
+      setLtScenes(visibleScenes.map((scene) => ({ sceneName: scene.sceneName, sceneIndex: scene.sceneIndex })));
       setFullLiveScenes((prev) => prev.filter((sceneName) => names.includes(sceneName)));
       setLtLiveScenes((prev) => prev.filter((sceneName) => names.includes(sceneName)));
       const program = await obsService.getCurrentProgramScene();
-      setLtProgramScene(program);
+      const normalizedProgram = normalizeDockStageBaseScene(program);
+      setLtProgramScene(
+        names.includes(program)
+          ? program
+          : (names.includes(normalizedProgram) ? normalizedProgram : ""),
+      );
       try {
-        setLtPreviewScene(await obsService.getCurrentPreviewScene());
+        const preview = await obsService.getCurrentPreviewScene();
+        const normalizedPreview = normalizeDockStageBaseScene(preview);
+        setLtPreviewScene(
+          names.includes(preview)
+            ? preview
+            : (names.includes(normalizedPreview) ? normalizedPreview : ""),
+        );
       } catch {
         setLtPreviewScene("");
       }
@@ -504,8 +517,11 @@ export function WorshipModule({
       obsService.getCurrentPreviewScene().catch(() => ltPreviewScene),
     ]);
 
-    if (sceneName && sceneName === programScene) return true;
-    if (sceneName && sceneName === previewScene) return false;
+    const normalizedProgramScene = normalizeDockStageBaseScene(programScene);
+    const normalizedPreviewScene = normalizeDockStageBaseScene(previewScene);
+
+    if (sceneName && (sceneName === programScene || sceneName === normalizedProgramScene)) return true;
+    if (sceneName && (sceneName === previewScene || sceneName === normalizedPreviewScene)) return false;
     return null;
   }, [ltProgramScene, ltPreviewScene]);
 

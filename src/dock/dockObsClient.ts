@@ -30,6 +30,12 @@ import OBSWebSocket from "obs-websocket-js";
 import { ALL_THEMES, type ThemeLike } from "../lowerthirds/themes";
 import { getWorshipLTFavorites } from "../services/favoriteThemes";
 import { getOverlayBaseUrlSync } from "../services/overlayUrl";
+import {
+  DOCK_PREVIEW_STAGE_SUFFIX,
+  isDockOverlaySceneName,
+  isUserSelectableObsScene,
+  normalizeDockStageBaseScene,
+} from "../services/dockSceneNames";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -71,7 +77,6 @@ const DOCK_BIBLE_SCENE = "⛪ OCS Bible";
 const DOCK_WORSHIP_SCENE = "⛪ OCS Worship";
 const DOCK_PREVIEW_BIBLE_SCENE = "⛪ OCS Preview Bible";
 const DOCK_PREVIEW_WORSHIP_SCENE = "⛪ OCS Preview Worship";
-const DOCK_PREVIEW_STAGE_SUFFIX = "__OCS_Dock_Preview";
 
 interface DockResourceNames {
   ltSource: string;
@@ -242,6 +247,9 @@ class DockObsClient {
   private _lastTargetBgSignature: Record<string, string> = {};
   /** Cache fullscreen browser-source config so verse changes do not force source reloads */
   private _lastFullscreenSourceSignature: Record<string, string> = {};
+  /** Remember the user's real scenes so Preview can recover from managed overlay scenes */
+  private _lastUserProgramScene = "";
+  private _lastUserPreviewScene = "";
 
   get status() { return this._status; }
   get isConnected() { return this._status === "connected"; }
@@ -449,6 +457,90 @@ class DockObsClient {
 
   // ── Scene helpers ──
 
+  private rememberUserScene(sceneName: string, live: boolean): void {
+    const normalizedSceneName = normalizeDockStageBaseScene(sceneName);
+    if (!isUserSelectableObsScene(normalizedSceneName)) return;
+    if (live) {
+      this._lastUserProgramScene = normalizedSceneName;
+    } else {
+      this._lastUserPreviewScene = normalizedSceneName;
+    }
+  }
+
+  private async getObsSceneNames(): Promise<string[]> {
+    const resp = await this.call("GetSceneList") as {
+      scenes?: Array<{ sceneName?: string | null }>;
+    };
+
+    return (resp.scenes ?? [])
+      .map((scene) => String(scene.sceneName ?? "").trim())
+      .filter(Boolean);
+  }
+
+  private async hasObsScene(sceneName: string): Promise<boolean> {
+    const trimmedSceneName = sceneName.trim();
+    if (!trimmedSceneName) return false;
+    const sceneNames = await this.getObsSceneNames();
+    return sceneNames.includes(trimmedSceneName);
+  }
+
+  private async normalizePreviewTargetScene(previewSceneName: string): Promise<string> {
+    const trimmedPreviewSceneName = previewSceneName.trim();
+    if (!trimmedPreviewSceneName) return "";
+
+    if (!isDockOverlaySceneName(trimmedPreviewSceneName)) {
+      this.rememberUserScene(trimmedPreviewSceneName, false);
+      return trimmedPreviewSceneName;
+    }
+
+    const sceneNames = await this.getObsSceneNames().catch(() => [] as string[]);
+    const programResp = await (this.call("GetCurrentProgramScene") as Promise<{
+      currentProgramSceneName?: string;
+      sceneName?: string;
+    }>).catch(() => null);
+
+    const currentProgramSceneName = (
+      programResp?.currentProgramSceneName ||
+      programResp?.sceneName ||
+      ""
+    ).trim();
+    this.rememberUserScene(currentProgramSceneName, true);
+
+    const currentProgramBaseScene = normalizeDockStageBaseScene(currentProgramSceneName);
+    const preferredFallbacks = [
+      this._lastUserPreviewScene,
+      sceneNames.find((sceneName) => {
+        if (!isUserSelectableObsScene(sceneName)) return false;
+        if (!currentProgramSceneName) return true;
+        return sceneName !== currentProgramSceneName && sceneName !== currentProgramBaseScene;
+      }) ?? "",
+      this._lastUserProgramScene,
+      currentProgramBaseScene,
+      sceneNames.find((sceneName) => isUserSelectableObsScene(sceneName)) ?? "",
+    ];
+
+    const fallbackSceneName = preferredFallbacks.find((candidate) => (
+      candidate.trim() &&
+      sceneNames.includes(candidate) &&
+      isUserSelectableObsScene(candidate)
+    )) ?? "";
+
+    if (!fallbackSceneName) {
+      console.warn(`[DockOBS] Preview is on managed overlay scene "${trimmedPreviewSceneName}" and no user scene fallback was found.`);
+      return trimmedPreviewSceneName;
+    }
+
+    try {
+      await this.call("SetCurrentPreviewScene", { sceneName: fallbackSceneName });
+      console.log(`[DockOBS] Restored OBS Preview from managed scene "${trimmedPreviewSceneName}" to "${fallbackSceneName}"`);
+    } catch (err) {
+      console.warn(`[DockOBS] Failed to restore OBS Preview to "${fallbackSceneName}":`, err);
+    }
+
+    this.rememberUserScene(fallbackSceneName, false);
+    return fallbackSceneName;
+  }
+
   /**
    * Get the target scene name.
    *   live=true  → current Program scene
@@ -461,7 +553,9 @@ class DockObsClient {
   private async getTargetScene(live: boolean): Promise<{ sceneName: string; studioMode: boolean }> {
     if (live) {
       const resp = await this.call("GetCurrentProgramScene") as { currentProgramSceneName: string; sceneName?: string };
-      return { sceneName: resp.currentProgramSceneName || resp.sceneName || "", studioMode: false };
+      const sceneName = resp.currentProgramSceneName || resp.sceneName || "";
+      this.rememberUserScene(sceneName, true);
+      return { sceneName, studioMode: false };
     }
 
     // Try preview first (Studio Mode)
@@ -469,7 +563,8 @@ class DockObsClient {
       const sm = await this.call("GetStudioModeEnabled") as { studioModeEnabled: boolean };
       if (sm.studioModeEnabled) {
         const resp = await this.call("GetCurrentPreviewScene") as { currentPreviewSceneName: string; sceneName?: string };
-        return { sceneName: resp.currentPreviewSceneName || resp.sceneName || "", studioMode: true };
+        const sceneName = await this.normalizePreviewTargetScene(resp.currentPreviewSceneName || resp.sceneName || "");
+        return { sceneName, studioMode: true };
       }
     } catch { /* Studio Mode not available */ }
 
@@ -484,14 +579,17 @@ class DockObsClient {
       await new Promise((r) => setTimeout(r, 150));
 
       const resp = await this.call("GetCurrentPreviewScene") as { currentPreviewSceneName: string; sceneName?: string };
-      return { sceneName: resp.currentPreviewSceneName || resp.sceneName || "", studioMode: true };
+      const sceneName = await this.normalizePreviewTargetScene(resp.currentPreviewSceneName || resp.sceneName || "");
+      return { sceneName, studioMode: true };
     } catch (err) {
       console.warn("[DockOBS] Failed to auto-enable Studio Mode:", err);
     }
 
     // Absolute fallback — should not be reached
     const resp = await this.call("GetCurrentProgramScene") as { currentProgramSceneName: string; sceneName?: string };
-    return { sceneName: resp.currentProgramSceneName || resp.sceneName || "", studioMode: false };
+    const sceneName = resp.currentProgramSceneName || resp.sceneName || "";
+    this.rememberUserScene(sceneName, true);
+    return { sceneName, studioMode: false };
   }
 
   private isDockManagedSourceName(sourceName: string): boolean {
@@ -525,18 +623,31 @@ class DockObsClient {
   }
 
   private getPreviewStagingSceneName(sceneName: string): string {
-    const trimmed = sceneName.trim() || "Scene";
+    const trimmed = normalizeDockStageBaseScene(sceneName) || "Scene";
     return `${trimmed}${DOCK_PREVIEW_STAGE_SUFFIX}`;
   }
 
   private async ensurePreviewTargetScene(previewSceneName: string): Promise<string> {
+    const normalizedPreviewSceneName = await this.normalizePreviewTargetScene(previewSceneName);
     const { sceneName: programSceneName } = await this.getTargetScene(true);
     if (
-      !previewSceneName.trim() ||
+      !normalizedPreviewSceneName.trim() ||
       !programSceneName.trim() ||
-      previewSceneName !== programSceneName
+      normalizedPreviewSceneName !== programSceneName
     ) {
-      return previewSceneName;
+      return normalizedPreviewSceneName;
+    }
+
+    if (programSceneName.endsWith(DOCK_PREVIEW_STAGE_SUFFIX)) {
+      const baseSceneName = normalizeDockStageBaseScene(programSceneName);
+      if (baseSceneName && baseSceneName !== programSceneName) {
+        try {
+          await this.call("SetCurrentPreviewScene", { sceneName: baseSceneName });
+        } catch { /* ignore */ }
+        this.rememberUserScene(baseSceneName, false);
+        return baseSceneName;
+      }
+      return normalizedPreviewSceneName;
     }
 
     const stagingSceneName = this.getPreviewStagingSceneName(programSceneName);
@@ -548,6 +659,8 @@ class DockObsClient {
   }
 
   private async syncPreviewStagingScene(sourceSceneName: string, stagingSceneName: string): Promise<void> {
+    if (!sourceSceneName.trim() || sourceSceneName === stagingSceneName) return;
+
     await this.ensureDedicatedScene(stagingSceneName);
 
     try {
@@ -751,20 +864,33 @@ class DockObsClient {
    * @returns the scene name (already existing or freshly created)
    */
   private async ensureDedicatedScene(dedicatedSceneName: string): Promise<string> {
-    try {
-      const resp = await this.call("GetSceneList") as {
-        scenes: Array<{ sceneName: string; sceneIndex: number }>;
-      };
-      const exists = resp.scenes.some((s) => s.sceneName === dedicatedSceneName);
-      if (!exists) {
-        await this.call("CreateScene", { sceneName: dedicatedSceneName });
-        console.log(`[DockOBS] Created dedicated scene "${dedicatedSceneName}"`);
-      }
-    } catch (err) {
-      // Scene might already exist — OBS returns error code 601
-      console.warn(`[DockOBS] ensureDedicatedScene "${dedicatedSceneName}":`, err);
+    const trimmedSceneName = dedicatedSceneName.trim();
+    if (!trimmedSceneName) {
+      throw new Error("Dock helper scene name was empty.");
     }
-    return dedicatedSceneName;
+
+    if (await this.hasObsScene(trimmedSceneName).catch(() => false)) {
+      return trimmedSceneName;
+    }
+
+    try {
+      await this.call("CreateScene", { sceneName: trimmedSceneName });
+      console.log(`[DockOBS] Created dedicated scene "${trimmedSceneName}"`);
+    } catch (err) {
+      if (await this.hasObsScene(trimmedSceneName).catch(() => false)) {
+        console.log(`[DockOBS] Reusing existing dedicated scene "${trimmedSceneName}" after create-scene warning`);
+        return trimmedSceneName;
+      }
+
+      const message = err instanceof Error ? err.message : String(err);
+      throw new Error(`Failed to create scene "${trimmedSceneName}" in OBS. ${message}`);
+    }
+
+    if (!await this.hasObsScene(trimmedSceneName).catch(() => false)) {
+      throw new Error(`OBS did not expose the helper scene "${trimmedSceneName}" after creation.`);
+    }
+
+    return trimmedSceneName;
   }
 
   private getTargetFullscreenBgSourceName(
