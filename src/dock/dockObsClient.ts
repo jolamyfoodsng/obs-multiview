@@ -1817,7 +1817,7 @@ class DockObsClient {
         timestamp: Date.now(),
       };
       this.publishFullscreenOverlayPacket(packet);
-      url = this.getFullscreenOverlayPageUrl();
+      url = this.buildBibleUrl(slide, live, false, cleanSettings, "fullscreen");
     }
 
     // CRITICAL: Hide the overlay in the OPPOSITE scene BEFORE setting the URL.
@@ -2239,7 +2239,15 @@ class DockObsClient {
         timestamp: Date.now(),
       };
       this.publishFullscreenOverlayPacket(packet);
-      url = this.getFullscreenOverlayPageUrl();
+      url = this.buildWorshipFullscreenUrl(
+        data.sectionText,
+        data.sectionLabel,
+        data.songTitle,
+        data.artist || "",
+        live,
+        false,
+        cleanSettings,
+      );
     } else {
       if (data.bibleThemeSettings) {
         const { overlayTheme } = this.prepareDedicatedLowerThirdTheme(data.bibleThemeSettings);
