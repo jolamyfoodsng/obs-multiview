@@ -816,21 +816,53 @@ export default function ThemeCreatorModal({ onClose, onSaved, editTheme }: Props
 
               {/* Background opacity */}
               {tab === "fullscreen" && (
-                <>
-                  <label className="tc-label">Background Opacity</label>
-                  <div className="tc-slider-row">
-                    <input
-                      type="range"
-                      className="tc-range"
-                      min={0}
-                      max={1}
-                      step={0.05}
-                      value={settings.backgroundOpacity}
-                      onChange={(e) => patch({ backgroundOpacity: parseFloat(e.target.value) })}
-                    />
-                    <span className="tc-range-value">{Math.round(settings.backgroundOpacity * 100)}%</span>
+                <div className="tc-row-2 tc-row-2--collapse">
+                  <div className="tc-field">
+                    <label className="tc-label">Background Opacity</label>
+                    <div className="tc-slider-row">
+                      <input
+                        type="range"
+                        className="tc-range"
+                        min={0}
+                        max={1}
+                        step={0.05}
+                        value={settings.backgroundOpacity}
+                        onChange={(e) => patch({ backgroundOpacity: parseFloat(e.target.value) })}
+                      />
+                      <span className="tc-range-value">{Math.round(settings.backgroundOpacity * 100)}%</span>
+                    </div>
                   </div>
-                </>
+                  <div className="tc-field">
+                    <label className="tc-label tc-label--row">
+                      <input
+                        type="checkbox"
+                        checked={settings.fullscreenShadeEnabled}
+                        onChange={(e) => patch({ fullscreenShadeEnabled: e.target.checked })}
+                      />
+                      Readability Shade
+                    </label>
+                    {settings.fullscreenShadeEnabled && (
+                      <div className="tc-color-row">
+                        <input
+                          type="color"
+                          className="tc-swatch"
+                          value={settings.fullscreenShadeColor}
+                          onChange={(e) => patch({ fullscreenShadeColor: e.target.value })}
+                        />
+                        <input
+                          type="range"
+                          className="tc-range tc-range--inline"
+                          min={0}
+                          max={1}
+                          step={0.05}
+                          value={settings.fullscreenShadeOpacity}
+                          onChange={(e) => patch({ fullscreenShadeOpacity: parseFloat(e.target.value) })}
+                        />
+                        <span className="tc-range-value">{Math.round(settings.fullscreenShadeOpacity * 100)}%</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
 
               {/* Box opacity (lower-third) */}
@@ -849,40 +881,6 @@ export default function ThemeCreatorModal({ onClose, onSaved, editTheme }: Props
                     />
                     <span className="tc-range-value">{Math.round(settings.boxOpacity * 100)}%</span>
                   </div>
-                </>
-              )}
-
-              {/* Shade overlay (fullscreen) */}
-              {tab === "fullscreen" && (
-                <>
-                  <label className="tc-label tc-label--row">
-                    <input
-                      type="checkbox"
-                      checked={settings.fullscreenShadeEnabled}
-                      onChange={(e) => patch({ fullscreenShadeEnabled: e.target.checked })}
-                    />
-                    Readability Shade
-                  </label>
-                  {settings.fullscreenShadeEnabled && (
-                    <div className="tc-color-row">
-                      <input
-                        type="color"
-                        className="tc-swatch"
-                        value={settings.fullscreenShadeColor}
-                        onChange={(e) => patch({ fullscreenShadeColor: e.target.value })}
-                      />
-                      <input
-                        type="range"
-                        className="tc-range tc-range--inline"
-                        min={0}
-                        max={1}
-                        step={0.05}
-                        value={settings.fullscreenShadeOpacity}
-                        onChange={(e) => patch({ fullscreenShadeOpacity: parseFloat(e.target.value) })}
-                      />
-                      <span className="tc-range-value">{Math.round(settings.fullscreenShadeOpacity * 100)}%</span>
-                    </div>
-                  )}
                 </>
               )}
             </section>
