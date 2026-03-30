@@ -812,7 +812,7 @@ input[type="radio"] {
   position: relative;
   overflow: hidden;
   border-radius: 26px;
-  padding: 28px;
+  padding: 14px;
   background: linear-gradient(160deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 78%, var(--accent-blue) 22%) 100%);
   color: #fff;
   box-shadow: 0 28px 56px rgba(var(--primary-rgb), 0.28);
@@ -868,7 +868,7 @@ input[type="radio"] {
 
 .dash-dock-copy h3 {
   margin: 0 0 10px;
-  font-size: 1.65rem;
+  font-size: 1.4rem;
   font-weight: 800;
   letter-spacing: -0.03em;
 }
@@ -876,7 +876,7 @@ input[type="radio"] {
 .dash-dock-copy p {
   margin: 0;
   color: rgba(255, 255, 255, 0.78);
-  font-size: 0.95rem;
+  font-size: 0.75rem;
   line-height: 1.7;
 }
 
@@ -887,7 +887,7 @@ input[type="radio"] {
 }
 
 .dash-dock-endpoint label {
-  font-size: 0.72rem;
+  font-size: 0.60rem;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
