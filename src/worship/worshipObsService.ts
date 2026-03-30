@@ -62,6 +62,18 @@ class WorshipObsService {
     } catch { /* ok */ }
   }
 
+  private async getCanvasSize(): Promise<{ width: number; height: number }> {
+    try {
+      const video = await obsService.getVideoSettings();
+      return {
+        width: Number(video.baseWidth) || 1920,
+        height: Number(video.baseHeight) || 1080,
+      };
+    } catch {
+      return { width: 1920, height: 1080 };
+    }
+  }
+
   getLiveState() {
     return {
       text: this._liveText,
@@ -249,6 +261,7 @@ class WorshipObsService {
     // ═══════════════════════════════════════════════════════════════════════
 
     const overlaySceneName = WORSHIP_SCENE_NAME; // "OCS Worship Overlay"
+    const canvas = await this.getCanvasSize();
     let overlaySceneUuid: string | null = null;
 
     // ── 1. Ensure the overlay scene exists ──
@@ -321,12 +334,12 @@ class WorshipObsService {
           ensureUrl = `${overlayUrl}#data=${encodeURIComponent(JSON.stringify(packet))}`;
           await obsService.call("SetInputSettings", {
             inputName: existing.sourceName,
-            inputSettings: { url: ensureUrl, width: 1920, height: 1080, css: customCss || "" },
+            inputSettings: { url: ensureUrl, width: canvas.width, height: canvas.height, css: customCss || "" },
           });
         } else {
           await obsService.call("SetInputSettings", {
             inputName: existing.sourceName,
-            inputSettings: { url: ensureUrl, width: 1920, height: 1080, css: "" },
+            inputSettings: { url: ensureUrl, width: canvas.width, height: canvas.height, css: "" },
           });
         }
       }
@@ -338,7 +351,7 @@ class WorshipObsService {
           overlaySceneName,
           WORSHIP_SOURCE_NAME,
           "browser_source",
-          { url: overlayUrl, width: 1920, height: 1080, css: "", shutdown: false, restart_when_active: false }
+          { url: overlayUrl, width: canvas.width, height: canvas.height, css: "", shutdown: false, restart_when_active: false }
         );
         const inputs = await obsService.getInputList();
         const createdInput = inputs.find((i) => i.inputName === WORSHIP_SOURCE_NAME);
@@ -351,7 +364,7 @@ class WorshipObsService {
         if (msg.includes("already exists") || msg.includes("600")) {
           await obsService.call("SetInputSettings", {
             inputName: currentSourceName,
-            inputSettings: { url: overlayUrl, width: 1920, height: 1080 },
+            inputSettings: { url: overlayUrl, width: canvas.width, height: canvas.height },
           });
           if (!regInput) {
             const inputs = await obsService.getInputList();
@@ -380,7 +393,7 @@ class WorshipObsService {
         await obsService.setSceneItemTransform(overlaySceneName, browserItemId, {
           positionX: 0, positionY: 0,
           boundsType: "OBS_BOUNDS_STRETCH",
-          boundsWidth: 1920, boundsHeight: 1080,
+          boundsWidth: canvas.width, boundsHeight: canvas.height,
           boundsAlignment: 0, rotation: 0,
         });
         await this.moveSceneItemToTop(overlaySceneName, browserItemId);
@@ -419,7 +432,7 @@ class WorshipObsService {
         await obsService.setSceneItemTransform(targetScene, nestedItemId, {
           positionX: 0, positionY: 0,
           boundsType: "OBS_BOUNDS_STRETCH",
-          boundsWidth: 1920, boundsHeight: 1080,
+          boundsWidth: canvas.width, boundsHeight: canvas.height,
           boundsAlignment: 0, rotation: 0,
         });
         await this.moveSceneItemToTop(targetScene, nestedItemId);
@@ -441,6 +454,7 @@ class WorshipObsService {
   /** Create a background source behind the text overlay */
   private async ensureBgSource(sceneName: string, sceneUuid: string | null): Promise<void> {
     if (!obsService.isConnected) return;
+    const canvas = await this.getCanvasSize();
     try {
       const resp = await obsService.call("GetSceneItemList", { sceneName });
       const items = (resp as { sceneItems: Array<{ sourceName: string; sceneItemId: number }> }).sceneItems ?? [];
@@ -474,7 +488,7 @@ class WorshipObsService {
     try {
       const bgItemId = await obsService.createInput(
         sceneName, WORSHIP_BG_SOURCE_NAME, "color_source_v3",
-        { color: defaultColor, width: 1920, height: 1080 }
+        { color: defaultColor, width: canvas.width, height: canvas.height }
       );
       this.bgSceneItemId = bgItemId;
       this._currentBgKind = "color";
@@ -578,6 +592,7 @@ class WorshipObsService {
     kind: "color" | "image",
     settings: Record<string, unknown>
   ): Promise<void> {
+    const canvas = await this.getCanvasSize();
     if (this.bgSceneItemId !== null) {
       try {
         await obsService.call("RemoveSceneItem", {
@@ -599,7 +614,7 @@ class WorshipObsService {
         sceneName,
         WORSHIP_BG_SOURCE_NAME,
         inputKind,
-        { ...settings, width: 1920, height: 1080 }
+        { ...settings, width: canvas.width, height: canvas.height }
       );
       this.bgSceneItemId = bgItemId;
       this._currentBgKind = kind;
@@ -757,9 +772,10 @@ class WorshipObsService {
                   const found = inputs.find((i) => i.inputUuid === regBg.inputUuid);
                   if (found) resolvedBgName = found.inputName;
                 }
+                const canvas = await this.getCanvasSize();
                 await obsService.call("SetInputSettings", {
                   inputName: resolvedBgName,
-                  inputSettings: { color: obsColor, width: 1920, height: 1080 },
+                  inputSettings: { color: obsColor, width: canvas.width, height: canvas.height },
                 });
               } else {
                 await this.ensureBgSource(bgSceneName, null);

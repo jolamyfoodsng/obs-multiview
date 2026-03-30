@@ -19,6 +19,8 @@ import { generateSlides } from "../../worship/slideEngine";
 import { archiveSong, getAllSongs, saveSong, syncSongsToDock } from "../../worship/worshipDb";
 import { worshipObsService } from "../../worship/worshipObsService";
 import { lowerThirdObsService } from "../../lowerthirds/lowerThirdObsService";
+import { dockObsClient } from "../../dock/dockObsClient";
+import { ensureDockObsClientConnected } from "../../services/dockObsInterop";
 import { obsService } from "../../services/obsService";
 import { serviceStore } from "../../services/serviceStore";
 import {
@@ -490,13 +492,77 @@ export function WorshipModule({
     );
   }, [activeWorshipLowerThird, buildWorshipLowerThirdValues, worshipCustomStyles]);
 
-  const handleSendWorshipFullToScene = useCallback(async (sceneName: string) => {
+  const resolveDockSendLive = useCallback(async (
+    sceneName: string,
+    mode: "scene" | "preview" | "program",
+  ): Promise<boolean | null> => {
+    if (mode === "program") return true;
+    if (mode === "preview") return false;
+
+    const [programScene, previewScene] = await Promise.all([
+      obsService.getCurrentProgramScene().catch(() => ltProgramScene),
+      obsService.getCurrentPreviewScene().catch(() => ltPreviewScene),
+    ]);
+
+    if (sceneName && sceneName === programScene) return true;
+    if (sceneName && sceneName === previewScene) return false;
+    return null;
+  }, [ltProgramScene, ltPreviewScene]);
+
+  const pushCurrentWorshipViaDock = useCallback(async (live: boolean): Promise<void> => {
+    const slide = songSlides[liveSlideIndex];
+    const overlayMode = layoutMode === "lower-third" ? "lower-third" : "fullscreen";
+
+    await ensureDockObsClientConnected();
+    await dockObsClient.pushWorshipLyrics({
+      sectionText: slide?.content ?? "",
+      sectionLabel: normalizeWorshipObsLabel(slide?.label ?? ""),
+      songTitle: selectedSong?.metadata.title ?? "",
+      artist: selectedSong?.metadata.artist ?? "",
+      overlayMode,
+      ltTheme: overlayMode === "lower-third" && activeWorshipLowerThird
+        ? { id: activeWorshipLowerThird.id, html: activeWorshipLowerThird.html, css: activeWorshipLowerThird.css }
+        : undefined,
+      bibleThemeSettings: overlayMode === "fullscreen"
+        ? (activeTheme as unknown as Record<string, unknown>)
+        : undefined,
+    }, live);
+  }, [
+    songSlides,
+    liveSlideIndex,
+    selectedSong,
+    layoutMode,
+    activeWorshipLowerThird,
+    activeTheme,
+  ]);
+
+  const handleSendWorshipFullToScene = useCallback(async (
+    sceneName: string,
+    mode: "scene" | "preview" | "program" = "scene",
+  ) => {
     if (!obsConnected) return;
     if (!checkServiceActive("send worship full overlay to OBS")) return;
     const slide = songSlides[liveSlideIndex];
     const text = slide?.content ?? null;
     const ref = "";
     const wasLive = isLive;
+
+    const dockLive = await resolveDockSendLive(sceneName, mode);
+    if (dockLive !== null) {
+      setLowerThirdBusy(true);
+      try {
+        setIsLive(true);
+        setIsBlanked(false);
+        await pushCurrentWorshipViaDock(dockLive);
+        setFullLiveScenes((prev) => (prev.includes(sceneName) ? prev : [...prev, sceneName]));
+        if (!wasLive && (serviceStore.status === "live" || serviceStore.status === "preservice")) {
+          serviceStore.trackSongPlayed();
+        }
+      } finally {
+        setLowerThirdBusy(false);
+      }
+      return;
+    }
 
     setLowerThirdBusy(true);
     try {
@@ -511,12 +577,32 @@ export function WorshipModule({
     } finally {
       setLowerThirdBusy(false);
     }
-  }, [obsConnected, checkServiceActive, songSlides, liveSlideIndex, selectedSong, isLive, activeTheme]);
+  }, [obsConnected, checkServiceActive, songSlides, liveSlideIndex, selectedSong, isLive, activeTheme, resolveDockSendLive, pushCurrentWorshipViaDock]);
 
-  const handleSendWorshipLowerThirdToScene = useCallback(async (sceneName: string) => {
+  const handleSendWorshipLowerThirdToScene = useCallback(async (
+    sceneName: string,
+    mode: "scene" | "preview" | "program" = "scene",
+  ) => {
     if (!activeWorshipLowerThird || !obsConnected) return;
     if (!checkServiceActive("send worship lower-third to OBS")) return;
     const wasLive = isLive;
+
+    const dockLive = await resolveDockSendLive(sceneName, mode);
+    if (dockLive !== null) {
+      setLowerThirdBusy(true);
+      try {
+        setIsLive(true);
+        setIsBlanked(false);
+        await pushCurrentWorshipViaDock(dockLive);
+        setLtLiveScenes((prev) => (prev.includes(sceneName) ? prev : [...prev, sceneName]));
+        if (!wasLive && (serviceStore.status === "live" || serviceStore.status === "preservice")) {
+          serviceStore.trackSongPlayed();
+        }
+      } finally {
+        setLowerThirdBusy(false);
+      }
+      return;
+    }
 
     setLowerThirdBusy(true);
     try {
@@ -530,7 +616,7 @@ export function WorshipModule({
     } finally {
       setLowerThirdBusy(false);
     }
-  }, [activeWorshipLowerThird, obsConnected, checkServiceActive, isLive, pushWorshipLowerThirdToScene]);
+  }, [activeWorshipLowerThird, obsConnected, checkServiceActive, isLive, pushWorshipLowerThirdToScene, resolveDockSendLive, pushCurrentWorshipViaDock]);
 
   const pushToObs = useCallback(
     async (slideIdx: number, live: boolean, blanked: boolean) => {
@@ -1330,11 +1416,11 @@ export function WorshipModule({
                 disabled={layoutMode === "lower-third" && !activeWorshipLowerThird ? true : lowerThirdBusy}
                 sendLabel={modeSendLabel}
                 onRefresh={handleRefreshLtScenes}
-                onSendToScene={async (sceneName) => {
+                onSendToScene={async (sceneName, mode) => {
                   if (layoutMode === "fullscreen") {
-                    await handleSendWorshipFullToScene(sceneName);
+                    await handleSendWorshipFullToScene(sceneName, mode);
                   } else {
-                    await handleSendWorshipLowerThirdToScene(sceneName);
+                    await handleSendWorshipLowerThirdToScene(sceneName, mode);
                   }
                 }}
               />

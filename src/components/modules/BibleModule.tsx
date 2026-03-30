@@ -22,12 +22,14 @@ import { parseBibleSearch } from "../../dock/bibleSearchParser";
 import { clearHistory, getBibleSettings, saveBibleSettings, getInstalledTranslations } from "../../bible/bibleDb";
 import type { BiblePassage, BibleTemplateType, BibleTranslation } from "../../bible/types";
 import { BIBLE_BOOKS } from "../../bible/types";
+import { generateSlides } from "../../bible/slideEngine";
 import BookChapterPanel from "../../bible/components/BookChapterPanel";
 import VerseListPanel from "../../bible/components/VerseListPanel";
 import SlidePreview from "../../bible/components/SlidePreview";
 import BibleLibrary from "../../bible/components/BibleLibrary";
 import { obsService } from "../../services/obsService";
 import { serviceStore } from "../../services/serviceStore";
+import { ensureDockObsClientConnected } from "../../services/dockObsInterop";
 import { getInputBySlot, getSceneBySlot } from "../../services/obsRegistry";
 import { useServiceGate } from "../../hooks/useServiceGate";
 import { ObsScenesPanel } from "../shared/ObsScenesPanel";
@@ -36,6 +38,7 @@ import { buildOverlayUrl, lowerThirdObsService } from "../../lowerthirds/lowerTh
 import type { LowerThirdTheme } from "../../lowerthirds/types";
 import type { LTSize } from "../../lowerthirds/types";
 import { OCS_LT_PATTERN, MV_LT_PATTERN, OCS_BIBLE_LT_PATTERN } from "../../lowerthirds/types";
+import { dockObsClient } from "../../dock/dockObsClient";
 import Icon from "../Icon";
 
 const LEFT_PANEL_DEFAULT_WIDTH = 300;
@@ -675,8 +678,14 @@ export function BibleModule({
   }, []);
 
   // Send verse directly to OBS — CLEARS queue first for continuous sends
-  const sendVerseToObs = useCallback(async (book: string, chapter: number, verse: number): Promise<boolean> => {
+  const sendVerseToObs = useCallback(async (
+    book: string,
+    chapter: number,
+    verse: number,
+    options?: { useLegacyObs?: boolean },
+  ): Promise<boolean> => {
     if (!checkServiceActive("display Bible verses on OBS")) return false;
+    const useLegacyObs = options?.useLegacyObs ?? true;
     let passage: BiblePassage;
     try {
       passage = await getChapter(book, chapter, state.translation);
@@ -709,6 +718,21 @@ export function BibleModule({
     recordHistory(biblePassage);
     goLive();
     setHasSentToObs(true);
+
+    if (layoutMode === "fullscreen" && useLegacyObs) {
+      const liveSlide = generateSlides(biblePassage, state.slideConfig)[0] ?? null;
+      if (liveSlide) {
+        await bibleObsService.pushSlide(
+          liveSlide,
+          activeTheme?.settings ?? null,
+          true,
+          false,
+          "fullscreen"
+        );
+        await bibleObsService.show();
+      }
+    }
+
     triggerFlash();
     // In fullscreen mode, show a toast notification indicating the verse is in preview
     if (layoutMode === "fullscreen") {
@@ -720,7 +744,14 @@ export function BibleModule({
       serviceStore.trackBibleVerse();
     }
     return true;
-  }, [state.translation, dispatch, addToQueue, recordHistory, goLive, triggerFlash, checkServiceActive, layoutMode]);
+  }, [state.translation, state.slideConfig, dispatch, addToQueue, recordHistory, goLive, activeTheme, triggerFlash, checkServiceActive, layoutMode]);
+
+  const syncLiveFullscreenSelection = useCallback((book: string, chapter: number, verse: number): boolean => {
+    if (layoutMode !== "fullscreen") return false;
+    if (!state.isLive && !hasSentToObs && fullLiveScenes.length === 0) return false;
+    void sendVerseToObs(book, chapter, verse);
+    return true;
+  }, [layoutMode, state.isLive, hasSentToObs, fullLiveScenes.length, sendVerseToObs]);
 
   // Auto-select chapter 1, verse 1 when book is clicked
   const handleSelectBook = useCallback((book: string) => {
@@ -739,8 +770,14 @@ export function BibleModule({
 
   const handleSelectVerse = useCallback((verse: number) => {
     setSelectedVerse(verse);
-    setHasSentToObs(false);
-  }, []);
+    if (!selectedBook || !selectedChapter) {
+      setHasSentToObs(false);
+      return;
+    }
+    if (!syncLiveFullscreenSelection(selectedBook, selectedChapter, verse)) {
+      setHasSentToObs(false);
+    }
+  }, [selectedBook, selectedChapter, syncLiveFullscreenSelection]);
 
   // Double-click verse → always update the preview panel and push to OBS
   // In LT mode: also pushes to the LT target scene on first use
@@ -1097,7 +1134,10 @@ export function BibleModule({
     setSelectedChapter(result.chapter);
     setSelectedVerse(result.verse);
     setActiveUtilityTab("none");
-  }, []);
+    if (!syncLiveFullscreenSelection(result.book, result.chapter, result.verse)) {
+      setHasSentToObs(false);
+    }
+  }, [syncLiveFullscreenSelection]);
 
   // Click a history/favorite item → navigate to that verse
   const handleJumpToPassage = useCallback((p: BiblePassage) => {
@@ -1105,7 +1145,10 @@ export function BibleModule({
     setSelectedChapter(p.chapter);
     setSelectedVerse(p.startVerse);
     setActiveUtilityTab("none");
-  }, []);
+    if (!syncLiveFullscreenSelection(p.book, p.chapter, p.startVerse)) {
+      setHasSentToObs(false);
+    }
+  }, [syncLiveFullscreenSelection]);
 
   // Clear history
   const handleClearHistory = useCallback(() => {
@@ -1240,6 +1283,62 @@ export function BibleModule({
     return () => { cancelled = true; };
   }, [selectedBook, selectedChapter, selectedVerse, state.translation]);
 
+  const resolveDockSendLive = useCallback(async (
+    sceneName: string,
+    mode: "scene" | "preview" | "program",
+  ): Promise<boolean | null> => {
+    if (mode === "program") return true;
+    if (mode === "preview") return false;
+
+    const [programScene, previewScene] = await Promise.all([
+      obsService.getCurrentProgramScene().catch(() => ltProgramScene),
+      obsService.getCurrentPreviewScene().catch(() => ltPreviewScene),
+    ]);
+
+    if (sceneName && sceneName === programScene) return true;
+    if (sceneName && sceneName === previewScene) return false;
+    return null;
+  }, [ltProgramScene, ltPreviewScene]);
+
+  const pushSelectedBibleViaDock = useCallback(async (live: boolean): Promise<boolean> => {
+    if (!selectedBook || !selectedChapter || !selectedVerse) return false;
+
+    const staged = await sendVerseToObs(selectedBook, selectedChapter, selectedVerse, {
+      useLegacyObs: false,
+    });
+    if (!staged) return false;
+
+    const overlayMode = layoutMode === "lower-third" ? "lower-third" : "fullscreen";
+
+    await ensureDockObsClientConnected();
+    await dockObsClient.pushBible({
+      book: selectedBook,
+      chapter: selectedChapter,
+      verse: selectedVerse,
+      translation: state.translation,
+      verseText: ltVerseText || `${selectedBook} ${selectedChapter}:${selectedVerse}`,
+      overlayMode,
+      ltTheme: overlayMode === "lower-third" && selectedLTTheme
+        ? { id: selectedLTTheme.id, html: selectedLTTheme.html, css: selectedLTTheme.css }
+        : undefined,
+      bibleThemeSettings: overlayMode === "fullscreen"
+        ? (activeTheme?.settings as unknown as Record<string, unknown> | null | undefined)
+        : undefined,
+    }, live);
+
+    return true;
+  }, [
+    selectedBook,
+    selectedChapter,
+    selectedVerse,
+    sendVerseToObs,
+    state.translation,
+    ltVerseText,
+    layoutMode,
+    selectedLTTheme,
+    activeTheme,
+  ]);
+
   const lowerThemePreviewReference = useMemo(
     () => `${selectedBook} ${selectedChapter}:${selectedVerse} (${state.translation})`,
     [selectedBook, selectedChapter, selectedVerse, state.translation],
@@ -1351,6 +1450,25 @@ export function BibleModule({
   ) => {
     if (!selectedLTTheme || !selectedBook || !selectedChapter || !selectedVerse) return;
     if (!checkServiceActive("send bible lower-third to OBS")) return;
+
+    const dockLive = await resolveDockSendLive(sceneName, mode);
+    if (dockLive !== null) {
+      setLtTargetScene(sceneName);
+      setLtSending(true);
+      try {
+        const sent = await pushSelectedBibleViaDock(dockLive);
+        if (!sent) return;
+        setLtLiveScenes((prev) => (prev.includes(sceneName) ? prev : [...prev, sceneName]));
+        triggerFlash();
+        setHasSentToObs(true);
+      } catch (err) {
+        console.warn(`[BibleModule] Dock lower-third send failed for "${sceneName}":`, err);
+      } finally {
+        setLtSending(false);
+      }
+      return;
+    }
+
     const resolvedSceneName = await restoreFromBibleFullscreenIfNeeded(mode, sceneName);
     setLtTargetScene(resolvedSceneName);
 
@@ -1368,6 +1486,8 @@ export function BibleModule({
     selectedChapter,
     selectedVerse,
     checkServiceActive,
+    resolveDockSendLive,
+    pushSelectedBibleViaDock,
     restoreFromBibleFullscreenIfNeeded,
     disableFullscreenBibleSourcesInScene,
     pushLtToScene,
@@ -1380,6 +1500,22 @@ export function BibleModule({
   ) => {
     if (!obsConnected || !selectedBook || !selectedChapter || !selectedVerse) return;
     if (!checkServiceActive("send bible full overlay to OBS")) return;
+
+    const dockLive = await resolveDockSendLive(sceneName, mode);
+    if (dockLive !== null) {
+      setLtSending(true);
+      try {
+        const sent = await pushSelectedBibleViaDock(dockLive);
+        if (!sent) return;
+        setFullLiveScenes((prev) => (prev.includes(sceneName) ? prev : [...prev, sceneName]));
+        triggerFlash();
+      } catch (err) {
+        console.warn(`[BibleModule] Dock fullscreen send failed for "${sceneName}":`, err);
+      } finally {
+        setLtSending(false);
+      }
+      return;
+    }
 
     setLtSending(true);
     try {
@@ -1397,6 +1533,7 @@ export function BibleModule({
       await bibleObsService.ensureBrowserSource(sceneName, "fullscreen");
       const sent = await sendVerseToObs(selectedBook, selectedChapter, selectedVerse);
       if (!sent) return;
+      await bibleObsService.show();
       setFullLiveScenes((prev) => (prev.includes(sceneName) ? prev : [...prev, sceneName]));
       triggerFlash();
     } catch (err) {
@@ -1410,6 +1547,8 @@ export function BibleModule({
     selectedChapter,
     selectedVerse,
     checkServiceActive,
+    resolveDockSendLive,
+    pushSelectedBibleViaDock,
     sendVerseToObs,
     triggerFlash,
   ]);
@@ -1750,10 +1889,15 @@ export function BibleModule({
                         key={`ref-${ref.label}-${idx}`}
                         className="bible-search-ref-chip"
                         onClick={() => {
+                          const chapter = ref.chapter ?? 1;
+                          const verse = ref.verse ?? 1;
                           setSelectedBook(ref.book);
-                          if (ref.chapter) setSelectedChapter(ref.chapter);
-                          if (ref.verse) setSelectedVerse(ref.verse);
+                          setSelectedChapter(chapter);
+                          setSelectedVerse(verse);
                           setActiveUtilityTab("none");
+                          if (!syncLiveFullscreenSelection(ref.book, chapter, verse)) {
+                            setHasSentToObs(false);
+                          }
                         }}
                         onDoubleClick={() => {
                           const book = ref.book;

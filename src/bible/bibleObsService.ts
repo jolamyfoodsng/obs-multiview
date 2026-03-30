@@ -64,6 +64,100 @@ class BibleObsService {
   private _lastBgImagePath: string | null = null;
   private _lastBgImageHash: string | null = null;
 
+  private async enableSceneItemSafe(sceneName: string, sceneItemId: number | null): Promise<void> {
+    if (!sceneName || sceneItemId === null) return;
+    try {
+      await obsService.call("SetSceneItemEnabled", {
+        sceneName,
+        sceneItemId,
+        sceneItemEnabled: true,
+      });
+    } catch {
+      // Best effort. The scene item may have been removed or be otherwise unavailable.
+    }
+  }
+
+  private async getCanvasSize(): Promise<{ width: number; height: number }> {
+    try {
+      const video = await obsService.getVideoSettings();
+      return {
+        width: Number(video.baseWidth) || 1920,
+        height: Number(video.baseHeight) || 1080,
+      };
+    } catch {
+      return { width: 1920, height: 1080 };
+    }
+  }
+
+  private async resolveMainSourceNames(): Promise<Set<string>> {
+    const names = new Set<string>([BIBLE_SOURCE_NAME]);
+    try {
+      const regMain = await getInputBySlot(SLOT_INPUT);
+      if (regMain) {
+        const inputs = await obsService.getInputList();
+        const found = inputs.find((input) => input.inputUuid === regMain.inputUuid);
+        if (found?.inputName) names.add(found.inputName);
+      }
+    } catch {
+      // Fallback to default main source name.
+    }
+    return names;
+  }
+
+  private async enforceBgPlacement(sceneName: string, bgItemId: number): Promise<void> {
+    try {
+      const mainSourceNames = await this.resolveMainSourceNames();
+      const resp = await obsService.call("GetSceneItemList", { sceneName });
+      const items = (resp as {
+        sceneItems: Array<{ sceneItemId: number; sourceName: string; sceneItemIndex: number }>;
+      }).sceneItems ?? [];
+
+      const bgItem = items.find((item) => item.sceneItemId === bgItemId);
+      const mainItem = items.find(
+        (item) => item.sceneItemId !== bgItemId && mainSourceNames.has(item.sourceName)
+      );
+
+      if (bgItem && mainItem && bgItem.sceneItemIndex >= mainItem.sceneItemIndex) {
+        await obsService.call("SetSceneItemIndex", {
+          sceneName,
+          sceneItemId: bgItemId,
+          sceneItemIndex: Math.max(0, mainItem.sceneItemIndex - 1),
+        });
+      } else if (!mainItem) {
+        await obsService.call("SetSceneItemIndex", {
+          sceneName,
+          sceneItemId: bgItemId,
+          sceneItemIndex: 0,
+        });
+      }
+    } catch (err) {
+      console.warn("[BibleOBS] Could not enforce BG z-order:", err);
+    }
+
+    try {
+      const video = await obsService.getVideoSettings();
+      await obsService.call("SetSceneItemTransform", {
+        sceneName,
+        sceneItemId: bgItemId,
+        sceneItemTransform: {
+          positionX: 0,
+          positionY: 0,
+          boundsType: "OBS_BOUNDS_STRETCH",
+          boundsWidth: video.baseWidth,
+          boundsHeight: video.baseHeight,
+          boundsAlignment: 0,
+          cropLeft: 0,
+          cropTop: 0,
+          cropRight: 0,
+          cropBottom: 0,
+        },
+      });
+      await this.enableSceneItemSafe(sceneName, bgItemId);
+    } catch (err) {
+      console.warn("[BibleOBS] Could not enforce BG transform:", err);
+    }
+  }
+
   private async moveSceneItemToTop(sceneName: string, sceneItemId: number): Promise<void> {
     try {
       const resp = await obsService.call("GetSceneItemList", { sceneName });
@@ -135,6 +229,7 @@ class BibleObsService {
     // ═══════════════════════════════════════════════════════════════════════
 
     const overlaySceneName = BIBLE_SCENE_NAME; // "OCS Bible Overlay"
+    const canvas = await this.getCanvasSize();
     let overlaySceneUuid: string | null = null;
 
     // ── 1. Ensure the overlay scene exists ──
@@ -210,8 +305,9 @@ class BibleObsService {
         }
         await obsService.call("SetInputSettings", {
           inputName: existing.sourceName,
-          inputSettings: { url: ensureUrl, width: 1920, height: 1080 },
+          inputSettings: { url: ensureUrl, width: canvas.width, height: canvas.height },
         });
+        await this.enableSceneItemSafe(overlaySceneName, browserItemId);
       }
     } catch { /* scene might be empty */ }
 
@@ -224,8 +320,8 @@ class BibleObsService {
           "browser_source",
           {
             url: overlayUrl,
-            width: 1920,
-            height: 1080,
+            width: canvas.width,
+            height: canvas.height,
             css: "",
             shutdown: false,
             restart_when_active: false,
@@ -243,7 +339,7 @@ class BibleObsService {
           // Source exists globally — update URL and add to overlay scene
           await obsService.call("SetInputSettings", {
             inputName: currentSourceName,
-            inputSettings: { url: overlayUrl, width: 1920, height: 1080 },
+            inputSettings: { url: overlayUrl, width: canvas.width, height: canvas.height },
           });
           if (!regInput) {
             const inputs = await obsService.getInputList();
@@ -275,12 +371,13 @@ class BibleObsService {
           positionX: 0,
           positionY: 0,
           boundsType: "OBS_BOUNDS_STRETCH",
-          boundsWidth: 1920,
-          boundsHeight: 1080,
+          boundsWidth: canvas.width,
+          boundsHeight: canvas.height,
           boundsAlignment: 0,
           rotation: 0,
         });
         await this.moveSceneItemToTop(overlaySceneName, browserItemId);
+        await this.enableSceneItemSafe(overlaySceneName, browserItemId);
       } catch { /* ok */ }
     }
 
@@ -306,9 +403,9 @@ class BibleObsService {
         const resp = await obsService.call("GetSceneItemList", { sceneName: targetScene });
         const items = (resp as { sceneItems: Array<{ sourceName: string; sceneItemId: number }> }).sceneItems ?? [];
         const existingNested = items.find((i) => i.sourceName === overlaySceneName);
-        if (existingNested) {
-          nestedItemId = existingNested.sceneItemId;
-        }
+      if (existingNested) {
+        nestedItemId = existingNested.sceneItemId;
+      }
       } catch { /* */ }
 
       if (nestedItemId === null) {
@@ -323,12 +420,13 @@ class BibleObsService {
           positionX: 0,
           positionY: 0,
           boundsType: "OBS_BOUNDS_STRETCH",
-          boundsWidth: 1920,
-          boundsHeight: 1080,
+          boundsWidth: canvas.width,
+          boundsHeight: canvas.height,
           boundsAlignment: 0,
           rotation: 0,
         });
         await this.moveSceneItemToTop(targetScene, nestedItemId);
+        await this.enableSceneItemSafe(targetScene, nestedItemId);
       } catch { /* ok */ }
 
       this.sceneItemId = nestedItemId;
@@ -353,6 +451,7 @@ class BibleObsService {
    */
   private async ensureBgSource(sceneName: string, sceneUuid: string | null): Promise<void> {
     if (!obsService.isConnected) return;
+    const canvas = await this.getCanvasSize();
 
     // Check if BG source already exists in scene
     try {
@@ -370,6 +469,8 @@ class BibleObsService {
         } catch {
           this._currentBgKind = "color"; // assume color if we can't determine
         }
+        await this.enableSceneItemSafe(sceneName, this.bgSceneItemId);
+        await this.enforceBgPlacement(sceneName, existing.sceneItemId);
         return; // Already exists
       }
     } catch { /* scene might not have items yet */ }
@@ -385,8 +486,8 @@ class BibleObsService {
         "color_source_v3",
         {
           color: defaultColor,
-          width: 1920,
-          height: 1080,
+          width: canvas.width,
+          height: canvas.height,
         }
       );
 
@@ -418,6 +519,7 @@ class BibleObsService {
           console.warn("[BibleOBS] Could not reorder BG source:", err);
         }
       }
+      await this.enforceBgPlacement(sceneName, bgItemId);
 
       console.log(`[BibleOBS] Created Color Source BG "${BIBLE_BG_SOURCE_NAME}" in "${sceneName}" (itemId: ${bgItemId})`);
     } catch (err: unknown) {
@@ -428,6 +530,7 @@ class BibleObsService {
           this.bgSceneItemId = bgItemId;
           this._currentBgKind = "color";
           await registerSceneItem(SLOT_BG_ITEM, SLOT_SCENE, SLOT_BG_INPUT, bgItemId, sceneUuid ?? "");
+          await this.enforceBgPlacement(sceneName, bgItemId);
         } catch (err2) {
           console.warn("[BibleOBS] Failed to add existing BG source to scene:", err2);
         }
@@ -521,6 +624,7 @@ class BibleObsService {
     kind: "color" | "image",
     settings: Record<string, unknown>
   ): Promise<void> {
+    const canvas = await this.getCanvasSize();
     // Remove old BG source from the scene if it exists
     if (this.bgSceneItemId !== null) {
       try {
@@ -544,7 +648,7 @@ class BibleObsService {
         sceneName,
         BIBLE_BG_SOURCE_NAME,
         inputKind,
-        { ...settings, width: 1920, height: 1080 }
+        { ...settings, width: canvas.width, height: canvas.height }
       );
       this.bgSceneItemId = bgItemId;
       this._currentBgKind = kind;
@@ -588,6 +692,7 @@ class BibleObsService {
           },
         });
       } catch { /* ok */ }
+      await this.enforceBgPlacement(sceneName, bgItemId);
 
       console.log(`[BibleOBS] Recreated BG source as ${inputKind} in "${sceneName}" (itemId: ${bgItemId})`);
     } catch (err: unknown) {
@@ -603,6 +708,7 @@ class BibleObsService {
           this.bgSceneItemId = bgItemId;
           this._currentBgKind = kind;
           await registerSceneItem(SLOT_BG_ITEM, SLOT_SCENE, SLOT_BG_INPUT, bgItemId, "");
+          await this.enforceBgPlacement(sceneName, bgItemId);
         } catch { /* ok */ }
       } else {
         console.warn("[BibleOBS] Failed to recreate BG source:", err);
@@ -736,6 +842,9 @@ class BibleObsService {
 
         const inputSettings: Record<string, unknown> = { url };
         inputSettings.css = customCss || "";
+        if (this.bgSceneItemId !== null) {
+          await this.enforceBgPlacement(BIBLE_SCENE_NAME, this.bgSceneItemId);
+        }
 
         // Resolve current input name from registry (survives renames)
         let resolvedInputName = BIBLE_SOURCE_NAME;
@@ -808,9 +917,10 @@ class BibleObsService {
                     const found = inputs.find((i) => i.inputUuid === regBg.inputUuid);
                     if (found) resolvedBgName = found.inputName;
                   }
+                  const canvas = await this.getCanvasSize();
                   await obsService.call("SetInputSettings", {
                     inputName: resolvedBgName,
-                    inputSettings: { color: obsColor, width: 1920, height: 1080 },
+                    inputSettings: { color: obsColor, width: canvas.width, height: canvas.height },
                   });
                 } else {
                   // No BG source exists yet — create one

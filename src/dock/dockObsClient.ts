@@ -29,6 +29,7 @@
 import OBSWebSocket from "obs-websocket-js";
 import { ALL_THEMES, type ThemeLike } from "../lowerthirds/themes";
 import { getWorshipLTFavorites } from "../services/favoriteThemes";
+import { getOverlayBaseUrlSync } from "../services/overlayUrl";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -257,7 +258,7 @@ class DockObsClient {
   /** Load branding from the dock JSON file served by the overlay server */
   private async _loadBranding(): Promise<void> {
     try {
-      const res = await fetch("/uploads/dock-branding.json");
+      const res = await fetch(`${this.getOverlayBaseUrl()}/uploads/dock-branding.json`);
       if (!res.ok) return;
       const data = await res.json();
       this._brandingCache = {
@@ -274,7 +275,7 @@ class DockObsClient {
   /** Get the resolved logo URL for lower-third overlays */
   private _getLogoUrl(): string {
     if (!this._brandingCache?.logoFileName) return "";
-    return `${window.location.origin}/uploads/${encodeURIComponent(this._brandingCache.logoFileName)}`;
+    return `${this.getOverlayBaseUrl()}/uploads/${encodeURIComponent(this._brandingCache.logoFileName)}`;
   }
 
   // ── Status ──
@@ -406,6 +407,44 @@ class DockObsClient {
   async call(requestType: string, requestData?: Record<string, unknown>): Promise<unknown> {
     if (!this.isConnected) throw new Error("Not connected to OBS");
     return this.obs.call(requestType as never, requestData as never);
+  }
+
+  private async getCanvasSize(): Promise<{ width: number; height: number }> {
+    try {
+      const video = await this.call("GetVideoSettings") as {
+        baseWidth?: number;
+        baseHeight?: number;
+      };
+      return {
+        width: Number(video.baseWidth) || 1920,
+        height: Number(video.baseHeight) || 1080,
+      };
+    } catch {
+      return { width: 1920, height: 1080 };
+    }
+  }
+
+  private async fitSceneItemToCanvas(sceneName: string, sceneItemId: number): Promise<void> {
+    const { width, height } = await this.getCanvasSize();
+    await this.call("SetSceneItemTransform", {
+      sceneName,
+      sceneItemId,
+      sceneItemTransform: {
+        positionX: 0,
+        positionY: 0,
+        scaleX: 1,
+        scaleY: 1,
+        rotation: 0,
+        boundsType: "OBS_BOUNDS_STRETCH",
+        boundsWidth: width,
+        boundsHeight: height,
+        boundsAlignment: 0,
+        cropLeft: 0,
+        cropTop: 0,
+        cropRight: 0,
+        cropBottom: 0,
+      },
+    });
   }
 
   // ── Scene helpers ──
@@ -592,10 +631,14 @@ class DockObsClient {
   private async ensureOverlaySource(
     sceneName: string,
     sourceName: string,
-    width = 1920,
-    height = 1080,
+    width?: number,
+    height?: number,
     enable = true,
   ): Promise<number> {
+    const canvas = await this.getCanvasSize();
+    const sourceWidth = Number(width) > 0 ? Number(width) : canvas.width;
+    const sourceHeight = Number(height) > 0 ? Number(height) : canvas.height;
+
     // 1. Check if the source already exists in this scene
     const resp = await this.call("GetSceneItemList", { sceneName }) as {
       sceneItems: Array<{ sourceName: string; sceneItemId: number; sceneItemIndex: number }>;
@@ -633,8 +676,8 @@ class DockObsClient {
           inputKind: "browser_source",
           inputSettings: {
             url: "about:blank",
-            width,
-            height,
+            width: sourceWidth,
+            height: sourceHeight,
             css: "",
             shutdown: false,
             restart_when_active: false,
@@ -644,23 +687,24 @@ class DockObsClient {
         sceneItemId = created.sceneItemId;
         console.log(`[DockOBS] Created browser source "${sourceName}" in scene "${sceneName}" (itemId ${sceneItemId})`);
       }
+    }
 
-      // Position at (0,0) fullscreen
-      try {
-        await this.call("SetSceneItemTransform", {
-          sceneName,
-          sceneItemId,
-          sceneItemTransform: {
-            positionX: 0,
-            positionY: 0,
-            boundsType: "OBS_BOUNDS_SCALE_INNER",
-            boundsWidth: width,
-            boundsHeight: height,
-          },
-        });
-      } catch (err) {
-        console.warn(`[DockOBS] Failed to set transform for "${sourceName}":`, err);
-      }
+    try {
+      await this.call("SetInputSettings", {
+        inputName: sourceName,
+        inputSettings: {
+          width: sourceWidth,
+          height: sourceHeight,
+        },
+      });
+    } catch {
+      // Some pre-existing sources may reject size-only updates; keep going.
+    }
+
+    try {
+      await this.fitSceneItemToCanvas(sceneName, sceneItemId!);
+    } catch (err) {
+      console.warn(`[DockOBS] Failed to set transform for "${sourceName}":`, err);
     }
 
     // 3. Move to top of z-order.
@@ -767,22 +811,11 @@ class DockObsClient {
       }) as { sceneItemId: number };
       sceneItemId = created.sceneItemId;
       console.log(`[DockOBS] Added scene source "${dedicatedScene}" to "${targetScene}" (itemId ${sceneItemId})`);
-
-      // Position fullscreen at (0,0)
-      try {
-        await this.call("SetSceneItemTransform", {
-          sceneName: targetScene,
-          sceneItemId,
-          sceneItemTransform: {
-            positionX: 0,
-            positionY: 0,
-            boundsType: "OBS_BOUNDS_SCALE_INNER",
-            boundsWidth: 1920,
-            boundsHeight: 1080,
-          },
-        });
-      } catch { /* ignore */ }
     }
+
+    try {
+      await this.fitSceneItemToCanvas(targetScene, sceneItemId!);
+    } catch { /* ignore */ }
 
     // Move to top of z-order in the target scene.
     try {
@@ -1104,7 +1137,8 @@ class DockObsClient {
     });
     const url = this.buildFullscreenBackgroundUrl(cleanSettings);
 
-    await this.ensureOverlaySource(targetScene, sourceName, 1920, 1080, enable);
+    const canvas = await this.getCanvasSize();
+    await this.ensureOverlaySource(targetScene, sourceName, canvas.width, canvas.height, enable);
     if (this._lastTargetBgSignature[sourceName] !== signature) {
       await this.setBrowserSourceUrl(sourceName, url, false, css || undefined);
       this._lastTargetBgSignature[sourceName] = signature;
@@ -1173,17 +1207,13 @@ class DockObsClient {
 
       // Position fullscreen
       try {
-        await this.call("SetSceneItemTransform", {
-          sceneName,
-          sceneItemId: sceneItem.sceneItemId,
-          sceneItemTransform: {
-            positionX: 0, positionY: 0,
-            boundsType: "OBS_BOUNDS_SCALE_INNER",
-            boundsWidth: 1920, boundsHeight: 1080,
-          },
-        });
+        await this.fitSceneItemToCanvas(sceneName, sceneItem.sceneItemId);
       } catch { /* ignore */ }
     }
+
+    try {
+      await this.fitSceneItemToCanvas(sceneName, sceneItem.sceneItemId);
+    } catch { /* ignore */ }
 
     // Move to JUST below the overlay source (find the overlay, put BG right below it)
     await this._positionBgBelowOverlays(sceneName, sceneItem.sceneItemId, resources);
@@ -1209,6 +1239,7 @@ class DockObsClient {
     resources: DockResourceNames = LIVE_DOCK_RESOURCES,
   ): Promise<void> {
     const sourceName = resources.fsBgSource;
+    const canvas = await this.getCanvasSize();
 
     // Convert CSS hex color to OBS ABGR integer (OBS color format)
     const obsColor = this._cssColorToObsColor(bgColor);
@@ -1224,7 +1255,7 @@ class DockObsClient {
         if (existing.inputKind === "color_source_v3") {
           await this.call("SetInputSettings", {
             inputName: sourceName,
-            inputSettings: { color: obsColor, width: 1920, height: 1080 },
+            inputSettings: { color: obsColor, width: canvas.width, height: canvas.height },
           });
         } else {
           try { await this.call("RemoveInput", { inputName: sourceName }); } catch { /* ignore */ }
@@ -1251,7 +1282,7 @@ class DockObsClient {
           sceneName,
           inputName: sourceName,
           inputKind: "color_source_v3",
-          inputSettings: { color: obsColor, width: 1920, height: 1080 },
+          inputSettings: { color: obsColor, width: canvas.width, height: canvas.height },
           sceneItemEnabled: enable,
         }) as { sceneItemId: number };
         sceneItem = { sourceName, sceneItemId: created.sceneItemId };
@@ -1259,17 +1290,13 @@ class DockObsClient {
 
       // Position fullscreen
       try {
-        await this.call("SetSceneItemTransform", {
-          sceneName,
-          sceneItemId: sceneItem.sceneItemId,
-          sceneItemTransform: {
-            positionX: 0, positionY: 0,
-            boundsType: "OBS_BOUNDS_SCALE_INNER",
-            boundsWidth: 1920, boundsHeight: 1080,
-          },
-        });
+        await this.fitSceneItemToCanvas(sceneName, sceneItem.sceneItemId);
       } catch { /* ignore */ }
     }
+
+    try {
+      await this.fitSceneItemToCanvas(sceneName, sceneItem.sceneItemId);
+    } catch { /* ignore */ }
 
     await this._positionBgBelowOverlays(sceneName, sceneItem.sceneItemId, resources);
 
@@ -1444,7 +1471,7 @@ class DockObsClient {
   // ── Overlay URL builders ──
 
   private getOverlayBaseUrl(): string {
-    return window.location.origin;
+    return getOverlayBaseUrlSync();
   }
 
   private getFullscreenOverlayPageUrl(): string {
@@ -1718,7 +1745,7 @@ class DockObsClient {
 
         await this.clearAllOverlays(keepSources, sceneName, resources);
         await this.ensureDedicatedScene(resources.bibleScene);
-        await this.ensureOverlaySource(resources.bibleScene, resources.bibleSource, 1920, 1080, true);
+        await this.ensureOverlaySource(resources.bibleScene, resources.bibleSource, undefined, undefined, true);
         await this.hideFullscreenBg(resources.bibleScene, resources);
         await this.ensureSceneSourceInTarget(sceneName, resources.bibleScene, shouldEnable);
         await this.hideFullscreenBg(sceneName, resources);
@@ -1735,7 +1762,7 @@ class DockObsClient {
       } else {
         // ── Lower-third: direct browser source in user's scene ──
         await this.clearAllOverlays(resources.bibleSource, sceneName, resources);
-        await this.ensureOverlaySource(sceneName, resources.bibleSource, 1920, 1080, shouldEnable);
+        await this.ensureOverlaySource(sceneName, resources.bibleSource, undefined, undefined, shouldEnable);
 
         const resolvedLTTheme = this.resolveLTTheme(data.ltTheme, "bible");
         url = this.buildBibleLowerThirdUrl(
@@ -1758,7 +1785,7 @@ class DockObsClient {
       await this.ensureDedicatedScene(resources.bibleScene);
 
       // 2. Inside the dedicated scene, ensure BG + overlay sources exist
-      await this.ensureOverlaySource(resources.bibleScene, resources.bibleSource, 1920, 1080, true);
+      await this.ensureOverlaySource(resources.bibleScene, resources.bibleSource, undefined, undefined, true);
       await this.ensureFullscreenBg(resources.bibleScene, data.bibleThemeSettings as Record<string, unknown> | null, true, resources);
 
       // 3. Add the dedicated scene as a nested scene-source in the user's target scene
@@ -1914,7 +1941,7 @@ class DockObsClient {
     await this.clearAllOverlays(resources.ltSource, sceneName, resources);
 
     // Ensure overlay source exists in target scene (auto-creates if needed)
-    await this.ensureOverlaySource(sceneName, resources.ltSource, 1920, 1080, shouldEnable);
+    await this.ensureOverlaySource(sceneName, resources.ltSource, undefined, undefined, shouldEnable);
 
     const resolvedLTTheme = this.resolveLTTheme(data.ltTheme, data.context ?? "speaker");
 
@@ -2179,7 +2206,7 @@ class DockObsClient {
       await this.ensureDedicatedScene(resources.worshipScene);
 
       // 2. Inside the dedicated scene, ensure BG + overlay sources exist
-      await this.ensureOverlaySource(resources.worshipScene, resources.worshipSource, 1920, 1080, true);
+      await this.ensureOverlaySource(resources.worshipScene, resources.worshipSource, undefined, undefined, true);
       await this.ensureFullscreenBg(resources.worshipScene, data.bibleThemeSettings as Record<string, unknown> | null, true, resources);
 
       // 3. Add the dedicated scene as a nested scene-source in the user's target scene
@@ -2220,7 +2247,7 @@ class DockObsClient {
 
         await this.clearAllOverlays(keepSources, sceneName, resources);
         await this.ensureDedicatedScene(resources.worshipScene);
-        await this.ensureOverlaySource(resources.worshipScene, resources.worshipSource, 1920, 1080, true);
+        await this.ensureOverlaySource(resources.worshipScene, resources.worshipSource, undefined, undefined, true);
         await this.hideFullscreenBg(resources.worshipScene, resources);
         await this.ensureSceneSourceInTarget(sceneName, resources.worshipScene, shouldEnable);
         await this.hideFullscreenBg(sceneName, resources);
@@ -2240,7 +2267,7 @@ class DockObsClient {
       } else {
         // ── Lower-third: direct browser source in user's scene ──
         await this.clearAllOverlays(resources.worshipSource, sceneName, resources);
-        await this.ensureOverlaySource(sceneName, resources.worshipSource, 1920, 1080, shouldEnable);
+        await this.ensureOverlaySource(sceneName, resources.worshipSource, undefined, undefined, shouldEnable);
 
         const resolvedLTTheme = this.resolveLTTheme(data.ltTheme, "worship");
         url = this.buildWorshipLyricsUrl(
@@ -2413,7 +2440,7 @@ class DockObsClient {
     // Clear all OTHER overlays first so previous overlay doesn't persist
     await this.clearAllOverlays(resources.tickerSource, sceneName, resources);
 
-    await this.ensureOverlaySource(sceneName, resources.tickerSource, 1920, 1080, shouldEnable);
+    await this.ensureOverlaySource(sceneName, resources.tickerSource, undefined, undefined, shouldEnable);
     const resolvedLTTheme = this.resolveLTTheme(data.ltTheme, "ticker");
 
     const url = this.buildTickerUrl(
@@ -2679,18 +2706,7 @@ class DockObsClient {
     //    of its native resolution.  We query the actual canvas size so it
     //    works with any OBS output resolution.
     try {
-      let canvasW = 1920;
-      let canvasH = 1080;
-      try {
-        const video = await this.call("GetVideoSettings") as {
-          baseWidth: number;
-          baseHeight: number;
-        };
-        if (video.baseWidth && video.baseHeight) {
-          canvasW = video.baseWidth;
-          canvasH = video.baseHeight;
-        }
-      } catch { /* fall back to 1920×1080 */ }
+      const { width: canvasW, height: canvasH } = await this.getCanvasSize();
 
       await this.call("SetSceneItemTransform", {
         sceneName,
