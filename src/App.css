@@ -9038,9 +9038,17 @@ input[type="radio"] {
 }
 
 /* ── Two-column row ── */
+
 .tc-row-2 {
   display: flex;
   gap: 10px;
+  width: 200px !important;
+}
+
+.tc-row-2 .tc-row-2--collapse {
+
+  width: 200px !important;
+  min-width: 0px !important;
 }
 
 .tc-row-2 .tc-field {
