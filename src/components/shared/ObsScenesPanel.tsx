@@ -153,7 +153,7 @@ export function ObsScenesPanel({
           disabled={!connected || disabled || Boolean(busyKey)}
           title="Sends to the scene currently loaded in OBS Preview"
         >
-          {busyKey === "preview" ? "Sending…" : "Send to Current OBS Preview"}
+          {busyKey === "preview" ? "Sending…" : "Send to Preview"}
         </button>
         <button
           type="button"
@@ -162,7 +162,7 @@ export function ObsScenesPanel({
           disabled={!connected || disabled || Boolean(busyKey)}
           title="Sends directly to the scene currently live in OBS Program"
         >
-          {busyKey === "program" ? "Sending…" : "Send to Current OBS Program"}
+          {busyKey === "program" ? "Sending…" : "Send to Program"}
         </button>
       </div>
 
