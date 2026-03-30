@@ -606,7 +606,7 @@ export default function ThemeCreatorModal({ onClose, onSaved, editTheme }: Props
             <Icon name={isEditing ? "edit" : "add_circle"} size={22} />
             <h2 className="tc-header-title">{isEditing ? "Edit Theme" : "Create New Theme"}</h2>
           </div>
-          <button className="tc-close" onClick={onClose}>
+          <button type="button" className="tc-close" onClick={onClose}>
             <Icon name="close" size={20} />
           </button>
         </div>
@@ -614,6 +614,7 @@ export default function ThemeCreatorModal({ onClose, onSaved, editTheme }: Props
         {/* ── Tab selector ── */}
         <div className="tc-tabs">
           <button
+            type="button"
             className={`tc-tab${tab === "fullscreen" ? " tc-tab--active" : ""}`}
             onClick={() => setTab("fullscreen")}
           >
@@ -621,6 +622,7 @@ export default function ThemeCreatorModal({ onClose, onSaved, editTheme }: Props
             Fullscreen
           </button>
           <button
+            type="button"
             className={`tc-tab${tab === "lower-third" ? " tc-tab--active" : ""}`}
             onClick={() => setTab("lower-third")}
           >
@@ -1548,10 +1550,11 @@ export default function ThemeCreatorModal({ onClose, onSaved, editTheme }: Props
 
         {/* ── Footer ── */}
         <div className="tc-footer">
-          <button className="tc-btn tc-btn--ghost" onClick={onClose}>
+          <button type="button" className="tc-btn tc-btn--ghost" onClick={onClose}>
             Cancel
           </button>
           <button
+            type="button"
             className="tc-btn tc-btn--primary"
             disabled={!name.trim() || saving}
             onClick={handleSave}

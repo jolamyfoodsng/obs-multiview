@@ -4,8 +4,8 @@
  * Browse built-in and custom themes, create new ones.
  */
 
-import { useState, useRef, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useRef, useMemo, useEffect } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useBible } from "../bibleStore";
 import { deleteCustomTheme } from "../bibleDb";
 import type { BibleTheme } from "../types";
@@ -13,6 +13,7 @@ import BibleThemeEditor from "../components/BibleThemeEditor";
 import Icon from "../../components/Icon";
 
 export default function BibleTemplatesPage() {
+  const location = useLocation();
   const navigate = useNavigate();
   const { state, dispatch, setTheme } = useBible();
   const [editingTheme, setEditingTheme] = useState<BibleTheme | null>(null);
@@ -28,6 +29,7 @@ export default function BibleTemplatesPage() {
   const builtinThemes = state.themes.filter((t) => t.source === "builtin");
   const customThemes = state.themes.filter((t) => t.source === "custom");
   const hiddenThemes = state.themes.filter((t) => t.hidden);
+  const routeState = location.state as { createNew?: boolean; editThemeId?: string } | null;
 
   // ── Colour-mode class (mirrors BibleHome) ──
   const effectiveColorMode = useMemo(() => {
@@ -78,6 +80,23 @@ export default function BibleTemplatesPage() {
     dispatch({ type: "DELETE_THEME", id: theme.id });
   };
 
+  useEffect(() => {
+    if (!routeState?.createNew && !routeState?.editThemeId) return;
+
+    if (routeState.editThemeId) {
+      const theme = state.themes.find((item) => item.id === routeState.editThemeId);
+      if (theme) {
+        setEditingTheme(theme);
+        setIsCreating(false);
+      }
+    } else if (routeState.createNew) {
+      setEditingTheme(null);
+      setIsCreating(true);
+    }
+
+    navigate(location.pathname, { replace: true, state: null });
+  }, [location.pathname, navigate, routeState, state.themes]);
+
   if (isCreating || editingTheme) {
     return (
       <BibleThemeEditor
@@ -97,12 +116,13 @@ export default function BibleTemplatesPage() {
   return (
     <div className={rootClassName}>
       <div className="bible-templates-header">
-        <button className="bible-templates-back-btn" onClick={handleCancel}>
+        <button type="button" className="bible-templates-back-btn" onClick={handleCancel}>
           <Icon name="arrow_back" size={20} />
           Back
         </button>
         <h1><Icon name="palette" size={20} />Bible Themes</h1>
         <button
+          type="button"
           className="bible-templates-create-btn"
           onClick={() => setIsCreating(true)}
         >

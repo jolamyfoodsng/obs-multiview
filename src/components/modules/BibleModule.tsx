@@ -1120,11 +1120,18 @@ export function BibleModule({
     setThemeContextMenu({ x: e.clientX, y: e.clientY, themeId });
   }, []);
 
-  const handleThemeEdit = useCallback((themeId: string) => {
+  const openThemeTemplates = useCallback((routeState?: { createNew?: boolean; editThemeId?: string }) => {
     setThemeContextMenu(null);
     setShowThemeModal(false);
-    navigate(templatesPath, { state: { editThemeId: themeId } });
+    setShowQuickSetup(false);
+    window.setTimeout(() => {
+      navigate(templatesPath, routeState ? { state: routeState } : undefined);
+    }, 0);
   }, [navigate, templatesPath]);
+
+  const handleThemeEdit = useCallback((themeId: string) => {
+    openThemeTemplates({ editThemeId: themeId });
+  }, [openThemeTemplates]);
 
   const handleThemeToggleHidden = useCallback((themeId: string) => {
     setThemeContextMenu(null);
@@ -2117,10 +2124,13 @@ export function BibleModule({
               )}
             </div>
             <div className="bible-modal-footer">
-              <button className="bible-modal-secondary" onClick={() => { setShowThemeModal(false); navigate(templatesPath); }}>
-                Edit Themes
+              <button type="button" className="bible-modal-secondary" onClick={() => openThemeTemplates({ createNew: true })}>
+                Create Theme
               </button>
-              <button className="bible-modal-done" onClick={() => setShowThemeModal(false)}>
+              <button type="button" className="bible-modal-secondary" onClick={() => openThemeTemplates()}>
+                Manage Themes
+              </button>
+              <button type="button" className="bible-modal-done" onClick={() => setShowThemeModal(false)}>
                 Done
               </button>
             </div>
@@ -2222,7 +2232,7 @@ export function BibleModule({
                 <div className="bible-setup-step-content">
                   <h4>Theme</h4>
                   <p>Choose a visual theme for your overlay</p>
-                  <button className="bible-setup-action" onClick={() => { setShowQuickSetup(false); navigate(templatesPath); }}>
+                  <button type="button" className="bible-setup-action" onClick={() => openThemeTemplates()}>
                     <Icon name="palette" size={20} />
                     Select Theme
                   </button>

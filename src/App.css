@@ -1,14 +1,3 @@
-/*
- * OBS Church Studio — Design System
- *
- * A refined, broadcast-grade design language for church production.
- * Warm undertones, subtle depth, professional without being cold.
- *
- * Font: Inter  •  Icons: Material Icons
- * Grid: 8px  •  Borders: 1px  •  Subtle depth via layered surfaces
- */
-
-/* ── Variables — Dark Mode (default) ── */
 :root {
   color-scheme: dark;
   /* Brand */
@@ -224,8 +213,7 @@ select[style] {
 /* ── Radius normalization ──
    Tightens the entire app onto a 4px corner system, including older module
    styles and inline style attributes that still carry larger hardcoded radii. */
-:where(
-  button,
+:where(button,
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]),
   select,
   textarea,
@@ -256,8 +244,7 @@ select[style] {
   [class*="preview"],
   [class*="shell"],
   [class*="box"],
-  [class*="badge"]
-) {
+  [class*="badge"]) {
   border-radius: 4px !important;
 }
 

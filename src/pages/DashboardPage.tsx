@@ -1,13 +1,3 @@
-/**
- * DashboardPage.tsx — Service Hub Dashboard
- *
- * Landing page:
- *   - Editorial hero with primary Service Hub CTA
- *   - Service module shortcuts
- *   - Quick configuration tools
- *   - OBS dock card + live status summary
- */
-
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { obsService } from "../services/obsService";
@@ -191,7 +181,7 @@ export default function DashboardPage() {
       <main className="dash-main">
         <div className="dash-glow" />
         <div className="dash-content">
-    
+
 
           <section className="dash-modules-grid" aria-label="Service modules">
             <button
@@ -211,7 +201,7 @@ export default function DashboardPage() {
               onClick={() => handleModuleNav("/hub?mode=live&tab=worship", "Worship", "music_note")}
             >
               <div className="dash-mod-icon dash-mod-icon--worship">
-                <Icon name="music_note" size={10} style={{width:'12px', height:'12px'}} />
+                <Icon name="music_note" size={10} style={{ width: '12px', height: '12px' }} />
               </div>
               <div className="dash-mod-info">
                 <h2>Start Song</h2>
@@ -311,35 +301,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
               </section>
-              <section className="dash-status-card">
-                <div className="dash-section-heading dash-section-heading--compact">
-                  <span className="dash-section-rule" />
-                  <h3>Hub Status</h3>
-                </div>
-                <div className="dash-status-list">
-                  <div className="dash-status-row">
-                    <span>Service State</span>
-                    <strong>{formatServiceStatus(serviceState.status)}</strong>
-                  </div>
-                  <div className="dash-status-row">
-                    <span>OBS Connection</span>
-                    <strong>{obsConnected ? "Connected" : "Disconnected"}</strong>
-                  </div>
-                  <div className="dash-status-row">
-                    <span>Render Time</span>
-                    <strong>{renderTimeLabel}</strong>
-                  </div>
-                </div>
-                <div className="dash-status-note">
-                  <div className="dash-status-note-icon">
-                    <Icon name={statusNotice.icon} size={16} />
-                  </div>
-                  <div>
-                    <h4>{statusNotice.title}</h4>
-                    <p>{statusNotice.body}</p>
-                  </div>
-                </div>
-              </section>
+
             </aside>
           </section>
         </div>
@@ -347,3 +309,6 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+
+
