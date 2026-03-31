@@ -1,45 +1,44 @@
 /**
  * DockPage.tsx — OBS Browser Dock Control Panel
  *
- * This page is loaded inside OBS's "Custom Browser Dock" feature.
- * It communicates with the main Tauri app via BroadcastChannel
- * (dockBridge/dockClient) for state sync and library data, while
- * overlay actions go straight to OBS through dockObsClient.
- *
- * URL: http://127.0.0.1:<overlay-port>/dock.html
- *   or in development: http://localhost:5173/dock
- *
- * Tabs:
- *   Speaker — select saved speaker profiles → lower third
- *   Bible   — book/chapter/verse picker → bible overlay
- *   Sermon  — sermon title + points/quotes → lower third
- *   Event   — event details → lower third
- *   Worship — song lyrics controller → worship overlay
+ * Pre-release production mode keeps the dock focused on Bible and Worship.
+ * Theme defaults come from the main app's Production Theme Settings page,
+ * while the dock remains the only live control surface for preview/program.
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { dockClient, type DockStateMessage } from "../services/dockBridge";
 import { dockObsClient, type DockObsStatus } from "./dockObsClient";
 import { DOCK_TABS, type DockTab, type DockStagedItem } from "./dockTypes";
-import DockSpeakerTab from "./tabs/DockSpeakerTab";
 import DockBibleTab from "./tabs/DockBibleTab";
-import DockSermonTab from "./tabs/DockSermonTab";
-import DockEventTab from "./tabs/DockEventTab";
-import DockWorshipTab from "./tabs/DockWorshipTab";
 import DockMediaTab from "./tabs/DockMediaTab";
-import DockMinistryTab from "./tabs/DockMinistryTab";
+import DockWorshipTab from "./tabs/DockWorshipTab";
 import { useAppTheme } from "../hooks/useAppTheme";
+import {
+  type DockProductionSettingsPayload,
+  getDefaultDockProductionSettings,
+  loadDockProductionSettings,
+} from "../services/productionSettings";
 import "./dock.css";
 import "./dock-theme.css";
 import Icon from "./DockIcon";
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
+function isDockProductionSettingsPayload(value: unknown): value is DockProductionSettingsPayload {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<DockProductionSettingsPayload>;
+  return Boolean(
+    candidate.bible &&
+    candidate.worship &&
+    candidate.bible.fullscreenTheme &&
+    candidate.bible.lowerThirdTheme &&
+    candidate.worship.fullscreenTheme &&
+    candidate.worship.lowerThirdTheme,
+  );
+}
 
 export default function DockPage() {
   const { effective, setTheme } = useAppTheme();
-  const [activeTab, setActiveTab] = useState<DockTab>("ministry");
+  const [activeTab, setActiveTab] = useState<DockTab>("bible");
   const [obsConnected, setObsConnected] = useState(false);
   const [obsError, setObsError] = useState("");
   const [staged, setStaged] = useState<DockStagedItem | null>(null);
@@ -49,32 +48,33 @@ export default function DockPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [obsUrlInput, setObsUrlInput] = useState("ws://localhost:4455");
   const [obsPwInput, setObsPwInput] = useState("");
+  const [productionSettings, setProductionSettings] = useState<DockProductionSettingsPayload>(
+    getDefaultDockProductionSettings(),
+  );
 
-  /** Synchronous guard to prevent double-click from firing the action twice */
   const sendingRef = useRef(false);
 
-  // ── Initialize dock client + direct OBS connection ──
   useEffect(() => {
-    // BroadcastChannel client (works if same browser process as main app)
-    dockClient.init();
+    void loadDockProductionSettings().then(setProductionSettings).catch(() => {});
+  }, []);
 
-    // Direct OBS WebSocket connection (works always)
+  useEffect(() => {
+    dockClient.init();
     dockObsClient.connect();
 
-    const unsubObs = dockObsClient.onStatusChange((s: DockObsStatus, err?: string) => {
-      setObsConnected(s === "connected");
-      setObsError(s === "error" ? (err || "Connection failed") : "");
-      if (s === "connected") {
+    const unsubObs = dockObsClient.onStatusChange((status: DockObsStatus, err?: string) => {
+      setObsConnected(status === "connected");
+      setObsError(status === "error" ? (err || "Connection failed") : "");
+
+      if (status === "connected") {
         setShowSettings(false);
-        // Recover live state from OBS on connect (handles app restart)
         dockObsClient.recoverLiveState().then((recovered) => {
-          // Only restore if nothing is currently staged by the user
           setStaged((current) => {
-            if (current) return current; // User already staged something — don't override
+            if (current) return current;
             if (recovered.bible) {
               setActiveTab("bible");
               return {
-                type: "bible" as const,
+                type: "bible",
                 label: recovered.bible.reference || "Bible Verse",
                 subtitle: recovered.bible.text || "",
                 data: {
@@ -91,7 +91,7 @@ export default function DockPage() {
             if (recovered.worship) {
               setActiveTab("worship");
               return {
-                type: "worship" as const,
+                type: "worship",
                 label: recovered.worship.sectionLabel || "Worship",
                 subtitle: recovered.worship.songTitle || "",
                 data: {
@@ -99,19 +99,6 @@ export default function DockPage() {
                   sectionLabel: recovered.worship.sectionLabel,
                   song: { title: recovered.worship.songTitle, artist: recovered.worship.artist },
                   overlayMode: recovered.worship.overlayMode,
-                  _recovered: true,
-                },
-              };
-            }
-            if (recovered.lowerThird) {
-              setActiveTab("ministry");
-              return {
-                type: "speaker" as const,
-                label: recovered.lowerThird.name,
-                subtitle: recovered.lowerThird.role,
-                data: {
-                  name: recovered.lowerThird.name,
-                  role: recovered.lowerThird.role,
                   _recovered: true,
                 },
               };
@@ -124,21 +111,23 @@ export default function DockPage() {
       }
     });
 
-    const unsub = dockClient.onState((msg: DockStateMessage) => {
+    const unsubState = dockClient.onState((msg: DockStateMessage) => {
       switch (msg.type) {
         case "state:pong":
           setAppConnected(true);
           break;
         case "state:obs-status":
-          // If we're already connected directly, don't override
           if (!dockObsClient.isConnected) {
             setObsConnected((msg.payload as { connected: boolean }).connected);
           }
           break;
         case "state:update": {
-          const s = msg.payload as Record<string, unknown>;
-          if (!dockObsClient.isConnected && typeof s.obsConnected === "boolean") {
-            setObsConnected(s.obsConnected);
+          const payload = msg.payload as Record<string, unknown>;
+          if (!dockObsClient.isConnected && typeof payload.obsConnected === "boolean") {
+            setObsConnected(payload.obsConnected);
+          }
+          if (isDockProductionSettingsPayload(payload.productionSettings)) {
+            setProductionSettings(payload.productionSettings);
           }
           setAppConnected(true);
           break;
@@ -146,177 +135,143 @@ export default function DockPage() {
       }
     });
 
-    // Periodically ping to check connection
-    const pingInterval = setInterval(() => {
+    const pingInterval = window.setInterval(() => {
       dockClient.sendCommand({ type: "ping", timestamp: Date.now() });
     }, 5000);
 
-    // Request initial state
     dockClient.sendCommand({ type: "request-state", timestamp: Date.now() });
 
     return () => {
-      unsub();
       unsubObs();
-      clearInterval(pingInterval);
+      unsubState();
+      window.clearInterval(pingInterval);
       dockObsClient.disconnect();
     };
   }, []);
 
-  // ── Stage handler (used by all tabs) ──
   const handleStage = useCallback((item: DockStagedItem | null) => {
     setStaged(item);
     setActionError("");
   }, []);
 
-  // ── Manual OBS connect ──
   const handleManualConnect = useCallback(async () => {
     setObsError("");
     await dockObsClient.connect(obsUrlInput, obsPwInput || undefined);
-  }, [obsUrlInput, obsPwInput]);
+  }, [obsPwInput, obsUrlInput]);
 
-  // ── Action: Send to Preview ──
   const handleSendPreview = useCallback(async () => {
     if (!staged || sendingRef.current) return;
     sendingRef.current = true;
     setActionError("");
     setSending(true);
+
     try {
       if (!dockObsClient.isConnected) {
         setActionError("Not connected to OBS. Click the status bar to configure.");
         setShowSettings(true);
         return;
       }
+
       if (staged.type === "bible") {
         const bibleData = staged.data as {
-          book: string; chapter: number; verse: number; translation: string;
-          theme?: string; verseText?: string; overlayMode?: "fullscreen" | "lower-third";
-          ltTheme?: import("./dockObsClient").DockLTThemeRef;
+          book: string;
+          chapter: number;
+          verse: number;
+          translation: string;
+          theme?: string;
+          verseText?: string;
+          overlayMode?: "fullscreen" | "lower-third";
           bibleThemeSettings?: Record<string, unknown>;
         };
         await dockObsClient.pushBible(bibleData, false);
       } else if (staged.type === "worship") {
-        const d = staged.data as Record<string, unknown>;
-        const song = d.song as { title: string; artist: string } | undefined;
+        const payload = staged.data as Record<string, unknown>;
+        const song = payload.song as { title: string; artist: string } | undefined;
         await dockObsClient.pushWorshipLyrics({
-          sectionText: (d.sectionText as string) ?? "",
-          sectionLabel: (d.sectionLabel as string) ?? staged.label ?? "",
+          sectionText: (payload.sectionText as string) ?? "",
+          sectionLabel: (payload.sectionLabel as string) ?? staged.label ?? "",
           songTitle: song?.title ?? "",
-          artist: (d.artist as string) ?? "",
-          overlayMode: (d.overlayMode as "fullscreen" | "lower-third") ?? "lower-third",
-          ltTheme: d.ltTheme as import("./dockObsClient").DockLTThemeRef | undefined,
-          bibleThemeSettings: d.bibleThemeSettings as Record<string, unknown> | undefined,
-        }, false);
-      } else if (staged.type === "speaker" || staged.type === "sermon" || staged.type === "event") {
-        const d = staged.data as Record<string, unknown>;
-        const pointObj = d.point as { text?: string } | undefined;
-        const pointText = typeof d.point === "string" ? d.point : (pointObj?.text ?? "");
-        await dockObsClient.pushLowerThird({
-          name: (d.name as string) ?? staged.label,
-          role: (d.role as string) ?? staged.subtitle ?? "",
-          title: (d.title as string) ?? pointText ?? "",
-          series: (d.series as string) ?? "",
-          speaker: (d.speaker as string) ?? "",
-          point: pointText,
-          date: (d.date as string) ?? "",
-          location: (d.location as string) ?? "",
-          description: (d.description as string) ?? "",
-          subtitle: (d.subtitle as string) ?? staged.subtitle ?? "",
-          ltTheme: d.ltTheme as import("./dockObsClient").DockLTThemeRef | undefined,
-          context: staged.type,
+          artist: (payload.artist as string) ?? "",
+          overlayMode: (payload.overlayMode as "fullscreen" | "lower-third") ?? "lower-third",
+          bibleThemeSettings: payload.bibleThemeSettings as Record<string, unknown> | undefined,
         }, false);
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error("[Dock] Send preview failed:", msg);
-      setActionError(msg);
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("[Dock] Send preview failed:", message);
+      setActionError(message);
     } finally {
       setSending(false);
       sendingRef.current = false;
     }
   }, [staged]);
 
-  // ── Action: Go Live ──
   const handleGoLive = useCallback(async () => {
     if (!staged || sendingRef.current) return;
     sendingRef.current = true;
     setActionError("");
     setSending(true);
+
     try {
       if (!dockObsClient.isConnected) {
         setActionError("Not connected to OBS. Click the status bar to configure.");
         setShowSettings(true);
         return;
       }
+
       if (staged.type === "bible") {
         const bibleData = staged.data as {
-          book: string; chapter: number; verse: number; translation: string;
-          theme?: string; verseText?: string; overlayMode?: "fullscreen" | "lower-third";
-          ltTheme?: import("./dockObsClient").DockLTThemeRef;
+          book: string;
+          chapter: number;
+          verse: number;
+          translation: string;
+          theme?: string;
+          verseText?: string;
+          overlayMode?: "fullscreen" | "lower-third";
           bibleThemeSettings?: Record<string, unknown>;
         };
         await dockObsClient.pushBible(bibleData, true);
       } else if (staged.type === "worship") {
-        const d = staged.data as Record<string, unknown>;
-        const song = d.song as { title: string; artist: string } | undefined;
+        const payload = staged.data as Record<string, unknown>;
+        const song = payload.song as { title: string; artist: string } | undefined;
         await dockObsClient.pushWorshipLyrics({
-          sectionText: (d.sectionText as string) ?? "",
-          sectionLabel: (d.sectionLabel as string) ?? staged.label ?? "",
+          sectionText: (payload.sectionText as string) ?? "",
+          sectionLabel: (payload.sectionLabel as string) ?? staged.label ?? "",
           songTitle: song?.title ?? "",
-          artist: (d.artist as string) ?? "",
-          overlayMode: (d.overlayMode as "fullscreen" | "lower-third") ?? "lower-third",
-          ltTheme: d.ltTheme as import("./dockObsClient").DockLTThemeRef | undefined,
-          bibleThemeSettings: d.bibleThemeSettings as Record<string, unknown> | undefined,
-        }, true);
-      } else if (staged.type === "speaker" || staged.type === "sermon" || staged.type === "event") {
-        const d = staged.data as Record<string, unknown>;
-        const pointObj = d.point as { text?: string } | undefined;
-        const pointText = typeof d.point === "string" ? d.point : (pointObj?.text ?? "");
-        await dockObsClient.pushLowerThird({
-          name: (d.name as string) ?? staged.label,
-          role: (d.role as string) ?? staged.subtitle ?? "",
-          title: (d.title as string) ?? pointText ?? "",
-          series: (d.series as string) ?? "",
-          speaker: (d.speaker as string) ?? "",
-          point: pointText,
-          date: (d.date as string) ?? "",
-          location: (d.location as string) ?? "",
-          description: (d.description as string) ?? "",
-          subtitle: (d.subtitle as string) ?? staged.subtitle ?? "",
-          ltTheme: d.ltTheme as import("./dockObsClient").DockLTThemeRef | undefined,
-          context: staged.type,
+          artist: (payload.artist as string) ?? "",
+          overlayMode: (payload.overlayMode as "fullscreen" | "lower-third") ?? "lower-third",
+          bibleThemeSettings: payload.bibleThemeSettings as Record<string, unknown> | undefined,
         }, true);
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error("[Dock] Go live failed:", msg);
-      setActionError(msg);
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("[Dock] Go live failed:", message);
+      setActionError(message);
     } finally {
       setSending(false);
       sendingRef.current = false;
     }
   }, [staged]);
 
-  // ── Action: Clear ──
   const handleClear = useCallback(async () => {
     if (!staged || sendingRef.current) return;
     sendingRef.current = true;
     setActionError("");
     setSending(true);
+
     try {
       if (dockObsClient.isConnected) {
         if (staged.type === "bible") {
           await dockObsClient.clearBible();
         } else if (staged.type === "worship") {
           await dockObsClient.clearWorshipLyrics();
-        } else if (staged.type === "speaker" || staged.type === "sermon" || staged.type === "event") {
-          await dockObsClient.clearLowerThirds();
         }
       }
       setStaged(null);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err);
-      console.error("[Dock] Clear failed:", msg);
-      setActionError(msg);
+      const message = err instanceof Error ? err.message : String(err);
+      console.error("[Dock] Clear failed:", message);
+      setActionError(message);
     } finally {
       setSending(false);
       sendingRef.current = false;
@@ -326,34 +281,28 @@ export default function DockPage() {
   const stagedSubtitleStyle =
     staged?.type === "bible" && staged.subtitle
       ? {
-        fontSize:
-          staged.subtitle.length > 260
-            ? "8px"
-            : staged.subtitle.length > 180
-              ? "8.5px"
-              : staged.subtitle.length > 120
-                ? "9px"
-                : "9.5px",
-        lineHeight: 1.45,
-        whiteSpace: "normal" as const,
-      }
+          fontSize:
+            staged.subtitle.length > 260
+              ? "8px"
+              : staged.subtitle.length > 180
+                ? "8.5px"
+                : staged.subtitle.length > 120
+                  ? "9px"
+                  : "9.5px",
+          lineHeight: 1.45,
+          whiteSpace: "normal" as const,
+        }
       : undefined;
+
+  const showStagedControls = activeTab !== "media";
 
   return (
     <div className="dock-root">
-      {/* ── Status bar (clickable to show settings) ── */}
-      <div className="dock-status-bar" onClick={() => setShowSettings((v) => !v)} style={{ cursor: "pointer" }}>
+      <div className="dock-status-bar" onClick={() => setShowSettings((value) => !value)} style={{ cursor: "pointer" }}>
         <div className="dock-status-bar__left">
-          <div
-            className={`dock-status-dot ${obsConnected ? "dock-status-dot--connected" : "dock-status-dot--disconnected"
-              }`}
-          />
-          <span className="dock-status-label">
-            {obsConnected ? "OBS Connected" : "OBS Disconnected"}
-          </span>
-          {!obsConnected && (
-            <Icon name="settings" size={10} style={{ opacity: 0.5, marginLeft: 2 }} />
-          )}
+          <div className={`dock-status-dot ${obsConnected ? "dock-status-dot--connected" : "dock-status-dot--disconnected"}`} />
+          <span className="dock-status-label">{obsConnected ? "OBS Connected" : "OBS Disconnected"}</span>
+          {!obsConnected && <Icon name="settings" size={10} style={{ opacity: 0.5, marginLeft: 2 }} />}
         </div>
         <div className="dock-status-bar__right">
           <div
@@ -389,7 +338,6 @@ export default function DockPage() {
         </div>
       </div>
 
-      {/* ── OBS Connection Settings Panel ── */}
       {showSettings && (
         <div className="dock-settings-panel">
           <div className="dock-section-label" style={{ marginTop: 0 }}>OBS WebSocket Connection</div>
@@ -404,20 +352,16 @@ export default function DockPage() {
               className="dock-input"
               placeholder="ws://localhost:4455"
               value={obsUrlInput}
-              onChange={(e) => setObsUrlInput(e.target.value)}
+              onChange={(event) => setObsUrlInput(event.target.value)}
             />
             <input
               className="dock-input"
               type="password"
               placeholder="Password (optional)"
               value={obsPwInput}
-              onChange={(e) => setObsPwInput(e.target.value)}
+              onChange={(event) => setObsPwInput(event.target.value)}
             />
-            <button
-              className="dock-btn dock-btn--preview"
-              onClick={handleManualConnect}
-              style={{ width: "100%" }}
-            >
+            <button className="dock-btn dock-btn--preview" onClick={handleManualConnect} style={{ width: "100%" }}>
               <Icon name="link" size={20} />
               {obsConnected ? "Reconnect" : "Connect"}
             </button>
@@ -428,7 +372,6 @@ export default function DockPage() {
         </div>
       )}
 
-      {/* ── Tab navigation ── */}
       <div className="dock-tabs">
         {DOCK_TABS.map((tab) => (
           <button
@@ -442,34 +385,30 @@ export default function DockPage() {
         ))}
       </div>
 
-      {/* ── Tab content (scrollable) ── */}
       <div className="dock-content">
-        {activeTab === "ministry" && (
-          <DockMinistryTab staged={staged} onStage={handleStage} />
-
-        )}
-        {activeTab === "speaker" && (
-          <DockSpeakerTab staged={staged} onStage={handleStage} />
-        )}
         {activeTab === "bible" && (
-          <DockBibleTab staged={staged} onStage={handleStage} />
-        )}
-        {activeTab === "sermon" && (
-          <DockSermonTab staged={staged} onStage={handleStage} />
-        )}
-        {activeTab === "event" && (
-          <DockEventTab staged={staged} onStage={handleStage} />
+          <DockBibleTab
+            staged={staged}
+            onStage={handleStage}
+            productionDefaults={productionSettings.bible}
+          />
         )}
         {activeTab === "worship" && (
-          <DockWorshipTab staged={staged} onStage={handleStage} />
+          <DockWorshipTab
+            staged={staged}
+            onStage={handleStage}
+            productionDefaults={productionSettings.worship}
+          />
         )}
         {activeTab === "media" && (
-          <DockMediaTab staged={staged} onStage={handleStage} />
+          <DockMediaTab
+            staged={staged}
+            onStage={handleStage}
+          />
         )}
       </div>
 
-      {/* ── Staged item (above footer) — hidden on Media tab ── */}
-      {staged && activeTab !== "media" && (
+      {showStagedControls && staged && (
         <div className="dock-staged">
           <div className="dock-staged__header">
             <span className="dock-staged__badge">
@@ -477,7 +416,6 @@ export default function DockPage() {
               Ready
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              {/* Show translation for Bible items */}
               {staged.type === "bible" && typeof (staged.data as Record<string, unknown>).translation === "string" && (
                 <span style={{ fontSize: 9, color: "var(--dock-text-dim)", fontWeight: 500 }}>
                   {(staged.data as Record<string, string>).translation}
@@ -494,7 +432,6 @@ export default function DockPage() {
         </div>
       )}
 
-      {/* ── Action error feedback ── */}
       {actionError && (
         <div className="dock-action-error">
           <Icon name="warning" size={14} />
@@ -508,8 +445,7 @@ export default function DockPage() {
         </div>
       )}
 
-      {/* ── Footer action buttons — hidden on Media tab (it has its own inline controls) ── */}
-      {activeTab !== "media" && (
+      {showStagedControls && (
         <div className="dock-footer">
           <button
             className="dock-btn dock-btn--preview"

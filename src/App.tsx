@@ -15,16 +15,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { OBSConnectGate } from "./components/OBSConnectGate";
 import { AppShell } from "./AppShell";
-import { MVDashboard } from "./multiview/pages/MVDashboard";
-import { MVEditor } from "./multiview/pages/MVEditor";
-import { MVSceneSync } from "./multiview/pages/MVSceneSync";
-import { MVTemplates } from "./multiview/pages/MVTemplates";
-import { MVObsThemes } from "./multiview/pages/MVObsThemes";
 import { MVSettings } from "./multiview/pages/MVSettings";
-import { BroadcastHome } from "./BroadcastHome";
-import BibleShell from "./bible/pages/BibleShell";
-import BibleTemplatesPage from "./bible/pages/BibleTemplatesPage";
-import BibleLive from "./bible/pages/BibleLive";
 import { BibleProvider } from "./bible/bibleStore";
 import { LowerThirdProvider } from "./lowerthirds/lowerThirdStore";
 import SplashScreen from "./components/SplashScreen";
@@ -35,19 +26,17 @@ import { migrateFromLegacyDatabases } from "./services/db";
 import { getSettings } from "./multiview/mvStore";
 import { applyBrandingSettingsToDom } from "./services/branding";
 import { useAppTheme } from "./hooks/useAppTheme";
-import ServiceHubPage from "./pages/ServiceHubPage";
-import DashboardPage from "./pages/DashboardPage";
-import QuickMergePage from "./pages/QuickMergePage";
 import DevDashboard from "./pages/DevDashboard";
 import { dockBridge } from "./services/dockBridge";
 import { initDockCommandHandler } from "./services/dockCommandHandler";
 import { obsService } from "./services/obsService";
 import { serviceStore as svcStore } from "./services/serviceStore";
 import { syncSongsToDock } from "./worship/worshipDb";
-import { syncMediaToDock } from "./library/libraryDb";
-import { syncSpeakersToDock, syncBrandingToDock } from "./multiview/mvStore";
-import { syncPlansToDock } from "./services/servicePlanDb";
+import { syncInstalledTranslationsToDock } from "./bible/bibleDb";
 import ResourcesPage from "./pages/ResourcesPage";
+import ProductionHomePage from "./pages/ProductionHomePage";
+import ProductionThemeSettingsPage from "./pages/ProductionThemeSettingsPage";
+import { buildDockProductionSettingsPayload, syncProductionSettingsToDock } from "./services/productionSettings";
 import "./App.css";
 import "./multiview/mv.css";
 import "./bible/bible.css";
@@ -82,13 +71,15 @@ function App() {
     // Handle state requests from the dock
     const unsubCmd = dockBridge.onCommand(async (cmd) => {
       if (cmd.type === "request-state") {
+        const productionSettings = await buildDockProductionSettingsPayload().catch(() => undefined);
         dockBridge.sendFullState({
           obsConnected: obsService.status === "connected",
           serviceStatus: svcStore.status,
+          productionSettings,
         });
       }
 
-      // Dock is requesting library data (songs + media) via BroadcastChannel
+      // Dock is requesting library data (songs) via BroadcastChannel
       if (cmd.type === "request-library-data") {
         try {
           const { getAllSongs } = await import("./worship/worshipDb");
@@ -100,18 +91,6 @@ function App() {
           });
         } catch (err) {
           console.warn("[App] Failed to send songs to dock:", err);
-        }
-
-        try {
-          const { getAllMedia } = await import("./library/libraryDb");
-          const media = getAllMedia();
-          dockBridge.sendState({
-            type: "state:media-data",
-            payload: media,
-            timestamp: Date.now(),
-          });
-        } catch (err) {
-          console.warn("[App] Failed to send media to dock:", err);
         }
       }
     });
@@ -160,16 +139,10 @@ function App() {
       console.warn("[App] Legacy DB migration failed (non-critical):", err);
     });
 
-    // Sync worship songs + speaker profiles to dock JSON files on startup.
-    // Ensures data added before the sync mechanism existed is available to the dock.
+    // Sync dock-first production data to dock JSON files on startup.
     syncSongsToDock().catch(() => {});
-    syncMediaToDock().catch(() => {});
-    const s2 = getSettings();
-    if (s2.pastorSpeakers?.length) {
-      syncSpeakersToDock(s2.pastorSpeakers).catch(() => {});
-    }
-    syncBrandingToDock(s2).catch(() => {});
-    syncPlansToDock().catch(() => {});
+    syncInstalledTranslationsToDock().catch(() => {});
+    syncProductionSettingsToDock().catch(() => {});
 
     // Rehydrate theme favorites from durable storage, then sync them to dock JSON.
     import("./services/favoriteThemes").then(({
@@ -274,43 +247,39 @@ function App() {
       {!splashVisible && !updateResult && (
         <OBSConnectGate>
           <LowerThirdProvider>
-          <Routes>
-            <Route element={<AppShell />}>
-              <Route index element={<DashboardPage />} />
-              <Route path="multiview" element={<MVDashboard />} />
-              <Route path="edit/:layoutId" element={<MVEditor />} />
-              <Route path="new" element={<MVEditor />} />
-              <Route path="scenes" element={<MVSceneSync />} />
-              <Route path="resources" element={<ResourcesPage />} />
-              <Route path="templates" element={<Navigate to="/resources" replace />} />
-              <Route path="templates/themes" element={<MVObsThemes />} />
-              <Route path="templates/studio" element={<MVTemplates />} />
-              <Route path="broadcast" element={<BroadcastHome />} />
-              <Route path="settings" element={<BibleProvider><MVSettings /></BibleProvider>} />
-              <Route path="library" element={<Navigate to="/resources" replace />} />
-              <Route path="hub" element={<ServiceHubPage />} />
-              <Route path="hub/quick-merge" element={<QuickMergePage />} />
-              <Route path="service-hub" element={<ServiceHubPage />} />
-              <Route path="service-control-hub" element={<ServiceHubPage />} />
-              <Route path="quick-merge" element={<Navigate to="/hub/quick-merge" replace />} />
+            <Routes>
+              <Route element={<AppShell />}>
+                <Route index element={<ProductionHomePage />} />
+                <Route path="resources" element={<BibleProvider><ResourcesPage /></BibleProvider>} />
+                <Route path="songs" element={<Navigate to="/resources?tab=worship" replace />} />
+                <Route path="bible-library" element={<Navigate to="/resources?tab=bible" replace />} />
+                <Route path="bible/translations" element={<Navigate to="/resources?tab=bible" replace />} />
+                <Route path="production/themes" element={<ProductionThemeSettingsPage />} />
+                <Route path="settings" element={<BibleProvider><MVSettings /></BibleProvider>} />
+                <Route path="library" element={<Navigate to="/resources" replace />} />
+                <Route path="templates" element={<Navigate to="/production/themes" replace />} />
+                <Route path="templates/*" element={<Navigate to="/production/themes" replace />} />
+                <Route path="hub" element={<Navigate to="/" replace />} />
+                <Route path="hub/*" element={<Navigate to="/" replace />} />
+                <Route path="service-hub" element={<Navigate to="/" replace />} />
+                <Route path="service-control-hub" element={<Navigate to="/" replace />} />
+                <Route path="quick-merge" element={<Navigate to="/" replace />} />
+                <Route path="broadcast" element={<Navigate to="/" replace />} />
+                <Route path="bible" element={<Navigate to="/settings" replace />} />
+                <Route path="bible/*" element={<Navigate to="/settings" replace />} />
+                <Route path="worship" element={<Navigate to="/resources" replace />} />
+                <Route path="lower-thirds" element={<Navigate to="/production/themes" replace />} />
+                <Route path="scenes" element={<Navigate to="/settings" replace />} />
+                <Route path="multiview" element={<Navigate to="/" replace />} />
+                <Route path="multiview/*" element={<Navigate to="/" replace />} />
+                <Route path="new" element={<Navigate to="/" replace />} />
+                <Route path="edit/:layoutId" element={<Navigate to="/" replace />} />
 
-              {/* Bible Module */}
-              <Route path="bible" element={<BibleShell />}>
-                <Route index element={<Navigate to="/hub?mode=live&tab=bible" replace />} />
-                <Route path="templates" element={<BibleTemplatesPage />} />
-                <Route path="live" element={<BibleLive />} />
+                {/* Developer Tools */}
+                <Route path="dev/db" element={<DevDashboard />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
               </Route>
-
-              {/* Worship Module */}
-              <Route path="worship" element={<Navigate to="/hub?mode=live&tab=worship" replace />} />
-
-              {/* Lower Thirds Module */}
-              <Route path="lower-thirds" element={<Navigate to="/hub?mode=live&tab=graphics" replace />} />
-
-              {/* Developer Tools */}
-              <Route path="dev/db" element={<DevDashboard />} />
-            </Route>
-          </Routes>
+            </Routes>
           </LowerThirdProvider>
         </OBSConnectGate>
       )}

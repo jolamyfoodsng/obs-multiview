@@ -108,10 +108,9 @@ function MenuDropdown({ def }: { def: MenuDropdownDef }) {
 }
 
 const NAV_ITEMS: ReadonlyArray<{ to: string; icon: string; label: string; end?: boolean }> = [
-  { to: "/", icon: "space_dashboard", label: "Dashboard", end: true },
-  { to: "/hub?mode=live", icon: "play_circle", label: "Service Hub", end: true },
-  { to: "/resources", icon: "auto_awesome_mosaic", label: "Resources" },
-  { to: "/hub/quick-merge", icon: "merge_type", label: "Quick Merge" },
+  { to: "/", icon: "home", label: "Production Home", end: true },
+  { to: "/resources", icon: "library_books", label: "Resources" },
+  { to: "/production/themes", icon: "palette", label: "Production Themes" },
   { to: "/settings", icon: "settings", label: "Settings" },
 ];
 
@@ -179,7 +178,7 @@ export function AppShell() {
       }
     }
     serviceStore.goLive();
-    navigate("/hub?mode=live");
+    navigate("/");
   }, [navigate]);
 
   const handleEndServiceConfirm = useCallback(() => {
@@ -216,7 +215,7 @@ export function AppShell() {
               <AppLogo alt="OBS Church Studio" />
             </div>
             {!isServiceActive && (
-              <span className="app-topnav-title">Service Hub</span>
+              <span className="app-topnav-title">Production Setup</span>
             )}
           </div>
 
@@ -251,24 +250,20 @@ export function AppShell() {
                   triggerLabel: "File",
                   triggerIcon: "folder_open",
                   items: [
-                    { label: "Dashboard", icon: "dashboard", shortcut: "⌘D", action: () => navigate("/") },
+                    { label: "Production Home", icon: "home", shortcut: "⌘D", action: () => navigate("/") },
                     { label: "Settings", icon: "settings", shortcut: "⌘,", action: () => navigate("/settings") },
                     { divider: true },
-                    { label: "Resources", icon: "auto_awesome_mosaic", shortcut: "⌘T", action: () => navigate("/resources") },
+                    { label: "Songs", icon: "music_note", shortcut: "⌘T", action: () => navigate("/resources") },
+                    { label: "Production Themes", icon: "palette", shortcut: "⌘⇧T", action: () => navigate("/production/themes") },
                   ],
                 }} />
                 <MenuDropdown def={{
                   triggerLabel: "New",
                   triggerIcon: "add",
                   items: [
-                    { label: "New Layout", icon: "grid_view", shortcut: "⌘N", action: () => navigate("/new") },
-                    { divider: true },
-                    { label: "Worship Set", icon: "music_note", shortcut: "⌘1", action: () => navigate("/hub?mode=live&tab=worship") },
-                    { label: "Bible / Scripture", icon: "menu_book", shortcut: "⌘2", action: () => navigate("/hub?mode=live&tab=bible") },
-                    { label: "Graphics", icon: "palette", shortcut: "⌘3", action: () => navigate("/hub?mode=live&tab=graphics") },
-                    { label: "Ticker", icon: "text_rotation_none", shortcut: "⌘4", action: () => navigate("/hub?mode=live&tab=ticker") },
-                    { divider: true },
-                    { label: "Quick Merge", icon: "merge_type", shortcut: "⌘5", action: () => navigate("/hub/quick-merge") },
+                    { label: "Theme Preset", icon: "palette", shortcut: "⌘N", action: () => navigate("/production/themes") },
+                    { label: "Song Entry", icon: "music_note", shortcut: "⌘1", action: () => navigate("/resources") },
+                    { label: "Bible Setup", icon: "menu_book", shortcut: "⌘2", action: () => navigate("/settings") },
                   ],
                 }} />
                 <button className="app-topnav-menu-item" role="menuitem" title="Keyboard shortcuts" onClick={() => setShowShortcuts(true)}>

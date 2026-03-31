@@ -9,7 +9,8 @@
 // Dock Tabs
 // ---------------------------------------------------------------------------
 
-export type DockTab = "speaker" | "bible" | "sermon" | "event" | "worship" | "media" | "ministry";
+export type DockTab = "bible" | "worship" | "media";
+export type DockStageType = DockTab | "speaker" | "sermon" | "event" | "media" | "ministry";
 
 export interface DockTabDef {
   id: DockTab;
@@ -18,7 +19,6 @@ export interface DockTabDef {
 }
 
 export const DOCK_TABS: DockTabDef[] = [
-  { id: "ministry", label: "Ministry", icon: "church" },
   { id: "bible", label: "Bible", icon: "menu_book" },
   { id: "worship", label: "Worship", icon: "music_note" },
   { id: "media", label: "Media", icon: "photo_library" },
@@ -111,7 +111,7 @@ export interface DockWorshipSection {
 // ---------------------------------------------------------------------------
 
 export interface DockStagedItem {
-  type: DockTab;
+  type: DockStageType;
   label: string;
   subtitle?: string;
   /** Additional data for the command */

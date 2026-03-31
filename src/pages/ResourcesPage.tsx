@@ -1,60 +1,121 @@
 /**
- * ResourcesPage.tsx — Unified Resources page
+ * ResourcesPage.tsx — Setup resources for the dock-first workflow
  *
- * Combines the Templates Library and Media Library into a single
- * page with top-level tabs.  Replaces the old separate /templates
- * and /library routes.
- *
- * Tabs:
- *   - Templates  → Theme & Template Library (TemplatesLibraryPage)
- *   - Library    → Media & Songs (LibraryPage)
- *
- * Persists the active tab to localStorage.
+ * Keeps Bible translations, worship songs, and media assets together so the
+ * main app remains the setup surface while the OBS Dock stays focused on live control.
  */
 
-import { useState, useEffect, useCallback } from "react";
-import TemplatesLibraryPage from "./TemplatesLibraryPage";
-import LibraryPage from "../library/LibraryPage";
+import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
+import BibleLibrary from "../bible/components/BibleLibrary";
+import { MediaTab } from "../library/MediaTab";
+import { SongsTab } from "../library/SongsTab";
 import Icon from "../components/Icon";
+import "../library/library.css";
 
-type ResourcesTab = "templates" | "library";
-const TAB_KEY = "resources-active-tab";
+type ResourceTab = "bible" | "worship" | "media";
+
+const TAB_KEY = "production-resources-active-tab";
+
+function parseTab(value: string | null): ResourceTab | null {
+  if (value === "bible" || value === "worship" || value === "media") {
+    return value;
+  }
+  return null;
+}
+
+const TAB_COPY: Record<ResourceTab, { title: string; subtitle: string; icon: string }> = {
+  bible: {
+    title: "Bible Resources",
+    subtitle: "Download translations like KJV and ASV or import custom XML Bibles for the OBS Dock.",
+    icon: "menu_book",
+  },
+  worship: {
+    title: "Worship Resources",
+    subtitle: "Manage the worship songs and lyrics that appear in the OBS Dock.",
+    icon: "music_note",
+  },
+  media: {
+    title: "Media Resources",
+    subtitle: "Manage videos, images, and backgrounds that the dock can send into OBS.",
+    icon: "perm_media",
+  },
+};
 
 export default function ResourcesPage() {
-  const [tab, setTab] = useState<ResourcesTab>(() => {
-    const saved = localStorage.getItem(TAB_KEY);
-    return saved === "library" ? "library" : "templates";
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = parseTab(searchParams.get("tab"));
+  const [tab, setTab] = useState<ResourceTab>(() => {
+    const saved = parseTab(localStorage.getItem(TAB_KEY));
+    return requestedTab ?? saved ?? "worship";
   });
+
+  useEffect(() => {
+    if (requestedTab && requestedTab !== tab) {
+      setTab(requestedTab);
+    }
+  }, [requestedTab, tab]);
 
   useEffect(() => {
     localStorage.setItem(TAB_KEY, tab);
   }, [tab]);
 
-  const handleTab = useCallback((t: ResourcesTab) => setTab(t), []);
+  const handleTab = useCallback((next: ResourceTab) => {
+    setTab(next);
+    setSearchParams({ tab: next }, { replace: true });
+  }, [setSearchParams]);
+
+  const copy = TAB_COPY[tab];
 
   return (
     <div className="resources-page">
-      {/* ── Tab bar ── */}
-      <div className="resources-tab-bar">
-        <button
-          className={`resources-tab-btn${tab === "templates" ? " is-active" : ""}`}
-          onClick={() => handleTab("templates")}
-        >
-          <Icon name="palette" size={18} />
-          Templates
-        </button>
-        <button
-          className={`resources-tab-btn${tab === "library" ? " is-active" : ""}`}
-          onClick={() => handleTab("library")}
-        >
-          <Icon name="video_library" size={18} />
-          Library
-        </button>
-      </div>
-
-      {/* ── Tab content ── */}
       <div className="resources-content">
-        {tab === "templates" ? <TemplatesLibraryPage /> : <LibraryPage />}
+        <div className="lib-page">
+          <div className="lib-header">
+            <div className="lib-header-left">
+              <h1 className="lib-title">{copy.title}</h1>
+              <p className="lib-subtitle">{copy.subtitle}</p>
+            </div>
+
+            <div className="lib-tab-switcher">
+              <button
+                className={`lib-tab-btn${tab === "bible" ? " is-active" : ""}`}
+                onClick={() => handleTab("bible")}
+              >
+                <Icon name="menu_book" size={18} />
+                Bible
+              </button>
+              <button
+                className={`lib-tab-btn${tab === "worship" ? " is-active" : ""}`}
+                onClick={() => handleTab("worship")}
+              >
+                <Icon name="music_note" size={18} />
+                Worship
+              </button>
+              <button
+                className={`lib-tab-btn${tab === "media" ? " is-active" : ""}`}
+                onClick={() => handleTab("media")}
+              >
+                <Icon name="perm_media" size={18} />
+                Media
+              </button>
+            </div>
+          </div>
+
+          {tab === "bible" && (
+            <div className="resources-embedded-panel" data-resource-tab="bible">
+              <BibleLibrary
+                open
+                onClose={() => {}}
+                mode="embedded"
+                closeOnUse={false}
+              />
+            </div>
+          )}
+
+          {tab === "worship" && <SongsTab />}
+          {tab === "media" && <MediaTab />}
+        </div>
       </div>
     </div>
   );
