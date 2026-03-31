@@ -9,6 +9,7 @@
 
 import { useState, useCallback, useEffect, useMemo, useRef, type ChangeEvent } from "react";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { Link } from "react-router-dom";
 import { CANVAS_PRESETS } from "../types";
 import * as db from "../mvStore";
 import {
@@ -1436,7 +1437,10 @@ export function MVSettings() {
             Sets the default Bible translation used when the app starts.
           </p>
           <p className="mv-settings-hint">
-            This stays synced with the Bible page translation. Click Save Bible Settings to apply updates.
+            This stays synced with the Bible page translation. Click Save Bible Settings to apply updates.{" "}
+            <Link className="mv-link" to="/resources?tab=bible">
+              Download or import more translations →
+            </Link>
           </p>
           <label className="mv-settings-field" style={{ maxWidth: 400 }}>
             <span className="mv-settings-field-label">Translation</span>

@@ -17,18 +17,19 @@ import { parseBibleSearch, type BibleSearchResult } from "../bibleSearchParser";
 import { BUILTIN_THEMES } from "../../bible/themes/builtinThemes";
 import type { BibleTheme } from "../../bible/types";
 import { dockObsClient } from "../dockObsClient";
-import DockBibleThemePicker from "../components/DockBibleThemePicker";
+import type { DockProductionModuleSettings } from "../../services/productionSettings";
 import Icon from "../DockIcon";
 
 interface Props {
   staged: DockStagedItem | null;
   onStage: (item: DockStagedItem | null) => void;
+  productionDefaults: DockProductionModuleSettings;
 }
 
 type BibleStep = "book" | "chapter" | "verse";
 type OverlayMode = "fullscreen" | "lower-third";
 
-export default function DockBibleTab({ staged: _staged, onStage }: Props) {
+export default function DockBibleTab({ staged: _staged, onStage, productionDefaults }: Props) {
   const [step, setStep] = useState<BibleStep>("book");
   const [testament, setTestament] = useState<"ot" | "nt">("ot");
   const [selectedBook, setSelectedBook] = useState<string | null>(null);
@@ -36,9 +37,13 @@ export default function DockBibleTab({ staged: _staged, onStage }: Props) {
   const [selectedVerse, setSelectedVerse] = useState<number | null>(null);
   const [translation, setTranslation] = useState("KJV");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedBibleTheme, setSelectedBibleTheme] = useState<BibleTheme>(BUILTIN_THEMES[0]);
-  const [selectedLowerThirdTheme, setSelectedLowerThirdTheme] = useState<BibleTheme>(BUILTIN_THEMES[0]);
-  const [overlayMode, setOverlayMode] = useState<OverlayMode>("fullscreen");
+  const [selectedBibleTheme, setSelectedBibleTheme] = useState<BibleTheme>(
+    productionDefaults.fullscreenTheme ?? BUILTIN_THEMES[0],
+  );
+  const [selectedLowerThirdTheme, setSelectedLowerThirdTheme] = useState<BibleTheme>(
+    productionDefaults.lowerThirdTheme ?? BUILTIN_THEMES[0],
+  );
+  const [overlayMode, setOverlayMode] = useState<OverlayMode>(productionDefaults.defaultMode);
   const [availableTranslations, setAvailableTranslations] = useState<Array<{ value: string; label: string }>>([
     { value: "KJV", label: "KJV" },
   ]);
@@ -49,6 +54,16 @@ export default function DockBibleTab({ staged: _staged, onStage }: Props) {
   const searchRef = useRef<HTMLDivElement>(null);
 
   const books = testament === "ot" ? OT_BOOKS : NT_BOOKS;
+
+  useEffect(() => {
+    setSelectedBibleTheme(productionDefaults.fullscreenTheme ?? BUILTIN_THEMES[0]);
+    setSelectedLowerThirdTheme(productionDefaults.lowerThirdTheme ?? BUILTIN_THEMES[0]);
+    setOverlayMode(productionDefaults.defaultMode);
+  }, [
+    productionDefaults.defaultMode,
+    productionDefaults.fullscreenTheme,
+    productionDefaults.lowerThirdTheme,
+  ]);
 
   useEffect(() => {
     let cancelled = false;
@@ -188,6 +203,41 @@ export default function DockBibleTab({ staged: _staged, onStage }: Props) {
       },
     });
   }, [overlayMode, selectedBook, selectedChapter, selectedVerse, _verseText, translation, selectedBibleTheme, selectedLowerThirdTheme, onStage]);
+
+  const prevThemeSignature = useRef(`${selectedBibleTheme.id}:${selectedLowerThirdTheme.id}`);
+  useEffect(() => {
+    const nextSignature = `${selectedBibleTheme.id}:${selectedLowerThirdTheme.id}`;
+    if (prevThemeSignature.current === nextSignature) return;
+    prevThemeSignature.current = nextSignature;
+
+    if (!selectedBook || !selectedChapter || !selectedVerse) return;
+
+    onStage({
+      type: "bible",
+      label: `${selectedBook} ${selectedChapter}:${selectedVerse}`,
+      subtitle: _verseText || `${selectedBook} ${selectedChapter}:${selectedVerse}`,
+      data: {
+        book: selectedBook,
+        chapter: selectedChapter,
+        verse: selectedVerse,
+        translation,
+        verseText: _verseText || `${selectedBook} ${selectedChapter}:${selectedVerse}`,
+        overlayMode,
+        theme: overlayMode === "fullscreen" ? selectedBibleTheme.id : selectedLowerThirdTheme.id,
+        bibleThemeSettings: overlayMode === "fullscreen" ? selectedBibleTheme.settings : selectedLowerThirdTheme.settings,
+      },
+    });
+  }, [
+    _verseText,
+    onStage,
+    overlayMode,
+    selectedBibleTheme,
+    selectedBook,
+    selectedChapter,
+    selectedLowerThirdTheme,
+    selectedVerse,
+    translation,
+  ]);
 
   // ── Smart search results ──
   const searchResults = useMemo<BibleSearchResult[]>(() => {
@@ -589,22 +639,17 @@ export default function DockBibleTab({ staged: _staged, onStage }: Props) {
         </button>
       </div>
 
-      {/* Theme selector — changes based on overlay mode */}
-      {overlayMode === "fullscreen" ? (
-        <DockBibleThemePicker
-          selectedThemeId={selectedBibleTheme.id}
-          onSelect={setSelectedBibleTheme}
-          label="Bible Fullscreen Theme"
-          templateType="fullscreen"
-        />
-      ) : (
-        <DockBibleThemePicker
-          selectedThemeId={selectedLowerThirdTheme.id}
-          onSelect={setSelectedLowerThirdTheme}
-          label="Bible Lower Third Theme"
-          templateType="lower-third"
-        />
-      )}
+      <div className="dock-section-label" style={{ marginTop: 10 }}>
+        Theme Default
+      </div>
+      <div className="dock-card" style={{ cursor: "default" }}>
+        <div className="dock-card__title">
+          {overlayMode === "fullscreen" ? selectedBibleTheme.name : selectedLowerThirdTheme.name}
+        </div>
+        <div className="dock-card__subtitle">
+          Managed in the app&apos;s Production Theme Settings page.
+        </div>
+      </div>
     </>
   );
 }

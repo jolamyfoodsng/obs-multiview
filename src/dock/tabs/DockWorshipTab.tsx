@@ -10,16 +10,17 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { DockStagedItem, DockWorshipSection } from "../dockTypes";
 import { dockObsClient } from "../dockObsClient";
-import DockBibleThemePicker from "../components/DockBibleThemePicker";
 import { BUILTIN_THEMES } from "../../bible/themes/builtinThemes";
 import type { BibleTheme } from "../../bible/types";
 import { dockClient } from "../../services/dockBridge";
+import type { DockProductionModuleSettings } from "../../services/productionSettings";
 import { generateSlides } from "../../worship/slideEngine";
 import Icon from "../DockIcon";
 
 interface Props {
   staged: DockStagedItem | null;
   onStage: (item: DockStagedItem | null) => void;
+  productionDefaults: DockProductionModuleSettings;
 }
 
 type OverlayMode = "fullscreen" | "lower-third";
@@ -47,16 +48,30 @@ function cleanWorshipSectionLabel(label: string): string {
   return /^verse\s+\d+$/i.test(normalized) ? "" : normalized;
 }
 
-export default function DockWorshipTab({ onStage }: Props) {
+export default function DockWorshipTab({ onStage, productionDefaults }: Props) {
   const [songs, setSongs] = useState<DockSong[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSong, setSelectedSong] = useState<DockSong | null>(null);
   const [liveIdx, setLiveIdx] = useState<number | null>(null);
   const [previewIdx, setPreviewIdx] = useState<number | null>(null);
-  const [selectedFSTheme, setSelectedFSTheme] = useState<BibleTheme>(BUILTIN_THEMES[0]);
-  const [selectedLTTheme, setSelectedLTTheme] = useState<BibleTheme>(BUILTIN_THEMES[0]);
-  const [overlayMode, setOverlayMode] = useState<OverlayMode>("lower-third");
+  const [selectedFSTheme, setSelectedFSTheme] = useState<BibleTheme>(
+    productionDefaults.fullscreenTheme ?? BUILTIN_THEMES[0],
+  );
+  const [selectedLTTheme, setSelectedLTTheme] = useState<BibleTheme>(
+    productionDefaults.lowerThirdTheme ?? BUILTIN_THEMES[0],
+  );
+  const [overlayMode, setOverlayMode] = useState<OverlayMode>(productionDefaults.defaultMode);
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    setSelectedFSTheme(productionDefaults.fullscreenTheme ?? BUILTIN_THEMES[0]);
+    setSelectedLTTheme(productionDefaults.lowerThirdTheme ?? BUILTIN_THEMES[0]);
+    setOverlayMode(productionDefaults.defaultMode);
+  }, [
+    productionDefaults.defaultMode,
+    productionDefaults.fullscreenTheme,
+    productionDefaults.lowerThirdTheme,
+  ]);
 
   // ── Song loading logic (reusable so we can refresh) ──
   const mapSongs = useCallback(
@@ -265,6 +280,41 @@ export default function DockWorshipTab({ onStage }: Props) {
     });
   }, [overlayMode, selectedSong, previewIdx, liveIdx, selectedLTTheme, selectedFSTheme, onStage]);
 
+  const prevThemeSignature = useRef(`${selectedFSTheme.id}:${selectedLTTheme.id}`);
+  useEffect(() => {
+    const nextSignature = `${selectedFSTheme.id}:${selectedLTTheme.id}`;
+    if (prevThemeSignature.current === nextSignature) return;
+    prevThemeSignature.current = nextSignature;
+
+    const idx = previewIdx ?? liveIdx;
+    if (!selectedSong || idx === null) return;
+    const section = selectedSong.sections[idx];
+    if (!section) return;
+    const displayLabel = cleanWorshipSectionLabel(section.label);
+
+    onStage({
+      type: "worship",
+      label: previewIdx !== null
+        ? (displayLabel || selectedSong.title)
+        : (displayLabel ? `${displayLabel} (LIVE)` : `${selectedSong.title} (LIVE)`),
+      subtitle: selectedSong.title,
+      data: {
+        song: selectedSong,
+        sectionIdx: idx,
+        artist: "",
+        sectionLabel: displayLabel,
+        sectionText: section.text,
+        overlayMode,
+        bibleThemeSettings: (
+          overlayMode === "fullscreen"
+            ? selectedFSTheme.settings
+            : selectedLTTheme.settings
+        ),
+        ...(liveIdx !== null && previewIdx === null ? { isLive: true } : {}),
+      },
+    });
+  }, [liveIdx, onStage, overlayMode, previewIdx, selectedFSTheme, selectedLTTheme, selectedSong]);
+
   const handleBackToSongList = useCallback(() => {
     setSelectedSong(null);
     setLiveIdx(null);
@@ -293,7 +343,7 @@ export default function DockWorshipTab({ onStage }: Props) {
             </div>
             <div className="dock-empty__text">
               {songs.length === 0
-                ? "Add songs in the app's Worship module."
+                ? "Add songs in the app's Song Library."
                 : `No songs match "${searchQuery}"`}
             </div>
           </div>
@@ -356,44 +406,15 @@ export default function DockWorshipTab({ onStage }: Props) {
         </button>
       </div>
 
-      {/* Theme selector — changes based on overlay mode */}
-      {overlayMode === "fullscreen" ? (
-        <DockBibleThemePicker
-          selectedThemeId={selectedFSTheme.id}
-          onSelect={setSelectedFSTheme}
-          label="Worship Fullscreen Theme"
-          templateType="fullscreen"
-        />
-      ) : (
-        <DockBibleThemePicker
-          selectedThemeId={selectedLTTheme.id}
-          onSelect={(theme) => {
-            setSelectedLTTheme(theme);
-            if (selectedSong && previewIdx !== null) {
-              const section = selectedSong.sections[previewIdx];
-              if (section) {
-                const displayLabel = cleanWorshipSectionLabel(section.label);
-                onStage({
-                  type: "worship",
-                  label: displayLabel || selectedSong.title,
-                  subtitle: selectedSong.title,
-                  data: {
-                    song: selectedSong,
-                    sectionIdx: previewIdx,
-                    artist: "",
-                    sectionLabel: displayLabel,
-                    sectionText: section.text,
-                    overlayMode,
-                    bibleThemeSettings: theme.settings,
-                  },
-                });
-              }
-            }
-          }}
-          label="Worship Lower Third Theme"
-          templateType="lower-third"
-        />
-      )}
+      <div className="dock-section-label" style={{ marginTop: 10 }}>Theme Default</div>
+      <div className="dock-card" style={{ cursor: "default" }}>
+        <div className="dock-card__title">
+          {overlayMode === "fullscreen" ? selectedFSTheme.name : selectedLTTheme.name}
+        </div>
+        <div className="dock-card__subtitle">
+          Managed in the app&apos;s Production Theme Settings page.
+        </div>
+      </div>
 
       {/* Song sections */}
       <div className="dock-section-label">Lyrics</div>

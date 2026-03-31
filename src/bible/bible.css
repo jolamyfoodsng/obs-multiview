@@ -3987,6 +3987,26 @@
   overflow: hidden;
   animation: blSlideUp 0.25s ease;
 }
+.bible-library-page-shell {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+.bible-library-modal--page {
+  width: 100%;
+  max-height: none;
+  min-height: 0;
+  height: 100%;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.18);
+}
+.bible-library-modal--embedded {
+  width: 100%;
+  max-height: none;
+  min-height: 0;
+  height: 100%;
+  animation: none;
+  box-shadow: none;
+}
 @keyframes blSlideUp {
   from { opacity: 0; transform: translateY(24px); }
   to { opacity: 1; transform: translateY(0); }
@@ -4023,6 +4043,25 @@
 }
 .bible-library-close:hover {
   background: var(--b-hover, rgba(255,255,255,0.08));
+  color: var(--b-text-1, #e0e0e0);
+}
+.bible-library-page-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: transparent;
+  border: 1px solid var(--b-border, #333);
+  border-radius: 10px;
+  color: var(--b-text-2, #888);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+.bible-library-page-back:hover {
+  background: var(--b-hover, rgba(255,255,255,0.08));
+  border-color: var(--b-accent, #7c6ff7);
   color: var(--b-text-1, #e0e0e0);
 }
 

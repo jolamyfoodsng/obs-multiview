@@ -44,6 +44,8 @@ interface BibleLibraryProps {
   onClose: () => void;
   /** Called after a new translation is installed or removed so the parent can refresh */
   onTranslationsChanged?: () => void;
+  mode?: "modal" | "page" | "embedded";
+  closeOnUse?: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -92,6 +94,8 @@ export default function BibleLibrary({
   open,
   onClose,
   onTranslationsChanged,
+  mode = "modal",
+  closeOnUse = true,
 }: BibleLibraryProps) {
   const [tab, setTab] = useState<Tab>("browse");
   const [query, setQuery] = useState("");
@@ -123,6 +127,8 @@ export default function BibleLibrary({
 
   const searchRef = useRef<HTMLInputElement>(null);
   const autoSearchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isPageMode = mode === "page";
+  const isEmbeddedMode = mode === "embedded";
 
   // ── Load installed translations ──
   const refreshInstalled = useCallback(async () => {
@@ -445,9 +451,11 @@ export default function BibleLibrary({
     async (abbr: string) => {
       dispatch({ type: "SET_TRANSLATION", translation: abbr });
       await saveBibleSettings({ defaultTranslation: abbr }).catch(console.error);
-      onClose();
+      if (closeOnUse) {
+        onClose();
+      }
     },
-    [dispatch, onClose]
+    [closeOnUse, dispatch, onClose]
   );
 
   // ── Confirm-delete flow ──
@@ -489,18 +497,27 @@ export default function BibleLibrary({
 
   if (!open) return null;
 
-  return (
-    <div className="bible-library-backdrop" onClick={onClose}>
-      <div className="bible-library-modal" onClick={(e) => e.stopPropagation()}>
+  const content = (
+    <div
+      className={`bible-library-modal${isPageMode ? " bible-library-modal--page" : ""}${isEmbeddedMode ? " bible-library-modal--embedded" : ""}`}
+      onClick={(e) => e.stopPropagation()}
+    >
         {/* ── Header ── */}
         <div className="bible-library-header">
           <h2>
             <Icon name="library_books" size={20} />
             Bible Library
           </h2>
-          <button className="bible-library-close" onClick={onClose}>
-            <Icon name="close" size={20} />
-          </button>
+          {isPageMode ? (
+            <button className="bible-library-page-back" onClick={onClose}>
+              <Icon name="arrow_back" size={18} />
+              Back to Settings
+            </button>
+          ) : isEmbeddedMode ? null : (
+            <button className="bible-library-close" onClick={onClose}>
+              <Icon name="close" size={20} />
+            </button>
+          )}
         </div>
 
         {/* ── Tabs ── */}
@@ -878,7 +895,20 @@ export default function BibleLibrary({
             </div>
           </div>
         )}
-      </div>
+    </div>
+  );
+
+  if (isPageMode) {
+    return <div className="bible-library-page-shell">{content}</div>;
+  }
+
+  if (isEmbeddedMode) {
+    return <div className="bible-library-page-shell">{content}</div>;
+  }
+
+  return (
+    <div className="bible-library-backdrop" onClick={onClose}>
+      {content}
     </div>
   );
 }
