@@ -484,6 +484,44 @@ class DockObsClient {
     return sceneNames.includes(trimmedSceneName);
   }
 
+  private async setCurrentPreviewScene(sceneName: string, attempts = 3): Promise<boolean> {
+    const trimmedSceneName = sceneName.trim();
+    if (!trimmedSceneName) return false;
+
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      try {
+        await this.call("SetCurrentPreviewScene", { sceneName: trimmedSceneName });
+      } catch (err) {
+        if (attempt === attempts - 1) {
+          console.warn(`[DockOBS] Failed to set OBS Preview to "${trimmedSceneName}":`, err);
+          return false;
+        }
+      }
+
+      try {
+        await new Promise((resolve) => setTimeout(resolve, 120));
+        const resp = await this.call("GetCurrentPreviewScene") as {
+          currentPreviewSceneName?: string;
+          sceneName?: string;
+        };
+        const currentPreviewSceneName = (
+          resp.currentPreviewSceneName ||
+          resp.sceneName ||
+          ""
+        ).trim();
+        if (currentPreviewSceneName === trimmedSceneName) {
+          return true;
+        }
+      } catch {
+        // Retry below.
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 120));
+    }
+
+    return false;
+  }
+
   private async normalizePreviewTargetScene(previewSceneName: string): Promise<string> {
     const trimmedPreviewSceneName = previewSceneName.trim();
     if (!trimmedPreviewSceneName) return "";
@@ -530,11 +568,11 @@ class DockObsClient {
       return trimmedPreviewSceneName;
     }
 
-    try {
-      await this.call("SetCurrentPreviewScene", { sceneName: fallbackSceneName });
+    const restored = await this.setCurrentPreviewScene(fallbackSceneName);
+    if (restored) {
       console.log(`[DockOBS] Restored OBS Preview from managed scene "${trimmedPreviewSceneName}" to "${fallbackSceneName}"`);
-    } catch (err) {
-      console.warn(`[DockOBS] Failed to restore OBS Preview to "${fallbackSceneName}":`, err);
+    } else {
+      console.warn(`[DockOBS] OBS Preview may still be on "${trimmedPreviewSceneName}" after restore attempt to "${fallbackSceneName}"`);
     }
 
     this.rememberUserScene(fallbackSceneName, false);
@@ -641,9 +679,7 @@ class DockObsClient {
     if (programSceneName.endsWith(DOCK_PREVIEW_STAGE_SUFFIX)) {
       const baseSceneName = normalizeDockStageBaseScene(programSceneName);
       if (baseSceneName && baseSceneName !== programSceneName) {
-        try {
-          await this.call("SetCurrentPreviewScene", { sceneName: baseSceneName });
-        } catch { /* ignore */ }
+        await this.setCurrentPreviewScene(baseSceneName);
         this.rememberUserScene(baseSceneName, false);
         return baseSceneName;
       }
@@ -652,9 +688,7 @@ class DockObsClient {
 
     const stagingSceneName = this.getPreviewStagingSceneName(programSceneName);
     await this.syncPreviewStagingScene(programSceneName, stagingSceneName);
-    try {
-      await this.call("SetCurrentPreviewScene", { sceneName: stagingSceneName });
-    } catch { /* ignore */ }
+    await this.setCurrentPreviewScene(stagingSceneName);
     return stagingSceneName;
   }
 
@@ -1848,7 +1882,7 @@ class DockObsClient {
     // Preview is a separate scene). When Studio Mode is off and
     // live=false the target IS Program — we just pre-load the URL but
     // keep the source hidden so it doesn't appear on air.
-    const shouldEnable = live || studioMode;
+    const shouldEnable = live || (!live && (studioMode || sceneName !== target.sceneName));
 
     const ref = `${data.book} ${data.chapter}:${data.verse}`;
     const mode = data.overlayMode ?? "fullscreen";
@@ -1984,6 +2018,24 @@ class DockObsClient {
       await this.setBrowserSourceUrl(resources.bibleSource, url, modeChanged, themeCss || undefined);
     }
 
+    if (!live) {
+      if (mode === "fullscreen") {
+        await this.ensureSceneSourceInTarget(sceneName, resources.bibleScene, true);
+        await this.ensureFullscreenTargetBg(
+          sceneName,
+          resources.bibleScene,
+          data.bibleThemeSettings as Record<string, unknown> | null,
+          true,
+          resources,
+        );
+      } else if (data.bibleThemeSettings) {
+        await this.ensureSceneSourceInTarget(sceneName, resources.bibleScene, true);
+      } else {
+        await this.ensureOverlaySource(sceneName, resources.bibleSource, undefined, undefined, true);
+      }
+      await this.setCurrentPreviewScene(sceneName);
+    }
+
     console.log(`[DockOBS] Bible "${ref}" (${mode}) → scene "${sceneName}" (${live ? "Program" : "Preview"})`);
   }
 
@@ -2057,7 +2109,7 @@ class DockObsClient {
       sceneName = await this.ensurePreviewTargetScene(sceneName);
     }
 
-    const shouldEnable = live || studioMode;
+    const shouldEnable = live || (!live && (studioMode || sceneName !== target.sceneName));
 
     // Clear all OTHER overlays first so previous overlay doesn't persist
     await this.clearAllOverlays(resources.ltSource, sceneName, resources);
@@ -2309,7 +2361,7 @@ class DockObsClient {
       sceneName = await this.ensurePreviewTargetScene(sceneName);
     }
 
-    const shouldEnable = live || studioMode;
+    const shouldEnable = live || (!live && (studioMode || sceneName !== target.sceneName));
 
     const mode = data.overlayMode ?? "lower-third";
     const prevMode = this._lastOverlayMode[resources.worshipSource];
@@ -2565,7 +2617,7 @@ class DockObsClient {
       sceneName = await this.ensurePreviewTargetScene(sceneName);
     }
 
-    const shouldEnable = live || studioMode;
+    const shouldEnable = live || (!live && (studioMode || sceneName !== target.sceneName));
 
     // Clear all OTHER overlays first so previous overlay doesn't persist
     await this.clearAllOverlays(resources.tickerSource, sceneName, resources);
