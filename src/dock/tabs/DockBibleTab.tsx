@@ -173,6 +173,7 @@ export default function DockBibleTab({ staged, onStage, productionDefaults }: Pr
         bibleThemeSettings: (
           overlayMode === "fullscreen" ? selectedBibleTheme.settings : selectedLowerThirdTheme.settings
         ) as unknown as Record<string, unknown>,
+        _dockLive: Boolean(options?.sendToProgram),
       };
 
       onStage({
@@ -297,16 +298,17 @@ export default function DockBibleTab({ staged, onStage, productionDefaults }: Pr
 
   // ── Pick a search result ──
   const handlePickResult = useCallback(
-    async (result: BibleSearchResult, options?: { sendToPreview?: boolean }) => {
-      const sendToPreview = options?.sendToPreview ?? false;
+    async (result: BibleSearchResult, options?: { sendToPreview?: boolean; sendToProgram?: boolean }) => {
+      const sendToProgram = options?.sendToProgram ?? isProgramLive;
+      const sendToPreview = !sendToProgram && (options?.sendToPreview ?? false);
       setSearchQuery("");
       setShowDropdown(false);
       setActiveIdx(-1);
 
       if (result.chapter !== null && result.verse !== null) {
         await stageVerse(result.book, result.chapter, result.verse, {
-          sendToProgram: isProgramLive,
-          sendToPreview: !isProgramLive && sendToPreview,
+          sendToProgram,
+          sendToPreview,
         });
       } else if (result.chapter !== null) {
         // Book + chapter — go to verse picker
@@ -340,7 +342,7 @@ export default function DockBibleTab({ staged, onStage, productionDefaults }: Pr
         e.preventDefault();
         const picked = searchResults[activeIdx >= 0 ? activeIdx : 0];
         if (picked) {
-          handlePickResult(picked, { sendToPreview: true });
+          void handlePickResult(picked, { sendToProgram: true });
         }
       } else if (e.key === "Escape") {
         setShowDropdown(false);
@@ -378,11 +380,30 @@ export default function DockBibleTab({ staged, onStage, productionDefaults }: Pr
     async (v: number) => {
       if (!selectedBook || !selectedChapter) return;
       await stageVerse(selectedBook, selectedChapter, v, {
-        sendToProgram: isProgramLive,
-        sendToPreview: !isProgramLive,
+        sendToProgram: true,
       });
     },
-    [selectedBook, selectedChapter, stageVerse, isProgramLive]
+    [selectedBook, selectedChapter, stageVerse]
+  );
+
+  const handlePreviewVerse = useCallback(
+    async (v: number) => {
+      if (!selectedBook || !selectedChapter) return;
+      await stageVerse(selectedBook, selectedChapter, v, {
+        sendToPreview: true,
+      });
+    },
+    [selectedBook, selectedChapter, stageVerse],
+  );
+
+  const handleProgramVerse = useCallback(
+    async (v: number) => {
+      if (!selectedBook || !selectedChapter) return;
+      await stageVerse(selectedBook, selectedChapter, v, {
+        sendToProgram: true,
+      });
+    },
+    [selectedBook, selectedChapter, stageVerse],
   );
 
   const goBack = useCallback(() => {
@@ -445,6 +466,13 @@ export default function DockBibleTab({ staged, onStage, productionDefaults }: Pr
     [isProgramLive, selectedBook, selectedChapter, selectedVerse, stageVerse, translation, verseCount],
   );
 
+  const sendSelectedVerseToProgram = useCallback(async () => {
+    if (!selectedBook || !selectedChapter || !selectedVerse) return;
+    await stageVerse(selectedBook, selectedChapter, selectedVerse, {
+      sendToProgram: true,
+    });
+  }, [selectedBook, selectedChapter, selectedVerse, stageVerse]);
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target;
@@ -463,12 +491,15 @@ export default function DockBibleTab({ staged, onStage, productionDefaults }: Pr
       } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
         event.preventDefault();
         void navigateVerse(-1);
+      } else if (event.key === "Enter" && selectedVerse !== null) {
+        event.preventDefault();
+        void sendSelectedVerseToProgram();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [navigateVerse, selectedBook, selectedChapter, step]);
+  }, [navigateVerse, selectedBook, selectedChapter, selectedVerse, sendSelectedVerseToProgram, step]);
 
   return (
     <>
@@ -648,15 +679,43 @@ export default function DockBibleTab({ staged, onStage, productionDefaults }: Pr
           </div>
           <div className="dock-numpad">
             {Array.from({ length: verseCount }, (_, i) => i + 1).map((v) => (
-              <button
+              <div
                 key={v}
-                className={`dock-numpad-btn${selectedVerse === v ? " dock-numpad-btn--active" : ""}`}
-                onClick={() => handleSelectVerse(v)}
-                onDoubleClick={() => handleDoubleClickVerse(v)}
-                title="Click to stage, double-click to send to preview"
+                className={`dock-verse-item${selectedVerse === v ? " dock-verse-item--active" : ""}`}
               >
-                {v}
-              </button>
+                <button
+                  className={`dock-numpad-btn${selectedVerse === v ? " dock-numpad-btn--active" : ""}`}
+                  onClick={() => handleSelectVerse(v)}
+                  onDoubleClick={() => handleDoubleClickVerse(v)}
+                  title="Click to stage, double-click to send to Program"
+                >
+                  {v}
+                </button>
+                <div className="dock-hover-actions dock-hover-actions--verse">
+                  <button
+                    type="button"
+                    className="dock-hover-actions__btn dock-hover-actions__btn--preview"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void handlePreviewVerse(v);
+                    }}
+                    title={`Send ${selectedBook} ${selectedChapter}:${v} to Preview`}
+                  >
+                    <Icon name="preview" size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    className="dock-hover-actions__btn dock-hover-actions__btn--program"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      void handleProgramVerse(v);
+                    }}
+                    title={`Send ${selectedBook} ${selectedChapter}:${v} to Program`}
+                  >
+                    <Icon name="cast" size={14} />
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
         </>

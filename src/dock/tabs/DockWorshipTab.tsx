@@ -167,7 +167,7 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
             ? selectedFSTheme.settings
             : selectedLTTheme.settings
         ),
-        ...(live ? { isLive: true } : {}),
+        _dockLive: live,
       };
 
     return {
@@ -259,18 +259,30 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
     if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
   }, []);
 
+  const getActiveSectionIndex = useCallback(() => {
+    if (!selectedSong || selectedSong.sections.length === 0) return null;
+    return (isProgramLive ? liveIdx : previewIdx) ?? (liveIdx ?? previewIdx ?? 0);
+  }, [isProgramLive, liveIdx, previewIdx, selectedSong]);
+
   const navigateSection = useCallback(
     async (delta: 1 | -1) => {
       if (!selectedSong || selectedSong.sections.length === 0) return;
 
-      const currentIdx = (isProgramLive ? liveIdx : previewIdx) ?? (liveIdx ?? previewIdx ?? 0);
+      const currentIdx = getActiveSectionIndex();
+      if (currentIdx === null) return;
       const nextIdx = Math.max(0, Math.min(selectedSong.sections.length - 1, currentIdx + delta));
       if (nextIdx === currentIdx) return;
 
       await pushSection(nextIdx, isProgramLive);
     },
-    [isProgramLive, liveIdx, previewIdx, pushSection, selectedSong],
+    [getActiveSectionIndex, isProgramLive, pushSection, selectedSong],
   );
+
+  const sendCurrentSectionToProgram = useCallback(async () => {
+    const currentIdx = getActiveSectionIndex();
+    if (currentIdx === null) return;
+    await pushSection(currentIdx, true);
+  }, [getActiveSectionIndex, pushSection]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -290,12 +302,15 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
       } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
         event.preventDefault();
         void navigateSection(-1);
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        void sendCurrentSectionToProgram();
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [navigateSection, selectedSong]);
+  }, [navigateSection, selectedSong, sendCurrentSectionToProgram]);
 
   const handleClearLyrics = useCallback(() => {
     setLiveIdx(null);
@@ -339,7 +354,7 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
             ? selectedFSTheme.settings
             : selectedLTTheme.settings
         ),
-        ...(liveIdx !== null && previewIdx === null ? { isLive: true } : {}),
+        _dockLive: liveIdx !== null && previewIdx === null,
       },
     });
     if (isProgramLive) {
@@ -390,7 +405,7 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
             ? selectedFSTheme.settings
             : selectedLTTheme.settings
         ),
-        ...(liveIdx !== null && previewIdx === null ? { isLive: true } : {}),
+        _dockLive: liveIdx !== null && previewIdx === null,
       },
     });
     if (isProgramLive) {
@@ -562,15 +577,41 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
           >
             <div className="dock-lyric-card__header">
               {displayLabel ? <span className="dock-lyric-card__label">{displayLabel}</span> : <span />}
-              {liveIdx === idx && (
-                <span className="dock-lyric-badge dock-lyric-badge--live">
-                  <Icon name="fiber_manual_record" size={8} />
-                  Live
-                </span>
-              )}
-              {previewIdx === idx && liveIdx !== idx && (
-                <span className="dock-lyric-badge dock-lyric-badge--preview">Preview</span>
-              )}
+              <div className="dock-lyric-card__meta">
+                {liveIdx === idx && (
+                  <span className="dock-lyric-badge dock-lyric-badge--live">
+                    <Icon name="fiber_manual_record" size={8} />
+                    Live
+                  </span>
+                )}
+                {previewIdx === idx && liveIdx !== idx && (
+                  <span className="dock-lyric-badge dock-lyric-badge--preview">Preview</span>
+                )}
+              </div>
+            </div>
+            <div className="dock-hover-actions dock-hover-actions--card">
+              <button
+                type="button"
+                className="dock-hover-actions__btn dock-hover-actions__btn--preview"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void pushSection(idx, false);
+                }}
+                title="Send section to Preview"
+              >
+                <Icon name="preview" size={14} />
+              </button>
+              <button
+                type="button"
+                className="dock-hover-actions__btn dock-hover-actions__btn--program"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void pushSection(idx, true);
+                }}
+                title="Send section to Program"
+              >
+                <Icon name="cast" size={14} />
+              </button>
             </div>
             <div className="dock-lyric-card__text">{section.text}</div>
           </div>

@@ -430,6 +430,14 @@
   gap: 4px;
 }
 
+.dock-verse-item {
+  position: relative;
+}
+
+.dock-verse-item .dock-numpad-btn {
+  width: 100%;
+}
+
 .dock-numpad-btn {
   padding:  3px;
   border-radius: 4px;
@@ -451,6 +459,60 @@
   background: var(--dock-accent);
   color: #fff;
   border-color: var(--dock-accent);
+}
+
+.dock-hover-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-2px);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.dock-hover-actions__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: 1px solid var(--dock-border);
+  background: rgba(17, 18, 24, 0.92);
+  color: var(--dock-text);
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+.dock-hover-actions__btn:hover {
+  border-color: transparent;
+}
+
+.dock-hover-actions__btn--preview:hover {
+  background: var(--dock-accent);
+  color: #fff;
+}
+
+.dock-hover-actions__btn--program:hover {
+  background: var(--dock-green);
+  color: #09110d;
+}
+
+.dock-verse-item .dock-hover-actions {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+}
+
+.dock-verse-item:hover .dock-hover-actions,
+.dock-verse-item:focus-within .dock-hover-actions,
+.dock-lyric-card:hover .dock-hover-actions,
+.dock-lyric-card:focus-within .dock-hover-actions {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
 }
 
 /* ── Preview card ── */
@@ -827,12 +889,19 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 4px;
+  padding-right: 72px;
 }
 
 .dock-lyric-card__label {
   font-weight: 600;
   font-size: 11px;
   color: var(--dock-text);
+}
+
+.dock-lyric-card__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .dock-lyric-badge {
@@ -866,6 +935,12 @@
   line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.dock-hover-actions--card {
+  position: absolute;
+  top: 6px;
+  right: 8px;
 }
 
 /* ── Sermon points list ── */

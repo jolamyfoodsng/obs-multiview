@@ -6,7 +6,7 @@
  * while the dock remains the only live control surface for preview/program.
  */
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { dockClient, type DockStateMessage } from "../services/dockBridge";
 import { dockObsClient, type DockObsStatus } from "./dockObsClient";
 import { DOCK_TABS, type DockTab, type DockStagedItem } from "./dockTypes";
@@ -43,16 +43,12 @@ export default function DockPage() {
   const [obsError, setObsError] = useState("");
   const [staged, setStaged] = useState<DockStagedItem | null>(null);
   const [appConnected, setAppConnected] = useState(false);
-  const [sending, setSending] = useState(false);
-  const [actionError, setActionError] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [obsUrlInput, setObsUrlInput] = useState("ws://localhost:4455");
   const [obsPwInput, setObsPwInput] = useState("");
   const [productionSettings, setProductionSettings] = useState<DockProductionSettingsPayload>(
     getDefaultDockProductionSettings(),
   );
-
-  const sendingRef = useRef(false);
 
   useEffect(() => {
     void loadDockProductionSettings().then(setProductionSettings).catch(() => {});
@@ -153,161 +149,12 @@ export default function DockPage() {
 
   const handleStage = useCallback((item: DockStagedItem | null) => {
     setStaged(item);
-    setActionError("");
   }, []);
 
   const handleManualConnect = useCallback(async () => {
     setObsError("");
     await dockObsClient.connect(obsUrlInput, obsPwInput || undefined);
   }, [obsPwInput, obsUrlInput]);
-
-  const handleSendPreview = useCallback(async () => {
-    if (!staged || sendingRef.current) return;
-    sendingRef.current = true;
-    setActionError("");
-    setSending(true);
-
-    try {
-      if (!dockObsClient.isConnected) {
-        setActionError("Not connected to OBS. Click the status bar to configure.");
-        setShowSettings(true);
-        return;
-      }
-
-      if (staged.type === "bible") {
-        const bibleData = staged.data as {
-          book: string;
-          chapter: number;
-          verse: number;
-          translation: string;
-          theme?: string;
-          verseText?: string;
-          overlayMode?: "fullscreen" | "lower-third";
-          bibleThemeSettings?: Record<string, unknown>;
-        };
-        await dockObsClient.pushBible(bibleData, false);
-      } else if (staged.type === "worship") {
-        const payload = staged.data as Record<string, unknown>;
-        const song = payload.song as { title: string; artist: string } | undefined;
-        await dockObsClient.pushWorshipLyrics({
-          sectionText: (payload.sectionText as string) ?? "",
-          sectionLabel: (payload.sectionLabel as string) ?? staged.label ?? "",
-          songTitle: song?.title ?? "",
-          artist: (payload.artist as string) ?? "",
-          overlayMode: (payload.overlayMode as "fullscreen" | "lower-third") ?? "lower-third",
-          bibleThemeSettings: payload.bibleThemeSettings as Record<string, unknown> | undefined,
-        }, false);
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error("[Dock] Send preview failed:", message);
-      setActionError(message);
-    } finally {
-      setSending(false);
-      sendingRef.current = false;
-    }
-  }, [staged]);
-
-  const handleGoLive = useCallback(async () => {
-    if (!staged || sendingRef.current) return;
-    sendingRef.current = true;
-    setActionError("");
-    setSending(true);
-
-    try {
-      if (!dockObsClient.isConnected) {
-        setActionError("Not connected to OBS. Click the status bar to configure.");
-        setShowSettings(true);
-        return;
-      }
-
-      if (staged.type === "bible") {
-        const bibleData = staged.data as {
-          book: string;
-          chapter: number;
-          verse: number;
-          translation: string;
-          theme?: string;
-          verseText?: string;
-          overlayMode?: "fullscreen" | "lower-third";
-          bibleThemeSettings?: Record<string, unknown>;
-        };
-        await dockObsClient.pushBible(bibleData, true);
-      } else if (staged.type === "worship") {
-        const payload = staged.data as Record<string, unknown>;
-        const song = payload.song as { title: string; artist: string } | undefined;
-        await dockObsClient.pushWorshipLyrics({
-          sectionText: (payload.sectionText as string) ?? "",
-          sectionLabel: (payload.sectionLabel as string) ?? staged.label ?? "",
-          songTitle: song?.title ?? "",
-          artist: (payload.artist as string) ?? "",
-          overlayMode: (payload.overlayMode as "fullscreen" | "lower-third") ?? "lower-third",
-          bibleThemeSettings: payload.bibleThemeSettings as Record<string, unknown> | undefined,
-        }, true);
-      }
-
-      setStaged((current) => {
-        if (!current) return current;
-        return {
-          ...current,
-          data: {
-            ...(current.data as Record<string, unknown>),
-            _dockLive: true,
-          },
-        };
-      });
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error("[Dock] Go live failed:", message);
-      setActionError(message);
-    } finally {
-      setSending(false);
-      sendingRef.current = false;
-    }
-  }, [staged]);
-
-  const handleClear = useCallback(async () => {
-    if (!staged || sendingRef.current) return;
-    sendingRef.current = true;
-    setActionError("");
-    setSending(true);
-
-    try {
-      if (dockObsClient.isConnected) {
-        if (staged.type === "bible") {
-          await dockObsClient.clearBible();
-        } else if (staged.type === "worship") {
-          await dockObsClient.clearWorshipLyrics();
-        }
-      }
-      setStaged(null);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      console.error("[Dock] Clear failed:", message);
-      setActionError(message);
-    } finally {
-      setSending(false);
-      sendingRef.current = false;
-    }
-  }, [staged]);
-
-  const stagedSubtitleStyle =
-    staged?.type === "bible" && staged.subtitle
-      ? {
-          fontSize:
-            staged.subtitle.length > 260
-              ? "8px"
-              : staged.subtitle.length > 180
-                ? "8.5px"
-                : staged.subtitle.length > 120
-                  ? "9px"
-                  : "9.5px",
-          lineHeight: 1.45,
-          whiteSpace: "normal" as const,
-        }
-      : undefined;
-
-  const showStagedControls = activeTab !== "media";
 
   return (
     <div className="dock-root">
@@ -420,64 +267,6 @@ export default function DockPage() {
           />
         )}
       </div>
-
-      {showStagedControls && staged && (
-        <div className="dock-staged">
-          <div className="dock-staged__header">
-            <span className="dock-staged__badge">
-              <Icon name="fiber_manual_record" size={10} />
-              Ready
-            </span>
-            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              {staged.type === "bible" && typeof (staged.data as Record<string, unknown>).translation === "string" && (
-                <span style={{ fontSize: 9, color: "var(--dock-text-dim)", fontWeight: 500 }}>
-                  {(staged.data as Record<string, string>).translation}
-                </span>
-              )}
-              <button className="dock-staged__clear" onClick={handleClear}>
-                <Icon name="close" size={12} />
-                Clear
-              </button>
-            </div>
-          </div>
-          <div className="dock-staged__label">{staged.label}</div>
-          {staged.subtitle && <div className="dock-staged__sub" style={stagedSubtitleStyle}>{staged.subtitle}</div>}
-        </div>
-      )}
-
-      {actionError && (
-        <div className="dock-action-error">
-          <Icon name="warning" size={14} />
-          <span style={{ flex: 1 }}>{actionError}</span>
-          <button
-            onClick={() => setActionError("")}
-            style={{ background: "none", border: "none", color: "inherit", cursor: "pointer", padding: 0 }}
-          >
-            <Icon name="close" size={14} />
-          </button>
-        </div>
-      )}
-
-      {showStagedControls && (
-        <div className="dock-footer">
-          <button
-            className="dock-btn dock-btn--preview"
-            onClick={handleSendPreview}
-            disabled={!staged || sending}
-          >
-            <Icon name={sending ? "hourglass_empty" : "visibility"} size={20} />
-            {sending ? "Sending..." : "Send to Preview"}
-          </button>
-          <button
-            className="dock-btn dock-btn--live"
-            onClick={handleGoLive}
-            disabled={!staged || sending}
-          >
-            <Icon name={sending ? "hourglass_empty" : "cast"} size={20} />
-            {sending ? "Sending..." : "Go Live"}
-          </button>
-        </div>
-      )}
     </div>
   );
 }
