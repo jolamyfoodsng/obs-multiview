@@ -101,6 +101,29 @@ body {
   box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
 }
 
+:root.light .dock-input,
+:root.light .dock-select {
+  border-color: rgba(92, 99, 112, 0.16);
+  background: rgba(255, 255, 255, 0.86);
+}
+
+:root.light .dock-input:hover,
+:root.light .dock-select:hover {
+  border-color: rgba(92, 99, 112, 0.24);
+}
+
+:root.light .dock-input:focus,
+:root.light .dock-select:focus {
+  border-color: rgba(37, 99, 235, 0.38);
+  background: #ffffff;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.12);
+}
+
+:root.light .dock-select--translation {
+  background: rgba(37, 99, 235, 0.08);
+  border-color: rgba(37, 99, 235, 0.24);
+}
+
 :root.light .dtb-backdrop {
   background: rgba(15, 23, 42, 0.24);
 }

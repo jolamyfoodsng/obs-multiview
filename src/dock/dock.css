@@ -434,7 +434,7 @@
 /* ── Number pad (chapter / verse) ── */
 .dock-numpad {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(6, 1fr);
   gap: 4px;
 }
 
@@ -713,17 +713,24 @@
   width: 100%;
   padding: 4px 7px;
   border-radius: 5px;
-  border: 1px solid var(--dock-border);
-  background: var(--dock-surface);
+  border: 1px solid rgba(139, 141, 154, 0.18);
+  background: rgba(255, 255, 255, 0.03);
   color: var(--dock-text);
   font-size: 10px;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  box-shadow: none;
+}
+
+.dock-input:hover {
+  border-color: rgba(139, 141, 154, 0.28);
 }
 
 .dock-input:focus {
-  border-color: var(--dock-accent);
+  border-color: rgba(108, 99, 255, 0.45);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 0 1px rgba(108, 99, 255, 0.12);
 }
 
 .dock-input::placeholder {
@@ -734,8 +741,8 @@
   width: 100%;
   padding: 4px 7px;
   border-radius: 5px;
-  border: 1px solid var(--dock-border);
-  background: var(--dock-surface);
+  border: 1px solid rgba(139, 141, 154, 0.18);
+  background: rgba(255, 255, 255, 0.03);
   color: var(--dock-text);
   font-size: 10px;
   font-family: inherit;
@@ -746,10 +753,25 @@
   background-position: right 8px center;
   padding-right: 28px;
   cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
+  box-shadow: none;
+}
+
+.dock-select:hover {
+  border-color: rgba(139, 141, 154, 0.28);
 }
 
 .dock-select:focus {
-  border-color: var(--dock-accent);
+  border-color: rgba(108, 99, 255, 0.45);
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 0 0 1px rgba(108, 99, 255, 0.12);
+}
+
+.dock-select--translation {
+  background: rgba(108, 99, 255, 0.08);
+  border-color: rgba(108, 99, 255, 0.26);
+  color: var(--dock-text);
+  font-weight: 700;
 }
 
 /* ── Search ── */
