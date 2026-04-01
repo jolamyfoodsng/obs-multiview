@@ -48,7 +48,7 @@ function cleanWorshipSectionLabel(label: string): string {
   return /^verse\s+\d+$/i.test(normalized) ? "" : normalized;
 }
 
-export default function DockWorshipTab({ onStage, productionDefaults }: Props) {
+export default function DockWorshipTab({ staged, onStage, productionDefaults }: Props) {
   const [songs, setSongs] = useState<DockSong[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSong, setSelectedSong] = useState<DockSong | null>(null);
@@ -62,6 +62,9 @@ export default function DockWorshipTab({ onStage, productionDefaults }: Props) {
   );
   const [overlayMode, setOverlayMode] = useState<OverlayMode>(productionDefaults.defaultMode);
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isProgramLive =
+    staged?.type === "worship" &&
+    Boolean((staged.data as Record<string, unknown> | undefined)?._dockLive);
 
   useEffect(() => {
     setSelectedFSTheme(productionDefaults.fullscreenTheme ?? BUILTIN_THEMES[0]);
@@ -213,13 +216,36 @@ export default function DockWorshipTab({ onStage, productionDefaults }: Props) {
     }
   }, [buildSectionStage, onStage]);
 
+  useEffect(() => {
+    if (!staged || staged.type !== "worship") {
+      return;
+    }
+
+    const data = staged.data as Record<string, unknown>;
+    const stageSong = data.song as DockSong | undefined;
+    const stageIdx = typeof data.sectionIdx === "number" ? data.sectionIdx : null;
+
+    if (stageSong && (!selectedSong || selectedSong.id !== stageSong.id)) {
+      setSelectedSong(stageSong);
+    }
+
+    if (stageIdx === null) return;
+
+    if (data._dockLive) {
+      setLiveIdx(stageIdx);
+      setPreviewIdx(null);
+    } else {
+      setPreviewIdx(stageIdx);
+    }
+  }, [selectedSong, staged]);
+
   const handleSectionClick = useCallback((idx: number) => {
     if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
     clickTimerRef.current = setTimeout(() => {
       clickTimerRef.current = null;
-      void pushSection(idx, false);
+      void pushSection(idx, isProgramLive);
     }, 220);
-  }, [pushSection]);
+  }, [isProgramLive, pushSection]);
 
   const handleGoLiveSection = useCallback((idx: number) => {
     if (clickTimerRef.current) {
@@ -232,6 +258,44 @@ export default function DockWorshipTab({ onStage, productionDefaults }: Props) {
   useEffect(() => () => {
     if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
   }, []);
+
+  const navigateSection = useCallback(
+    async (delta: 1 | -1) => {
+      if (!selectedSong || selectedSong.sections.length === 0) return;
+
+      const currentIdx = (isProgramLive ? liveIdx : previewIdx) ?? (liveIdx ?? previewIdx ?? 0);
+      const nextIdx = Math.max(0, Math.min(selectedSong.sections.length - 1, currentIdx + delta));
+      if (nextIdx === currentIdx) return;
+
+      await pushSection(nextIdx, isProgramLive);
+    },
+    [isProgramLive, liveIdx, previewIdx, pushSection, selectedSong],
+  );
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+      if (!selectedSong || selectedSong.sections.length === 0) return;
+
+      if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+        event.preventDefault();
+        void navigateSection(1);
+      } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+        event.preventDefault();
+        void navigateSection(-1);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [navigateSection, selectedSong]);
 
   const handleClearLyrics = useCallback(() => {
     setLiveIdx(null);
@@ -278,7 +342,23 @@ export default function DockWorshipTab({ onStage, productionDefaults }: Props) {
         ...(liveIdx !== null && previewIdx === null ? { isLive: true } : {}),
       },
     });
-  }, [overlayMode, selectedSong, previewIdx, liveIdx, selectedLTTheme, selectedFSTheme, onStage]);
+    if (isProgramLive) {
+      void dockObsClient.pushWorshipLyrics({
+        sectionText: section.text,
+        sectionLabel: displayLabel,
+        songTitle: selectedSong.title,
+        artist: "",
+        overlayMode,
+        bibleThemeSettings: (
+          overlayMode === "fullscreen"
+            ? selectedFSTheme.settings
+            : selectedLTTheme.settings
+        ) as unknown as Record<string, unknown>,
+      }, true).catch((err) => {
+        console.warn("[DockWorshipTab] Auto-update program failed:", err);
+      });
+    }
+  }, [overlayMode, selectedSong, previewIdx, liveIdx, selectedLTTheme, selectedFSTheme, onStage, isProgramLive]);
 
   const prevThemeSignature = useRef(`${selectedFSTheme.id}:${selectedLTTheme.id}`);
   useEffect(() => {
@@ -313,7 +393,23 @@ export default function DockWorshipTab({ onStage, productionDefaults }: Props) {
         ...(liveIdx !== null && previewIdx === null ? { isLive: true } : {}),
       },
     });
-  }, [liveIdx, onStage, overlayMode, previewIdx, selectedFSTheme, selectedLTTheme, selectedSong]);
+    if (isProgramLive) {
+      void dockObsClient.pushWorshipLyrics({
+        sectionText: section.text,
+        sectionLabel: displayLabel,
+        songTitle: selectedSong.title,
+        artist: "",
+        overlayMode,
+        bibleThemeSettings: (
+          overlayMode === "fullscreen"
+            ? selectedFSTheme.settings
+            : selectedLTTheme.settings
+        ) as unknown as Record<string, unknown>,
+      }, true).catch((err) => {
+        console.warn("[DockWorshipTab] Auto-update program failed:", err);
+      });
+    }
+  }, [liveIdx, onStage, overlayMode, previewIdx, selectedFSTheme, selectedLTTheme, selectedSong, isProgramLive]);
 
   const handleBackToSongList = useCallback(() => {
     setSelectedSong(null);
@@ -414,6 +510,27 @@ export default function DockWorshipTab({ onStage, productionDefaults }: Props) {
         <div className="dock-card__subtitle">
           Managed in the app&apos;s Production Theme Settings page.
         </div>
+      </div>
+
+      <div className="dock-row" style={{ justifyContent: "flex-end", gap: 6, marginBottom: 8 }}>
+        <button
+          className="dock-btn"
+          style={{ padding: "4px 8px", minWidth: 0 }}
+          onClick={() => void navigateSection(-1)}
+          title="Previous section"
+          disabled={selectedSong.sections.length === 0}
+        >
+          <Icon name="arrow_back" size={14} />
+        </button>
+        <button
+          className="dock-btn"
+          style={{ padding: "4px 8px", minWidth: 0 }}
+          onClick={() => void navigateSection(1)}
+          title="Next section"
+          disabled={selectedSong.sections.length === 0}
+        >
+          <Icon name="chevron_right" size={14} />
+        </button>
       </div>
 
       {/* Song sections */}

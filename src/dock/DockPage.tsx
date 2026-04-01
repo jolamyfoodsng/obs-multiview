@@ -85,6 +85,7 @@ export default function DockPage() {
                   verseText: recovered.bible.text,
                   overlayMode: recovered.bible.overlayMode,
                   _recovered: true,
+                  _dockLive: true,
                 },
               };
             }
@@ -100,6 +101,7 @@ export default function DockPage() {
                   song: { title: recovered.worship.songTitle, artist: recovered.worship.artist },
                   overlayMode: recovered.worship.overlayMode,
                   _recovered: true,
+                  _dockLive: true,
                 },
               };
             }
@@ -243,6 +245,17 @@ export default function DockPage() {
           bibleThemeSettings: payload.bibleThemeSettings as Record<string, unknown> | undefined,
         }, true);
       }
+
+      setStaged((current) => {
+        if (!current) return current;
+        return {
+          ...current,
+          data: {
+            ...(current.data as Record<string, unknown>),
+            _dockLive: true,
+          },
+        };
+      });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       console.error("[Dock] Go live failed:", message);
