@@ -9044,9 +9044,17 @@ input[type="radio"] {
 }
 
 /* ── Two-column row ── */
+
 .tc-row-2 {
   display: flex;
   gap: 10px;
+  width: 200px !important;
+}
+
+.tc-row-2 .tc-row-2--collapse {
+
+  width: 200px !important;
+  min-width: 0px !important;
 }
 
 .tc-row-2 .tc-field {
@@ -9888,7 +9896,7 @@ input[type="radio"] {
   gap: 8px;
 }
 
-.production-field > span {
+.production-field>span {
   color: var(--text-secondary);
   font-size: 12px;
   font-weight: 700;
@@ -10155,6 +10163,7 @@ input[type="radio"] {
 }
 
 @media (max-width: 980px) {
+
   .production-hero,
   .production-hero--compact {
     grid-template-columns: 1fr;

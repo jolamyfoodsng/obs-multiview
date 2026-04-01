@@ -124,8 +124,15 @@
 }
 
 @keyframes dock-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
 }
 
 /* ── OBS Settings Panel ── */
@@ -188,7 +195,8 @@
 }
 
 .dock-tab svg {
-  width: 14px; height: 14px;
+  width: 14px;
+  height: 14px;
 }
 
 .dock-tab:hover {
@@ -397,7 +405,7 @@
 }
 
 .dock-bible-book-btn {
-  padding: 4px 2px;
+  padding: 16px 2px;
   border-radius: 4px;
   border: 1px solid var(--dock-border);
   background: var(--dock-surface);
@@ -426,7 +434,7 @@
 /* ── Number pad (chapter / verse) ── */
 .dock-numpad {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 4px;
 }
 
@@ -439,7 +447,7 @@
 }
 
 .dock-numpad-btn {
-  padding:  3px;
+  padding: 15px;
   border-radius: 4px;
   border: 1px solid var(--dock-border);
   background: var(--dock-surface);
@@ -696,7 +704,8 @@
 }
 
 .dock-btn svg {
-  width: 14px; height: 14px;
+  width: 14px;
+  height: 14px;
 }
 
 /* ── Form elements ── */
@@ -754,7 +763,8 @@
   left: 8px;
   top: 50%;
   transform: translateY(-50%);
-  width: 14px; height: 14px;
+  width: 14px;
+  height: 14px;
   color: var(--dock-text-dim);
   pointer-events: none;
 }
@@ -1005,16 +1015,19 @@
   border-left: 3px solid var(--dock-accent, #6c63ff);
   border-radius: 5px;
 }
+
 .dock-sermon-pinned__info {
   flex: 1;
   min-width: 0;
 }
+
 .dock-sermon-pinned__title {
   font-size: 11px;
   font-weight: 700;
   color: var(--dock-text);
   line-height: 1.2;
 }
+
 .dock-sermon-pinned__meta {
   display: flex;
   align-items: center;
@@ -1054,7 +1067,8 @@
 }
 
 .dock-empty svg {
-  width: 28px; height: 28px;
+  width: 28px;
+  height: 28px;
   opacity: 0.3;
   margin-bottom: 6px;
 }
@@ -1093,7 +1107,8 @@
 }
 
 .dock-welcome__logo svg {
-  width: 28px; height: 28px;
+  width: 28px;
+  height: 28px;
   color: #fff;
 }
 
@@ -1171,7 +1186,8 @@
 }
 
 .dock-breadcrumb-btn svg {
-  width: 14px; height: 14px;
+  width: 14px;
+  height: 14px;
 }
 
 .dock-breadcrumb-sep {
@@ -1472,8 +1488,13 @@
 }
 
 @keyframes dtb-fadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .dtb-modal {
@@ -1939,7 +1960,9 @@
 }
 
 @keyframes dock-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .dock-spin {
