@@ -52,6 +52,7 @@ export default function DockBibleTab({ staged, onStage, productionDefaults }: Pr
   const [, setVerseText] = useState<string | null>(null);
   const [verseCount, setVerseCount] = useState(30);
   const searchRef = useRef<HTMLDivElement>(null);
+  const verseClickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isProgramLive =
     staged?.type === "bible" &&
     Boolean((staged.data as Record<string, unknown> | undefined)?._dockLive);
@@ -299,8 +300,8 @@ export default function DockBibleTab({ staged, onStage, productionDefaults }: Pr
   // ── Pick a search result ──
   const handlePickResult = useCallback(
     async (result: BibleSearchResult, options?: { sendToPreview?: boolean; sendToProgram?: boolean }) => {
-      const sendToProgram = options?.sendToProgram ?? isProgramLive;
-      const sendToPreview = !sendToProgram && (options?.sendToPreview ?? false);
+      const sendToProgram = options?.sendToProgram ?? false;
+      const sendToPreview = options?.sendToPreview ?? !sendToProgram;
       setSearchQuery("");
       setShowDropdown(false);
       setActiveIdx(-1);
@@ -324,7 +325,7 @@ export default function DockBibleTab({ staged, onStage, productionDefaults }: Pr
         setStep("chapter");
       }
     },
-    [isProgramLive, stageVerse]
+    [stageVerse]
   );
 
   // ── Keyboard navigation ──
@@ -365,45 +366,32 @@ export default function DockBibleTab({ staged, onStage, productionDefaults }: Pr
   }, []);
 
   const handleSelectVerse = useCallback(
-    async (v: number) => {
-      if (selectedBook && selectedChapter) {
-        await stageVerse(selectedBook, selectedChapter, v, {
-          sendToProgram: isProgramLive,
+    (v: number) => {
+      if (!selectedBook || !selectedChapter) return;
+      if (verseClickTimerRef.current) clearTimeout(verseClickTimerRef.current);
+      verseClickTimerRef.current = setTimeout(() => {
+        verseClickTimerRef.current = null;
+        void stageVerse(selectedBook, selectedChapter, v, {
+          sendToPreview: true,
         });
-      }
+      }, 220);
     },
-    [selectedBook, selectedChapter, stageVerse, isProgramLive]
+    [selectedBook, selectedChapter, stageVerse]
   );
 
-  /** Double-click a verse → stage it AND immediately send to OBS preview */
+  /** Double-click a verse → cancel preview click and send straight to Program */
   const handleDoubleClickVerse = useCallback(
     async (v: number) => {
+      if (verseClickTimerRef.current) {
+        clearTimeout(verseClickTimerRef.current);
+        verseClickTimerRef.current = null;
+      }
       if (!selectedBook || !selectedChapter) return;
       await stageVerse(selectedBook, selectedChapter, v, {
         sendToProgram: true,
       });
     },
     [selectedBook, selectedChapter, stageVerse]
-  );
-
-  const handlePreviewVerse = useCallback(
-    async (v: number) => {
-      if (!selectedBook || !selectedChapter) return;
-      await stageVerse(selectedBook, selectedChapter, v, {
-        sendToPreview: true,
-      });
-    },
-    [selectedBook, selectedChapter, stageVerse],
-  );
-
-  const handleProgramVerse = useCallback(
-    async (v: number) => {
-      if (!selectedBook || !selectedChapter) return;
-      await stageVerse(selectedBook, selectedChapter, v, {
-        sendToProgram: true,
-      });
-    },
-    [selectedBook, selectedChapter, stageVerse],
   );
 
   const goBack = useCallback(() => {
@@ -501,6 +489,10 @@ export default function DockBibleTab({ staged, onStage, productionDefaults }: Pr
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [navigateVerse, selectedBook, selectedChapter, selectedVerse, sendSelectedVerseToProgram, step]);
 
+  useEffect(() => () => {
+    if (verseClickTimerRef.current) clearTimeout(verseClickTimerRef.current);
+  }, []);
+
   return (
     <>
       {/* Search + Translation */}
@@ -533,7 +525,7 @@ export default function DockBibleTab({ staged, onStage, productionDefaults }: Pr
                 <button
                   key={result.label + i}
                   className={`dock-search-dropdown__item${i === activeIdx ? " dock-search-dropdown__item--active" : ""}`}
-                  onClick={() => handlePickResult(result)}
+                  onClick={() => void handlePickResult(result, { sendToPreview: true })}
                   onMouseEnter={() => setActiveIdx(i)}
                 >
                   <Icon name={result.verse !== null
@@ -679,43 +671,15 @@ export default function DockBibleTab({ staged, onStage, productionDefaults }: Pr
           </div>
           <div className="dock-numpad">
             {Array.from({ length: verseCount }, (_, i) => i + 1).map((v) => (
-              <div
+              <button
                 key={v}
-                className={`dock-verse-item${selectedVerse === v ? " dock-verse-item--active" : ""}`}
+                className={`dock-numpad-btn${selectedVerse === v ? " dock-numpad-btn--active" : ""}`}
+                onClick={() => handleSelectVerse(v)}
+                onDoubleClick={() => void handleDoubleClickVerse(v)}
+                title="Click to send to Preview, double-click to send to Program"
               >
-                <button
-                  className={`dock-numpad-btn${selectedVerse === v ? " dock-numpad-btn--active" : ""}`}
-                  onClick={() => handleSelectVerse(v)}
-                  onDoubleClick={() => handleDoubleClickVerse(v)}
-                  title="Click to stage, double-click to send to Program"
-                >
-                  {v}
-                </button>
-                <div className="dock-hover-actions dock-hover-actions--verse">
-                  <button
-                    type="button"
-                    className="dock-hover-actions__btn dock-hover-actions__btn--preview"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      void handlePreviewVerse(v);
-                    }}
-                    title={`Send ${selectedBook} ${selectedChapter}:${v} to Preview`}
-                  >
-                    <Icon name="preview" size={14} />
-                  </button>
-                  <button
-                    type="button"
-                    className="dock-hover-actions__btn dock-hover-actions__btn--program"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      void handleProgramVerse(v);
-                    }}
-                    title={`Send ${selectedBook} ${selectedChapter}:${v} to Program`}
-                  >
-                    <Icon name="cast" size={14} />
-                  </button>
-                </div>
-              </div>
+                {v}
+              </button>
             ))}
           </div>
         </>
