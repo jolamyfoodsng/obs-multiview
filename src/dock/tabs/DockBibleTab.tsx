@@ -29,7 +29,7 @@ interface Props {
 type BibleStep = "book" | "chapter" | "verse";
 type OverlayMode = "fullscreen" | "lower-third";
 
-export default function DockBibleTab({ staged: _staged, onStage, productionDefaults }: Props) {
+export default function DockBibleTab({ staged, onStage, productionDefaults }: Props) {
   const [step, setStep] = useState<BibleStep>("book");
   const [testament, setTestament] = useState<"ot" | "nt">("ot");
   const [selectedBook, setSelectedBook] = useState<string | null>(null);
@@ -49,9 +49,12 @@ export default function DockBibleTab({ staged: _staged, onStage, productionDefau
   ]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [activeIdx, setActiveIdx] = useState(-1);
-  const [_verseText, setVerseText] = useState<string | null>(null);
+  const [, setVerseText] = useState<string | null>(null);
   const [verseCount, setVerseCount] = useState(30);
   const searchRef = useRef<HTMLDivElement>(null);
+  const isProgramLive =
+    staged?.type === "bible" &&
+    Boolean((staged.data as Record<string, unknown> | undefined)?._dockLive);
 
   const books = testament === "ot" ? OT_BOOKS : NT_BOOKS;
 
@@ -145,6 +148,69 @@ export default function DockBibleTab({ staged: _staged, onStage, productionDefau
     }
   }, []);
 
+  const stageVerse = useCallback(
+    async (
+      book: string,
+      chapter: number,
+      verse: number,
+      options?: { sendToPreview?: boolean; sendToProgram?: boolean },
+    ) => {
+      const text = await fetchVerseText(book, chapter, verse, translation);
+      setSelectedBook(book);
+      setSelectedChapter(chapter);
+      setSelectedVerse(verse);
+      setStep("verse");
+      setVerseText(text);
+
+      const stageData = {
+        book,
+        chapter,
+        verse,
+        translation,
+        verseText: text,
+        overlayMode,
+        theme: overlayMode === "fullscreen" ? selectedBibleTheme.id : selectedLowerThirdTheme.id,
+        bibleThemeSettings: (
+          overlayMode === "fullscreen" ? selectedBibleTheme.settings : selectedLowerThirdTheme.settings
+        ) as unknown as Record<string, unknown>,
+      };
+
+      onStage({
+        type: "bible",
+        label: `${book} ${chapter}:${verse}`,
+        subtitle: text,
+        data: stageData,
+      });
+
+      if (options?.sendToProgram) {
+        try {
+          await dockObsClient.pushBible(stageData, true);
+        } catch (err) {
+          console.warn("[DockBibleTab] Auto-update program failed:", err);
+        }
+        return;
+      }
+
+      if (options?.sendToPreview) {
+        try {
+          await dockObsClient.pushBible(stageData, false);
+        } catch (err) {
+          console.warn("[DockBibleTab] Send to preview failed:", err);
+        }
+      }
+    },
+    [
+      fetchVerseText,
+      onStage,
+      overlayMode,
+      selectedBibleTheme.id,
+      selectedBibleTheme.settings,
+      selectedLowerThirdTheme.id,
+      selectedLowerThirdTheme.settings,
+      translation,
+    ],
+  );
+
   // ── Re-fetch verse text when translation changes (if a verse is already selected) ──
   const prevTranslation = useRef(translation);
   useEffect(() => {
@@ -156,27 +222,13 @@ export default function DockBibleTab({ staged: _staged, onStage, productionDefau
 
     let cancelled = false;
     (async () => {
-      const text = await fetchVerseText(selectedBook, selectedChapter, selectedVerse, translation);
-      if (cancelled) return;
-      setVerseText(text);
-      onStage({
-        type: "bible",
-        label: `${selectedBook} ${selectedChapter}:${selectedVerse}`,
-        subtitle: text,
-        data: {
-          book: selectedBook,
-          chapter: selectedChapter,
-          verse: selectedVerse,
-          translation,
-          verseText: text,
-          overlayMode,
-          theme: overlayMode === "fullscreen" ? selectedBibleTheme.id : selectedLowerThirdTheme.id,
-          bibleThemeSettings: overlayMode === "fullscreen" ? selectedBibleTheme.settings : selectedLowerThirdTheme.settings,
-        },
+      await stageVerse(selectedBook, selectedChapter, selectedVerse, {
+        sendToProgram: isProgramLive,
       });
+      if (cancelled) return;
     })();
     return () => { cancelled = true; };
-  }, [translation, selectedBook, selectedChapter, selectedVerse, overlayMode, selectedBibleTheme, selectedLowerThirdTheme, fetchVerseText, onStage]);
+  }, [translation, selectedBook, selectedChapter, selectedVerse, stageVerse, isProgramLive]);
 
   // ── Re-stage verse when overlay mode changes ──
   const prevOverlayMode = useRef(overlayMode);
@@ -186,23 +238,10 @@ export default function DockBibleTab({ staged: _staged, onStage, productionDefau
 
     if (!selectedBook || !selectedChapter || !selectedVerse) return;
 
-    // Re-stage with the updated overlay mode
-    onStage({
-      type: "bible",
-      label: `${selectedBook} ${selectedChapter}:${selectedVerse}`,
-      subtitle: _verseText || `${selectedBook} ${selectedChapter}:${selectedVerse}`,
-      data: {
-        book: selectedBook,
-        chapter: selectedChapter,
-        verse: selectedVerse,
-        translation,
-        verseText: _verseText || `${selectedBook} ${selectedChapter}:${selectedVerse}`,
-        overlayMode,
-        theme: overlayMode === "fullscreen" ? selectedBibleTheme.id : selectedLowerThirdTheme.id,
-        bibleThemeSettings: overlayMode === "fullscreen" ? selectedBibleTheme.settings : selectedLowerThirdTheme.settings,
-      },
+    void stageVerse(selectedBook, selectedChapter, selectedVerse, {
+      sendToProgram: isProgramLive,
     });
-  }, [overlayMode, selectedBook, selectedChapter, selectedVerse, _verseText, translation, selectedBibleTheme, selectedLowerThirdTheme, onStage]);
+  }, [overlayMode, selectedBook, selectedChapter, selectedVerse, stageVerse, isProgramLive]);
 
   const prevThemeSignature = useRef(`${selectedBibleTheme.id}:${selectedLowerThirdTheme.id}`);
   useEffect(() => {
@@ -212,32 +251,10 @@ export default function DockBibleTab({ staged: _staged, onStage, productionDefau
 
     if (!selectedBook || !selectedChapter || !selectedVerse) return;
 
-    onStage({
-      type: "bible",
-      label: `${selectedBook} ${selectedChapter}:${selectedVerse}`,
-      subtitle: _verseText || `${selectedBook} ${selectedChapter}:${selectedVerse}`,
-      data: {
-        book: selectedBook,
-        chapter: selectedChapter,
-        verse: selectedVerse,
-        translation,
-        verseText: _verseText || `${selectedBook} ${selectedChapter}:${selectedVerse}`,
-        overlayMode,
-        theme: overlayMode === "fullscreen" ? selectedBibleTheme.id : selectedLowerThirdTheme.id,
-        bibleThemeSettings: overlayMode === "fullscreen" ? selectedBibleTheme.settings : selectedLowerThirdTheme.settings,
-      },
+    void stageVerse(selectedBook, selectedChapter, selectedVerse, {
+      sendToProgram: isProgramLive,
     });
-  }, [
-    _verseText,
-    onStage,
-    overlayMode,
-    selectedBibleTheme,
-    selectedBook,
-    selectedChapter,
-    selectedLowerThirdTheme,
-    selectedVerse,
-    translation,
-  ]);
+  }, [selectedBibleTheme, selectedLowerThirdTheme, selectedBook, selectedChapter, selectedVerse, stageVerse, isProgramLive]);
 
   // ── Smart search results ──
   const searchResults = useMemo<BibleSearchResult[]>(() => {
@@ -287,41 +304,10 @@ export default function DockBibleTab({ staged: _staged, onStage, productionDefau
       setActiveIdx(-1);
 
       if (result.chapter !== null && result.verse !== null) {
-        // Full reference — stage it immediately
-        setSelectedBook(result.book);
-        setSelectedChapter(result.chapter);
-        setSelectedVerse(result.verse);
-        setStep("verse");
-
-        const text = await fetchVerseText(result.book, result.chapter, result.verse, translation);
-        setVerseText(text);
-        const stageData = {
-          book: result.book,
-          chapter: result.chapter,
-          verse: result.verse,
-          translation,
-          verseText: text,
-          overlayMode,
-          theme: overlayMode === "fullscreen" ? selectedBibleTheme.id : selectedLowerThirdTheme.id,
-          bibleThemeSettings: (overlayMode === "fullscreen"
-            ? selectedBibleTheme.settings
-            : selectedLowerThirdTheme.settings) as unknown as Record<string, unknown>,
-        };
-
-        onStage({
-          type: "bible",
-          label: `${result.book} ${result.chapter}:${result.verse}`,
-          subtitle: text,
-          data: stageData,
+        await stageVerse(result.book, result.chapter, result.verse, {
+          sendToProgram: isProgramLive,
+          sendToPreview: !isProgramLive && sendToPreview,
         });
-
-        if (sendToPreview) {
-          try {
-            await dockObsClient.pushBible(stageData, false);
-          } catch (err) {
-            console.warn("[DockBibleTab] Search Enter send to preview failed:", err);
-          }
-        }
       } else if (result.chapter !== null) {
         // Book + chapter — go to verse picker
         setSelectedBook(result.book);
@@ -336,7 +322,7 @@ export default function DockBibleTab({ staged: _staged, onStage, productionDefau
         setStep("chapter");
       }
     },
-    [translation, selectedBibleTheme, selectedLowerThirdTheme, overlayMode, fetchVerseText, onStage]
+    [isProgramLive, stageVerse]
   );
 
   // ── Keyboard navigation ──
@@ -378,65 +364,25 @@ export default function DockBibleTab({ staged: _staged, onStage, productionDefau
 
   const handleSelectVerse = useCallback(
     async (v: number) => {
-      setSelectedVerse(v);
       if (selectedBook && selectedChapter) {
-        const text = await fetchVerseText(selectedBook, selectedChapter, v, translation);
-        setVerseText(text);
-        onStage({
-          type: "bible",
-          label: `${selectedBook} ${selectedChapter}:${v}`,
-          subtitle: text,
-          data: {
-            book: selectedBook,
-            chapter: selectedChapter,
-            verse: v,
-            translation,
-            verseText: text,
-            overlayMode,
-            theme: overlayMode === "fullscreen" ? selectedBibleTheme.id : selectedLowerThirdTheme.id,
-            bibleThemeSettings: overlayMode === "fullscreen" ? selectedBibleTheme.settings : selectedLowerThirdTheme.settings,
-          },
+        await stageVerse(selectedBook, selectedChapter, v, {
+          sendToProgram: isProgramLive,
         });
       }
     },
-    [selectedBook, selectedChapter, translation, selectedBibleTheme, selectedLowerThirdTheme, overlayMode, fetchVerseText, onStage]
+    [selectedBook, selectedChapter, stageVerse, isProgramLive]
   );
 
   /** Double-click a verse → stage it AND immediately send to OBS preview */
   const handleDoubleClickVerse = useCallback(
     async (v: number) => {
       if (!selectedBook || !selectedChapter) return;
-      // Stage first (reuse handleSelectVerse logic)
-      const text = await fetchVerseText(selectedBook, selectedChapter, v, translation);
-      setSelectedVerse(v);
-      setVerseText(text);
-
-      const stageData = {
-        book: selectedBook,
-        chapter: selectedChapter,
-        verse: v,
-        translation,
-        verseText: text,
-        overlayMode,
-        theme: overlayMode === "fullscreen" ? selectedBibleTheme.id : selectedLowerThirdTheme.id,
-        bibleThemeSettings: (overlayMode === "fullscreen" ? selectedBibleTheme.settings : selectedLowerThirdTheme.settings) as unknown as Record<string, unknown>,
-      };
-
-      onStage({
-        type: "bible",
-        label: `${selectedBook} ${selectedChapter}:${v}`,
-        subtitle: text,
-        data: stageData,
+      await stageVerse(selectedBook, selectedChapter, v, {
+        sendToProgram: isProgramLive,
+        sendToPreview: !isProgramLive,
       });
-
-      // Immediately push to OBS preview (live=false)
-      try {
-        await dockObsClient.pushBible(stageData, false);
-      } catch (err) {
-        console.warn("[DockBibleTab] Double-click send to preview failed:", err);
-      }
     },
-    [selectedBook, selectedChapter, translation, selectedBibleTheme, selectedLowerThirdTheme, overlayMode, fetchVerseText, onStage]
+    [selectedBook, selectedChapter, stageVerse, isProgramLive]
   );
 
   const goBack = useCallback(() => {
@@ -449,6 +395,80 @@ export default function DockBibleTab({ staged: _staged, onStage, productionDefau
       setSelectedBook(null);
     }
   }, [step]);
+
+  const navigateVerse = useCallback(
+    async (delta: 1 | -1) => {
+      if (!selectedBook || !selectedChapter) return;
+
+      let nextChapter = selectedChapter;
+      let nextVerse = selectedVerse ?? 1;
+      let nextVerseCount = verseCount;
+
+      if (delta > 0) {
+        if (nextVerse < verseCount) {
+          nextVerse += 1;
+        } else {
+          const maxChapter = BOOK_CHAPTERS[selectedBook] ?? selectedChapter;
+          if (selectedChapter >= maxChapter) return;
+          nextChapter = selectedChapter + 1;
+          try {
+            const { getVerseCount } = await import("../../bible/bibleData");
+            nextVerseCount = await getVerseCount(selectedBook, nextChapter, translation) || 30;
+          } catch {
+            nextVerseCount = 30;
+          }
+          nextVerse = 1;
+        }
+      } else if (nextVerse > 1) {
+        nextVerse -= 1;
+      } else {
+        if (selectedChapter <= 1) return;
+        nextChapter = selectedChapter - 1;
+        try {
+          const { getVerseCount } = await import("../../bible/bibleData");
+          nextVerseCount = await getVerseCount(selectedBook, nextChapter, translation) || 30;
+        } catch {
+          nextVerseCount = 30;
+        }
+        nextVerse = nextVerseCount;
+      }
+
+      if (nextChapter !== selectedChapter) {
+        setSelectedChapter(nextChapter);
+        setVerseCount(nextVerseCount);
+      }
+
+      await stageVerse(selectedBook, nextChapter, nextVerse, {
+        sendToProgram: isProgramLive,
+      });
+    },
+    [isProgramLive, selectedBook, selectedChapter, selectedVerse, stageVerse, translation, verseCount],
+  );
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target;
+      if (
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target instanceof HTMLSelectElement
+      ) {
+        return;
+      }
+      if (step !== "verse" || !selectedBook || !selectedChapter) return;
+
+      if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+        event.preventDefault();
+        void navigateVerse(1);
+      } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+        event.preventDefault();
+        void navigateVerse(-1);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [navigateVerse, selectedBook, selectedChapter, step]);
 
   return (
     <>
@@ -603,7 +623,29 @@ export default function DockBibleTab({ staged: _staged, onStage, productionDefau
       {/* Step: Verse selection */}
       {step === "verse" && (
         <>
-          <div className="dock-section-label">Select Verse</div>
+          <div className="dock-row" style={{ justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <div className="dock-section-label" style={{ margin: 0 }}>Select Verse</div>
+            {selectedBook && selectedChapter && (
+              <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  className="dock-btn"
+                  style={{ padding: "4px 8px", minWidth: 0 }}
+                  onClick={() => void navigateVerse(-1)}
+                  title="Previous verse"
+                >
+                  <Icon name="arrow_back" size={14} />
+                </button>
+                <button
+                  className="dock-btn"
+                  style={{ padding: "4px 8px", minWidth: 0 }}
+                  onClick={() => void navigateVerse(1)}
+                  title="Next verse"
+                >
+                  <Icon name="chevron_right" size={14} />
+                </button>
+              </div>
+            )}
+          </div>
           <div className="dock-numpad">
             {Array.from({ length: verseCount }, (_, i) => i + 1).map((v) => (
               <button
