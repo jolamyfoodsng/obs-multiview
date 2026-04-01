@@ -1600,10 +1600,6 @@ class DockObsClient {
     return getOverlayBaseUrlSync();
   }
 
-  private getFullscreenOverlayPageUrl(): string {
-    return `${this.getOverlayBaseUrl()}/bible-overlay-fullscreen.html`;
-  }
-
   private publishFullscreenOverlayPacket(packet: {
     slide: Record<string, unknown> | null;
     theme: Record<string, unknown> | null;

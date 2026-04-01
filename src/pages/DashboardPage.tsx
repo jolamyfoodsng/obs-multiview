@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { obsService } from "../services/obsService";
-import { serviceStore, type ServiceState } from "../services/serviceStore";
 import { getOverlayBaseUrlSync } from "../services/overlayUrl";
 import Icon from "../components/Icon";
 
@@ -33,28 +32,10 @@ export function trackRecentOpen(path: string, label: string, icon: string) {
   localStorage.setItem(RECENT_KEY, JSON.stringify(filtered.slice(0, MAX_RECENT)));
 }
 
-function formatServiceStatus(status: ServiceState["status"]): string {
-  switch (status) {
-    case "preparing":
-      return "Preparing";
-    case "preservice":
-      return "Pre-Service";
-    case "live":
-      return "Live";
-    case "ended":
-      return "Completed";
-    case "idle":
-    default:
-      return "Idle";
-  }
-}
-
 export default function DashboardPage() {
   const navigate = useNavigate();
   const [dockCopied, setDockCopied] = useState(false);
-  const [serviceState, setServiceState] = useState<ServiceState>(() => serviceStore.getState());
   const [obsConnected, setObsConnected] = useState(() => obsService.isConnected);
-  const [renderTimeMs, setRenderTimeMs] = useState<number | null>(null);
 
   // In dev, Vite serves the SPA at localhost:1420 (with SPA fallback routing)
   // so /dock works because Vite proxies it to dock.html via the multi-page config.
@@ -76,62 +57,11 @@ export default function DashboardPage() {
   }, [dockUrl]);
 
   useEffect(() => {
-    return serviceStore.subscribe((state) => {
-      setServiceState(state);
-    });
-  }, []);
-
-  useEffect(() => {
     setObsConnected(obsService.isConnected);
     return obsService.onStatusChange((status) => {
-      const connected = status === "connected";
-      setObsConnected(connected);
-      if (!connected) {
-        setRenderTimeMs(null);
-      }
+      setObsConnected(status === "connected");
     });
   }, []);
-
-  useEffect(() => {
-    if (!obsConnected) {
-      setRenderTimeMs(null);
-      return;
-    }
-
-    let cancelled = false;
-    let timer: ReturnType<typeof window.setTimeout> | null = null;
-
-    const pollStats = async () => {
-      try {
-        const stats = await obsService.getStats();
-        if (!cancelled) {
-          setRenderTimeMs(stats.averageFrameRenderTime);
-        }
-      } catch {
-        if (!cancelled) {
-          setRenderTimeMs(null);
-        }
-      } finally {
-        if (!cancelled) {
-          timer = window.setTimeout(pollStats, 5000);
-        }
-      }
-    };
-
-    void pollStats();
-
-    return () => {
-      cancelled = true;
-      if (timer) {
-        window.clearTimeout(timer);
-      }
-    };
-  }, [obsConnected]);
-
-  const handleHeroClick = useCallback(() => {
-    trackRecentOpen("/hub?mode=live", "Service Hub", "play_circle");
-    navigate("/hub?mode=live");
-  }, [navigate]);
 
   const handleModuleNav = useCallback(
     (path: string, label: string, icon: string) => {
@@ -140,41 +70,6 @@ export default function DashboardPage() {
     },
     [navigate]
   );
-
-  const serviceActive =
-    serviceState.status !== "idle" && serviceState.status !== "ended";
-
-  const statusNotice = useMemo(() => {
-    if (!obsConnected) {
-      return {
-        icon: "wifi_tethering",
-        title: "Reconnect OBS",
-        body: "OBS is currently disconnected. Reconnect to restore live module control and performance telemetry.",
-      };
-    }
-
-    if (serviceActive) {
-      return {
-        icon: "bolt",
-        title: "Service in Motion",
-        body: `Tracking ${serviceState.stats.bibleVersesDisplayed} scripture cues, ${serviceState.stats.songsPlayed} songs, and ${serviceState.stats.lowerThirdsShown} live graphics in this session.`,
-      };
-    }
-
-    return {
-      icon: "info",
-      title: "Ready for Direction",
-      body: "Your environment is standing by. Open Service Hub to begin directing the next service.",
-    };
-  }, [obsConnected, serviceActive, serviceState.stats]);
-
-  const renderTimeLabel = useMemo(() => {
-    if (!obsConnected) return "Unavailable";
-    if (renderTimeMs == null) return "Collecting";
-    return renderTimeMs >= 10
-      ? `${renderTimeMs.toFixed(0)} ms`
-      : `${renderTimeMs.toFixed(1)} ms`;
-  }, [obsConnected, renderTimeMs]);
 
   return (
     <div className="dash-page">
@@ -309,6 +204,4 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-
 
