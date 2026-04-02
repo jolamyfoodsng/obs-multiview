@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { ChevronDown } from "lucide-react";
 import type { BibleTheme, BibleThemeSettings } from "../../bible/types";
 import DockThemeBrowserModal from "./DockThemeBrowserModal";
 import { loadDockFavoriteBibleThemes } from "../dockThemeData";
@@ -106,10 +105,10 @@ export default function DockBibleThemePicker({ selectedThemeId, onSelect, label,
               </div>
             )}
           </div>
-          <span className="dock-theme-dropdown-trigger__name">
+          {/* <span className="dock-theme-dropdown-trigger__name">
             {selected?.name || "No Favorite Themes"}
-          </span>
-          <ChevronDown size={14} style={{ color: "var(--dock-text-dim)" }} />
+          </span> */}
+          {/* <ChevronDown size={14} style={{ color: "var(--dock-text-dim)" }} /> */}
         </button>
       </div>
 

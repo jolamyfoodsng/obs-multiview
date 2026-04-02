@@ -37,6 +37,25 @@ import { ltDurationStore } from "../../lowerthirds/ltDurationStore";
 import { applyBrandingSettingsToDom } from "../../services/branding";
 import { saveUploadFile } from "../../services/layoutEngine";
 import { STREAMING_PLATFORM_OPTIONS, getStreamingPlatformLabel } from "../../services/streamQuality";
+import { voiceBibleService } from "../../services/voiceBibleService";
+import {
+  DEFAULT_VOICE_BIBLE_SETTINGS,
+  getMicrophonePermissionState,
+  getVoiceBibleRuntimeStatus,
+  getVoiceBibleSettings,
+  isOllamaModelReady,
+  listAudioInputDevices,
+  listObsAudioInputs,
+  prepareVoiceBibleModel,
+  requestMicrophoneAccess,
+  saveVoiceBibleSettings,
+} from "../../services/voiceBibleSettings";
+import type {
+  VoiceBibleInputOption,
+  VoiceBibleObsInputOption,
+  VoiceBibleRuntimeStatus,
+  VoiceBibleSettings,
+} from "../../services/voiceBibleTypes";
 import Icon from "../../components/Icon";
 
 /* Dynamic — populated from IndexedDB installed translations */
@@ -223,6 +242,20 @@ export function MVSettings() {
   const [bSaved, setBSaved] = useState(false);
   const [bTranslations, setBTranslations] = useState(FALLBACK_TRANSLATIONS);
   const [bibleSettingsDirty, setBibleSettingsDirty] = useState(false);
+  const [voiceBibleSettings, setVoiceBibleSettings] = useState<VoiceBibleSettings>(DEFAULT_VOICE_BIBLE_SETTINGS);
+  const [voiceRuntime, setVoiceRuntime] = useState<VoiceBibleRuntimeStatus>({
+    modelReady: false,
+    modelName: "medium.en",
+    modelPath: null,
+  });
+  const [voicePermission, setVoicePermission] = useState<PermissionState | "unsupported">("unsupported");
+  const [voiceDevices, setVoiceDevices] = useState<VoiceBibleInputOption[]>([]);
+  const [voiceObsInputs, setVoiceObsInputs] = useState<VoiceBibleObsInputOption[]>([]);
+  const [voiceSemanticReady, setVoiceSemanticReady] = useState(false);
+  const [voiceStatusMessage, setVoiceStatusMessage] = useState<string | null>(null);
+  const [voiceStatusType, setVoiceStatusType] = useState<"ok" | "err">("ok");
+  const [voicePreparingModel, setVoicePreparingModel] = useState(false);
+  const [voiceBibleDirty, setVoiceBibleDirty] = useState(false);
 
   // Load Bible settings from IndexedDB on mount
   useEffect(() => {
@@ -249,6 +282,56 @@ export function MVSettings() {
       }
     }).catch(console.error);
   }, []);
+
+  const refreshVoiceBibleDiagnostics = useCallback(async () => {
+    const [runtime, permission, devices] = await Promise.all([
+      getVoiceBibleRuntimeStatus().catch(() => ({
+        modelReady: false,
+        modelName: "medium.en",
+        modelPath: null,
+      })),
+      getMicrophonePermissionState(),
+      listAudioInputDevices().catch(() => []),
+    ]);
+
+    setVoiceRuntime(runtime);
+    setVoicePermission(permission);
+    setVoiceDevices(devices);
+
+    if (obsService.isConnected) {
+      const obsInputs = await listObsAudioInputs().catch(() => []);
+      setVoiceObsInputs(obsInputs);
+    } else {
+      setVoiceObsInputs([]);
+    }
+
+    if (
+      voiceBibleSettings.semanticMode === "ollama" &&
+      voiceBibleSettings.ollamaBaseUrl &&
+      voiceBibleSettings.ollamaModel
+    ) {
+      const ready = await isOllamaModelReady(
+        voiceBibleSettings.ollamaBaseUrl,
+        voiceBibleSettings.ollamaModel,
+      );
+      setVoiceSemanticReady(ready);
+    } else {
+      setVoiceSemanticReady(false);
+    }
+  }, [voiceBibleSettings.ollamaBaseUrl, voiceBibleSettings.ollamaModel, voiceBibleSettings.semanticMode]);
+
+  useEffect(() => {
+    getVoiceBibleSettings()
+      .then((saved) => {
+        setVoiceBibleSettings(saved);
+        setVoiceBibleDirty(false);
+      })
+      .catch((err) => console.warn("[MVSettings] Failed to load Voice Bible settings:", err));
+  }, []);
+
+  useEffect(() => {
+    void refreshVoiceBibleDiagnostics();
+  }, [obsStatus, refreshVoiceBibleDiagnostics]);
 
   // Keep the Settings "Default Translation" aligned with the Bible page selection
   // unless the user is currently editing unsaved values in this form.
@@ -521,6 +604,60 @@ export function MVSettings() {
     setBSaved(true);
     setTimeout(() => setBSaved(false), 2000);
   }, [bDefaultTranslation, bDefaultThemeId, bShowVerseNumbers, bMaxLines, bColorMode, bAutoSend, bReduceMotion, bHighContrast, bibleDispatch, bibleSetTheme, bibleState.slideConfig]);
+
+  const updateVoiceBibleDraft = useCallback((patch: Partial<VoiceBibleSettings>) => {
+    setVoiceBibleSettings((current) => ({ ...current, ...patch }));
+    setVoiceBibleDirty(true);
+  }, []);
+
+  const handleSaveVoiceBible = useCallback(async () => {
+    try {
+      const saved = await saveVoiceBibleSettings(voiceBibleSettings);
+      setVoiceBibleSettings(saved);
+      setVoiceBibleDirty(false);
+      setVoiceStatusMessage("Voice Bible settings saved.");
+      setVoiceStatusType("ok");
+      await voiceBibleService.refreshAvailability();
+      await refreshVoiceBibleDiagnostics();
+    } catch (err) {
+      setVoiceStatusMessage(err instanceof Error ? err.message : String(err));
+      setVoiceStatusType("err");
+    }
+  }, [refreshVoiceBibleDiagnostics, voiceBibleSettings]);
+
+  const handleRequestVoiceMic = useCallback(async () => {
+    const requestedDeviceId =
+      voiceBibleSettings.audioSourceMode === "system-mic"
+        ? voiceBibleSettings.audioDeviceId
+        : undefined;
+    const nextPermission = await requestMicrophoneAccess(requestedDeviceId);
+    setVoicePermission(nextPermission);
+    if (nextPermission === "denied") {
+      setVoiceStatusMessage("Microphone permission was denied.");
+      setVoiceStatusType("err");
+    } else {
+      setVoiceStatusMessage("Microphone access confirmed.");
+      setVoiceStatusType("ok");
+    }
+    await refreshVoiceBibleDiagnostics();
+  }, [refreshVoiceBibleDiagnostics, voiceBibleSettings.audioDeviceId, voiceBibleSettings.audioSourceMode]);
+
+  const handlePrepareVoiceModel = useCallback(async () => {
+    setVoicePreparingModel(true);
+    try {
+      const runtime = await prepareVoiceBibleModel();
+      setVoiceRuntime(runtime);
+      setVoiceStatusMessage("Whisper medium.en is ready.");
+      setVoiceStatusType("ok");
+      await voiceBibleService.refreshAvailability();
+    } catch (err) {
+      setVoiceStatusMessage(err instanceof Error ? err.message : String(err));
+      setVoiceStatusType("err");
+    } finally {
+      setVoicePreparingModel(false);
+      await refreshVoiceBibleDiagnostics();
+    }
+  }, [refreshVoiceBibleDiagnostics]);
 
   const overlayUrls = useMemo(
     () => ({
@@ -1457,6 +1594,193 @@ export function MVSettings() {
               ))}
             </select>
           </label>
+        </section>
+
+        <section className="mv-settings-section">
+          <h2 className="mv-settings-heading">
+            <Icon name="mic" size={18} style={{ verticalAlign: "text-bottom" }} />
+            {" "}Voice Bible
+          </h2>
+          <p className="mv-settings-desc">
+            Configure local speech-to-verse lookup for the OBS dock hold-to-talk mic button.
+          </p>
+          <p className="mv-settings-hint">
+            Supported commands include: “John 1 verse 2”, “next verse”, “previous verse”, “go to chapter 4”, “last chapter”, and “use NIV”.
+          </p>
+
+          <div className="mv-settings-form">
+            <label className="mv-settings-field" style={{ maxWidth: 280 }}>
+              <span className="mv-settings-field-label">Audio Source</span>
+              <select
+                className="mv-input"
+                value={voiceBibleSettings.audioSourceMode}
+                onChange={(e) =>
+                  updateVoiceBibleDraft({
+                    audioSourceMode: e.target.value as VoiceBibleSettings["audioSourceMode"],
+                  })
+                }
+              >
+                <option value="system-mic">System microphone</option>
+                <option value="obs-input">OBS input source</option>
+              </select>
+            </label>
+
+            {voiceBibleSettings.audioSourceMode === "system-mic" ? (
+              <label className="mv-settings-field" style={{ maxWidth: 360 }}>
+                <span className="mv-settings-field-label">Microphone Device</span>
+                <select
+                  className="mv-input"
+                  value={voiceBibleSettings.audioDeviceId ?? ""}
+                  onChange={(e) =>
+                    updateVoiceBibleDraft({ audioDeviceId: e.target.value || undefined })
+                  }
+                >
+                  <option value="">Default system microphone</option>
+                  {voiceDevices.map((device) => (
+                    <option key={device.id} value={device.id}>
+                      {device.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : (
+              <label className="mv-settings-field" style={{ maxWidth: 360 }}>
+                <span className="mv-settings-field-label">OBS Input Source</span>
+                <select
+                  className="mv-input"
+                  value={voiceBibleSettings.obsInputName ?? ""}
+                  onChange={(e) => {
+                    const nextInputName = e.target.value || undefined;
+                    const mappedInput = voiceObsInputs.find((input) => input.inputName === nextInputName);
+                    updateVoiceBibleDraft({
+                      obsInputName: nextInputName,
+                      audioDeviceId: mappedInput?.deviceId,
+                    });
+                  }}
+                  disabled={!obsService.isConnected}
+                >
+                  <option value="">
+                    {obsService.isConnected ? "Select an OBS audio input" : "Connect OBS to inspect inputs"}
+                  </option>
+                  {voiceObsInputs.map((input) => (
+                    <option key={input.inputName} value={input.inputName}>
+                      {input.label}{input.deviceId ? "" : " (unmapped)"}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </div>
+
+          <div className="mv-settings-form" style={{ marginTop: 12 }}>
+            <label className="mv-settings-field" style={{ maxWidth: 240 }}>
+              <span className="mv-settings-field-label">Semantic Matching</span>
+              <select
+                className="mv-input"
+                value={voiceBibleSettings.semanticMode}
+                onChange={(e) =>
+                  updateVoiceBibleDraft({
+                    semanticMode: e.target.value as VoiceBibleSettings["semanticMode"],
+                  })
+                }
+              >
+                <option value="ollama">Ollama rerank</option>
+                <option value="lexical-only">Lexical only</option>
+              </select>
+            </label>
+
+            {voiceBibleSettings.semanticMode === "ollama" && (
+              <>
+                <label className="mv-settings-field" style={{ maxWidth: 300 }}>
+                  <span className="mv-settings-field-label">Ollama Base URL</span>
+                  <input
+                    className="mv-input"
+                    type="text"
+                    value={voiceBibleSettings.ollamaBaseUrl ?? ""}
+                    onChange={(e) => updateVoiceBibleDraft({ ollamaBaseUrl: e.target.value })}
+                    placeholder="http://127.0.0.1:11434"
+                  />
+                </label>
+                <label className="mv-settings-field" style={{ maxWidth: 300 }}>
+                  <span className="mv-settings-field-label">Embedding Model</span>
+                  <input
+                    className="mv-input"
+                    type="text"
+                    value={voiceBibleSettings.ollamaModel ?? ""}
+                    onChange={(e) => updateVoiceBibleDraft({ ollamaModel: e.target.value })}
+                    placeholder="qwen3-embedding:4b"
+                  />
+                </label>
+              </>
+            )}
+          </div>
+
+          <div className="mv-settings-row" style={{ marginTop: 12, gap: 8, flexWrap: "wrap" }}>
+            <button className="mv-btn mv-btn--outline mv-btn--sm" onClick={() => void handleRequestVoiceMic()}>
+              <Icon name="mic" size={14} />
+              Request Mic Access
+            </button>
+            <button
+              className="mv-btn mv-btn--outline mv-btn--sm"
+              onClick={() => void refreshVoiceBibleDiagnostics()}
+            >
+              <Icon name="refresh" size={14} />
+              Refresh Sources
+            </button>
+            <button
+              className="mv-btn mv-btn--outline mv-btn--sm"
+              onClick={() => void handlePrepareVoiceModel()}
+              disabled={voicePreparingModel}
+            >
+              <Icon name={voicePreparingModel ? "hourglass_top" : "download"} size={14} />
+              {voicePreparingModel ? "Downloading Whisper…" : voiceRuntime.modelReady ? "Re-check Whisper" : "Download Whisper"}
+            </button>
+            <button
+              className="mv-btn mv-btn--primary mv-btn--sm"
+              onClick={() => void handleSaveVoiceBible()}
+              disabled={!voiceBibleDirty}
+            >
+              <Icon name="save" size={14} />
+              Save Voice Bible
+            </button>
+          </div>
+
+          <div className="mv-settings-form" style={{ marginTop: 12 }}>
+            <div className="mv-settings-field" style={{ maxWidth: 360 }}>
+              <span className="mv-settings-field-label">Whisper Runtime</span>
+              <div className="mv-settings-hint">
+                {voiceRuntime.modelReady
+                  ? "medium.en is downloaded locally and ready."
+                  : "medium.en will be downloaded to Documents/OBSChurchStudio/voice-bible on first use."}
+              </div>
+            </div>
+            <div className="mv-settings-field" style={{ maxWidth: 360 }}>
+              <span className="mv-settings-field-label">Ollama Rerank</span>
+              <div className="mv-settings-hint">
+                {voiceBibleSettings.semanticMode === "ollama"
+                  ? voiceSemanticReady
+                    ? "Configured Ollama embedding model is reachable."
+                    : "Configured Ollama model is not ready; lexical matching will be used."
+                  : "Lexical-only mode is active."}
+              </div>
+            </div>
+          </div>
+
+          <p className="mv-settings-hint" style={{ marginTop: 10 }}>
+            Microphone permission: <strong>{voicePermission}</strong>
+            {voiceBibleSettings.audioSourceMode === "obs-input" && !obsService.isConnected ? " — connect OBS to inspect audio input mappings." : ""}
+          </p>
+
+          {voiceStatusMessage && (
+            <p
+              className={`mv-settings-test-result ${
+                voiceStatusType === "ok" ? "mv-settings-test-result--ok" : "mv-settings-test-result--err"
+              }`}
+              style={{ marginTop: 8 }}
+            >
+              {voiceStatusMessage}
+            </p>
+          )}
         </section>
 
         {/* ── 3. Default Theme ── */}

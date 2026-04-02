@@ -219,6 +219,7 @@ export function initDockCommandHandler(): () => void {
   const unsub = dockBridge.onCommand(async (cmd: DockCommand) => {
     // Skip state requests (handled separately in App.tsx)
     if (cmd.type === "request-state" || cmd.type === "ping") return;
+    if (cmd.type.startsWith("voice-bible:")) return;
 
     // Preview routing is handled directly inside the OBS dock via
     // dockObsClient. Legacy BroadcastChannel preview commands used the

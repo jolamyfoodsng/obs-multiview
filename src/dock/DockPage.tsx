@@ -1,15 +1,15 @@
 /**
  * DockPage.tsx — OBS Browser Dock Control Panel
  *
- * Pre-release production mode keeps the dock focused on Bible and Worship.
- * Theme defaults come from the main app's Production Theme Settings page,
- * while the dock remains the only live control surface for preview/program.
+ * The dock keeps Bible and Worship production controls, while the Ministry
+ * section restores lower-third speaker/sermon/event control inside OBS.
  */
 
 import { useState, useEffect, useCallback } from "react";
 import { dockClient, type DockStateMessage } from "../services/dockBridge";
 import { dockObsClient, type DockObsStatus } from "./dockObsClient";
 import { DOCK_TABS, type DockTab, type DockStagedItem } from "./dockTypes";
+import DockMinistryTab from "./tabs/DockMinistryTab";
 import DockBibleTab from "./tabs/DockBibleTab";
 import DockMediaTab from "./tabs/DockMediaTab";
 import DockWorshipTab from "./tabs/DockWorshipTab";
@@ -19,9 +19,42 @@ import {
   getDefaultDockProductionSettings,
   loadDockProductionSettings,
 } from "../services/productionSettings";
+import type { VoiceBibleSnapshot } from "../services/voiceBibleTypes";
 import "./dock.css";
 import "./dock-theme.css";
 import Icon from "./DockIcon";
+
+const DOCK_SHELL_PREFS_KEY = "ocs-dock-shell-preferences";
+const DOCK_STAGED_ITEM_KEY = "ocs-dock-staged-item";
+
+interface DockShellPreferences {
+  activeTab?: DockTab;
+}
+
+function loadDockStagedItem(): DockStagedItem | null {
+  try {
+    const raw = localStorage.getItem(DOCK_STAGED_ITEM_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as DockStagedItem | null;
+    if (!parsed || typeof parsed !== "object") return null;
+    if (typeof parsed.type !== "string" || typeof parsed.label !== "string") return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function saveDockStagedItem(item: DockStagedItem | null): void {
+  try {
+    if (!item) {
+      localStorage.removeItem(DOCK_STAGED_ITEM_KEY);
+      return;
+    }
+    localStorage.setItem(DOCK_STAGED_ITEM_KEY, JSON.stringify(item));
+  } catch {
+    // ignore OBS CEF storage failures
+  }
+}
 
 function isDockProductionSettingsPayload(value: unknown): value is DockProductionSettingsPayload {
   if (!value || typeof value !== "object") return false;
@@ -36,12 +69,32 @@ function isDockProductionSettingsPayload(value: unknown): value is DockProductio
   );
 }
 
+function loadDockShellPreferences(): DockShellPreferences {
+  try {
+    const raw = localStorage.getItem(DOCK_SHELL_PREFS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as DockShellPreferences;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveDockShellPreferences(next: DockShellPreferences): void {
+  try {
+    localStorage.setItem(DOCK_SHELL_PREFS_KEY, JSON.stringify(next));
+  } catch {
+    // ignore OBS CEF storage failures
+  }
+}
+
 export default function DockPage() {
+  const shellPreferences = loadDockShellPreferences();
   const { effective, setTheme } = useAppTheme();
-  const [activeTab, setActiveTab] = useState<DockTab>("bible");
+  const [activeTab, setActiveTab] = useState<DockTab>(shellPreferences.activeTab ?? "bible");
   const [obsConnected, setObsConnected] = useState(false);
   const [obsError, setObsError] = useState("");
-  const [staged, setStaged] = useState<DockStagedItem | null>(null);
+  const [staged, setStaged] = useState<DockStagedItem | null>(() => loadDockStagedItem());
   const [appConnected, setAppConnected] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [obsUrlInput, setObsUrlInput] = useState("ws://localhost:4455");
@@ -49,14 +102,23 @@ export default function DockPage() {
   const [productionSettings, setProductionSettings] = useState<DockProductionSettingsPayload>(
     getDefaultDockProductionSettings(),
   );
+  const [voiceBible, setVoiceBible] = useState<VoiceBibleSnapshot | null>(null);
 
   useEffect(() => {
-    void loadDockProductionSettings().then(setProductionSettings).catch(() => {});
+    saveDockShellPreferences({ activeTab });
+  }, [activeTab]);
+
+  useEffect(() => {
+    saveDockStagedItem(staged);
+  }, [staged]);
+
+  useEffect(() => {
+    void loadDockProductionSettings().then(setProductionSettings).catch(() => { });
   }, []);
 
   useEffect(() => {
     dockClient.init();
-    dockObsClient.connect();
+    void dockObsClient.connect();
 
     const unsubObs = dockObsClient.onStatusChange((status: DockObsStatus, err?: string) => {
       setObsConnected(status === "connected");
@@ -101,10 +163,24 @@ export default function DockPage() {
                 },
               };
             }
+            if (recovered.lowerThird) {
+              setActiveTab("ministry");
+              return {
+                type: "speaker",
+                label: recovered.lowerThird.name || "Lower Third",
+                subtitle: recovered.lowerThird.role || "",
+                data: {
+                  name: recovered.lowerThird.name,
+                  role: recovered.lowerThird.role,
+                  _recovered: true,
+                  _dockLive: true,
+                },
+              };
+            }
             return null;
           });
-        }).catch((err) => {
-          console.warn("[Dock] Failed to recover live state:", err);
+        }).catch((error) => {
+          console.warn("[Dock] Failed to recover live state:", error);
         });
       }
     });
@@ -120,6 +196,7 @@ export default function DockPage() {
           }
           break;
         case "state:update": {
+          setAppConnected(true);
           const payload = msg.payload as Record<string, unknown>;
           if (!dockObsClient.isConnected && typeof payload.obsConnected === "boolean") {
             setObsConnected(payload.obsConnected);
@@ -127,9 +204,13 @@ export default function DockPage() {
           if (isDockProductionSettingsPayload(payload.productionSettings)) {
             setProductionSettings(payload.productionSettings);
           }
-          setAppConnected(true);
+          if (payload.voiceBible) {
+            setVoiceBible(payload.voiceBible as VoiceBibleSnapshot);
+          }
           break;
         }
+        default:
+          break;
       }
     });
 
@@ -156,58 +237,57 @@ export default function DockPage() {
     await dockObsClient.connect(obsUrlInput, obsPwInput || undefined);
   }, [obsPwInput, obsUrlInput]);
 
+  const activeTabDef = DOCK_TABS.find((tab) => tab.id === activeTab) ?? DOCK_TABS[0];
+  const nextTheme = effective === "dark" ? "light" : "dark";
+  const themeToggleLabel = nextTheme === "dark" ? "Switch to dark mode" : "Switch to light mode";
+  const themeToggleIcon = nextTheme === "dark" ? "moon" : "sun";
+
   return (
     <div className="dock-root">
-      <div className="dock-status-bar" onClick={() => setShowSettings((value) => !value)} style={{ cursor: "pointer" }}>
-        <div className="dock-status-bar__left">
-          <div className={`dock-status-dot ${obsConnected ? "dock-status-dot--connected" : "dock-status-dot--disconnected"}`} />
-          <span className="dock-status-label">{obsConnected ? "OBS Connected" : "OBS Disconnected"}</span>
-          {!obsConnected && <Icon name="settings" size={10} style={{ opacity: 0.5, marginLeft: 2 }} />}
-        </div>
-        <div className="dock-status-bar__right">
-          <div
-            className="dock-theme-switch"
-            role="group"
-            aria-label="Dock color mode"
-            onClick={(event) => event.stopPropagation()}
-          >
+      <div className="dock-shell-header">
+        <div className="dock-shell-status">
+          <div className="dock-shell-titleline">
+            <span className="dock-shell-titleline__app">OBS Studio</span>
+            <span className="dock-shell-titleline__divider">/</span>
+            <span className="dock-shell-titleline__section">{activeTabDef.label}</span>
+          </div>
+
+          <div className="dock-shell-status__right">
             <button
               type="button"
-              className={`dock-theme-switch__btn${effective === "light" ? " dock-theme-switch__btn--active" : ""}`}
-              onClick={() => setTheme("light")}
-              aria-pressed={effective === "light"}
-              title="Use light mode"
+              className="dock-shell-icon-btn dock-shell-icon-btn--theme"
+              onClick={() => setTheme(nextTheme)}
+              aria-label={themeToggleLabel}
+              title={themeToggleLabel}
             >
-              Light
+              <Icon name={themeToggleIcon} size={14} />
             </button>
             <button
               type="button"
-              className={`dock-theme-switch__btn${effective === "dark" ? " dock-theme-switch__btn--active" : ""}`}
-              onClick={() => setTheme("dark")}
-              aria-pressed={effective === "dark"}
-              title="Use dark mode"
+              className={`dock-shell-icon-btn${showSettings ? " dock-shell-icon-btn--active" : ""}`}
+              onClick={() => setShowSettings((value) => !value)}
+              aria-label="Open OBS connection settings"
+              title="OBS connection settings"
             >
-              Dark
+              <Icon name="settings" size={14} />
             </button>
           </div>
-          {appConnected && (
-            <span className="dock-status-label" style={{ color: "var(--dock-green, #4ade80)", fontSize: 8 }}>
-              Synced
-            </span>
-          )}
         </div>
       </div>
 
       {showSettings && (
         <div className="dock-settings-panel">
-          <div className="dock-section-label" style={{ marginTop: 0 }}>OBS WebSocket Connection</div>
+          <div className="dock-settings-panel__header">
+            <div className="dock-settings-panel__title">OBS WebSocket</div>
+            <div className="dock-settings-panel__caption">Connect the dock directly to your OBS session.</div>
+          </div>
           {obsError && (
             <div className="dock-error-msg">
               <Icon name="error" size={14} />
               {obsError}
             </div>
           )}
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          <div className="dock-settings-form">
             <input
               className="dock-input"
               placeholder="ws://localhost:4455"
@@ -221,36 +301,31 @@ export default function DockPage() {
               value={obsPwInput}
               onChange={(event) => setObsPwInput(event.target.value)}
             />
-            <button className="dock-btn dock-btn--preview" onClick={handleManualConnect} style={{ width: "100%" }}>
-              <Icon name="link" size={20} />
+            <button type="button" className="dock-btn dock-btn--preview dock-btn--block" onClick={handleManualConnect}>
+              <Icon name="link" size={16} />
               {obsConnected ? "Reconnect" : "Connect"}
             </button>
           </div>
-          <div style={{ fontSize: 10, color: "var(--dock-text-dim)", marginTop: 6 }}>
+          <div className="dock-settings-panel__hint">
             Make sure OBS → Tools → WebSocket Server Settings is enabled.
           </div>
         </div>
       )}
 
-      <div className="dock-tabs">
-        {DOCK_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            className={`dock-tab${activeTab === tab.id ? " dock-tab--active" : ""}`}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            <Icon name={tab.icon} size={20} />
-            <span>{tab.label}</span>
-          </button>
-        ))}
-      </div>
-
       <div className="dock-content">
+        {activeTab === "ministry" && (
+          <DockMinistryTab
+            staged={staged}
+            onStage={handleStage}
+          />
+        )}
         {activeTab === "bible" && (
           <DockBibleTab
             staged={staged}
             onStage={handleStage}
             productionDefaults={productionSettings.bible}
+            initialVoiceBible={voiceBible}
+            appConnected={appConnected}
           />
         )}
         {activeTab === "worship" && (
@@ -266,6 +341,19 @@ export default function DockPage() {
             onStage={handleStage}
           />
         )}
+      </div>
+
+      <div className="dock-bottom-nav">
+        {DOCK_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            className={`dock-bottom-nav__item${activeTab === tab.id ? " dock-bottom-nav__item--active" : ""}`}
+            onClick={() => setActiveTab(tab.id)}
+          >
+            <span>{tab.label}</span>
+          </button>
+        ))}
       </div>
     </div>
   );

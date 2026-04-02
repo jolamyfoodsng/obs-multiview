@@ -230,23 +230,23 @@
        Named animation classes (set dynamically)
        ════════════════════════════════════════════ */
 
-    #overlay-root.anim-slide-left   { animation: lt-slide-left  0.6s cubic-bezier(0.16,1,0.3,1) forwards; }
-    #overlay-root.anim-slide-right  { animation: lt-slide-right 0.6s cubic-bezier(0.16,1,0.3,1) forwards; }
-    #overlay-root.anim-slide-up     { animation: lt-slide-up    0.6s cubic-bezier(0.16,1,0.3,1) forwards; }
-    #overlay-root.anim-slide-down   { animation: lt-slide-down  0.6s cubic-bezier(0.16,1,0.3,1) forwards; }
-    #overlay-root.anim-fade-in      { animation: lt-fade-in     0.5s ease-out forwards; }
-    #overlay-root.anim-fade-up      { animation: lt-fade-up     0.5s ease-out forwards; }
-    #overlay-root.anim-fade-down    { animation: lt-fade-down   0.5s ease-out forwards; }
-    #overlay-root.anim-zoom-in      { animation: lt-zoom-in     0.5s cubic-bezier(0.16,1,0.3,1) forwards; }
-    #overlay-root.anim-bounce-in    { animation: lt-bounce-in   0.7s ease-out forwards; }
-    #overlay-root.anim-flip-in      { animation: lt-flip-in     0.6s ease-out forwards; }
-    #overlay-root.anim-blur-in      { animation: lt-blur-in     0.5s ease-out forwards; }
+    #overlay-root.anim-slide-left   { animation: lt-slide-left  0.22s cubic-bezier(0.16,1,0.3,1) forwards; }
+    #overlay-root.anim-slide-right  { animation: lt-slide-right 0.22s cubic-bezier(0.16,1,0.3,1) forwards; }
+    #overlay-root.anim-slide-up     { animation: lt-slide-up    0.22s cubic-bezier(0.16,1,0.3,1) forwards; }
+    #overlay-root.anim-slide-down   { animation: lt-slide-down  0.22s cubic-bezier(0.16,1,0.3,1) forwards; }
+    #overlay-root.anim-fade-in      { animation: lt-fade-in     0.18s ease-out forwards; }
+    #overlay-root.anim-fade-up      { animation: lt-fade-up     0.18s ease-out forwards; }
+    #overlay-root.anim-fade-down    { animation: lt-fade-down   0.18s ease-out forwards; }
+    #overlay-root.anim-zoom-in      { animation: lt-zoom-in     0.18s cubic-bezier(0.16,1,0.3,1) forwards; }
+    #overlay-root.anim-bounce-in    { animation: lt-bounce-in   0.24s ease-out forwards; }
+    #overlay-root.anim-flip-in      { animation: lt-flip-in     0.22s ease-out forwards; }
+    #overlay-root.anim-blur-in      { animation: lt-blur-in     0.18s ease-out forwards; }
     #overlay-root.anim-none         { opacity: 1; }
 
     /* Legacy compat */
-    #overlay-root.slide-in  { animation: lt-slide-left 0.6s cubic-bezier(0.16,1,0.3,1) forwards; }
+    #overlay-root.slide-in  { animation: lt-slide-left 0.22s cubic-bezier(0.16,1,0.3,1) forwards; }
     #overlay-root.slide-out { animation: lt-slide-out-right 0.5s cubic-bezier(0.7,0,0.84,0) forwards; }
-    #overlay-root.fade-in   { animation: lt-fade-in 0.4s ease-out forwards; }
+    #overlay-root.fade-in   { animation: lt-fade-in 0.16s ease-out forwards; }
     #overlay-root.fade-out  { animation: lt-fade-scale-out 0.4s ease-in forwards; }
     /* Reverse exit classes (matching entry animations) */
     #overlay-root.exit-slide-left   { animation: lt-slide-out-left   0.5s cubic-bezier(0.7,0,0.84,0) forwards; }
@@ -308,6 +308,9 @@
     let isVisible = false;
     const MIN_THEME_EXIT_DURATION_MS = 220;
     const BACKGROUND_SNAPSHOT_HOLD_MS = 180;
+    const FAST_ENTRY_DURATION_MIN_MS = 90;
+    const FAST_ENTRY_DURATION_MAX_MS = 180;
+    const FAST_ENTRY_DELAY_MAX_MS = 70;
     let backgroundSnapshotTimer = null;
 
     /**
@@ -648,6 +651,127 @@
       return parseFloat(value) || 0;
     }
 
+    function splitCssTopLevel(value) {
+      var input = String(value || "");
+      var parts = [];
+      var current = "";
+      var depth = 0;
+      for (var i = 0; i < input.length; i++) {
+        var char = input[i];
+        if (char === "(") depth += 1;
+        if (char === ")" && depth > 0) depth -= 1;
+        if (char === "," && depth === 0) {
+          parts.push(current);
+          current = "";
+          continue;
+        }
+        current += char;
+      }
+      if (current || !parts.length) parts.push(current);
+      return parts;
+    }
+
+    function formatCssTime(ms) {
+      return Math.max(0, Math.round(ms)) + "ms";
+    }
+
+    function compactEntryDurationMs(ms) {
+      if (!isFinite(ms) || ms <= 0) return 0;
+      return Math.max(
+        FAST_ENTRY_DURATION_MIN_MS,
+        Math.min(FAST_ENTRY_DURATION_MAX_MS, Math.round(ms * 0.42))
+      );
+    }
+
+    function compactEntryDelayMs(ms) {
+      if (!isFinite(ms) || ms <= 0) return 0;
+      return Math.max(0, Math.min(FAST_ENTRY_DELAY_MAX_MS, Math.round(ms * 0.22)));
+    }
+
+    function compactCssTimeList(value, transformer) {
+      return splitCssTopLevel(value)
+        .map(function(part) {
+          return part.replace(/(-?\d*\.?\d+)(ms|s)\b/gi, function(match, amount, unit) {
+            var originalMs = unit.toLowerCase() === "s" ? (parseFloat(amount) || 0) * 1000 : (parseFloat(amount) || 0);
+            return formatCssTime(transformer(originalMs));
+          });
+        })
+        .join(", ");
+    }
+
+    function compactAnimationShorthand(value) {
+      return splitCssTopLevel(value)
+        .map(function(part) {
+          var timeTokenCount = 0;
+          return part.replace(/(-?\d*\.?\d+)(ms|s)\b/gi, function(match, amount, unit) {
+            var originalMs = unit.toLowerCase() === "s" ? (parseFloat(amount) || 0) * 1000 : (parseFloat(amount) || 0);
+            var compactedMs = timeTokenCount === 0
+              ? compactEntryDurationMs(originalMs)
+              : compactEntryDelayMs(originalMs);
+            timeTokenCount += 1;
+            return formatCssTime(compactedMs);
+          });
+        })
+        .join(", ");
+    }
+
+    function compactTransitionShorthand(value) {
+      return splitCssTopLevel(value)
+        .map(function(part) {
+          var timeTokenCount = 0;
+          return part.replace(/(-?\d*\.?\d+)(ms|s)\b/gi, function(match, amount, unit) {
+            var originalMs = unit.toLowerCase() === "s" ? (parseFloat(amount) || 0) * 1000 : (parseFloat(amount) || 0);
+            var compactedMs = timeTokenCount === 0
+              ? compactEntryDurationMs(originalMs)
+              : compactEntryDelayMs(originalMs);
+            timeTokenCount += 1;
+            return formatCssTime(compactedMs);
+          });
+        })
+        .join(", ");
+    }
+
+    function shouldCompactEntryMotion(selector) {
+      var normalized = String(selector || "").replace(/\s+/g, " ").toLowerCase();
+      if (!normalized) return false;
+      if (normalized.includes('[data-state="out"]') || normalized.includes("[data-state='out']")) return false;
+      if (/\b(?:exit|out)-(?:[\w-]+)/.test(normalized)) return false;
+      return (
+        normalized.includes('[data-state="in"]') ||
+        normalized.includes("[data-state='in']") ||
+        /\b(?:anim|animate|enter|in)-(?:[\w-]+)/.test(normalized) ||
+        normalized.includes(".slide-in") ||
+        normalized.includes(".fade-in")
+      );
+    }
+
+    function compactEntryMotionCss(cssText) {
+      if (!cssText) return cssText;
+      return String(cssText).replace(/([^{}]+)\{([^{}]*)\}/g, function(match, selector, body) {
+        if (!shouldCompactEntryMotion(selector)) return match;
+        var compactedBody = String(body)
+          .replace(/animation\s*:\s*([^;]+);/gi, function(_, value) {
+            return "animation: " + compactAnimationShorthand(value) + ";";
+          })
+          .replace(/animation-duration\s*:\s*([^;]+);/gi, function(_, value) {
+            return "animation-duration: " + compactCssTimeList(value, compactEntryDurationMs) + ";";
+          })
+          .replace(/animation-delay\s*:\s*([^;]+);/gi, function(_, value) {
+            return "animation-delay: " + compactCssTimeList(value, compactEntryDelayMs) + ";";
+          })
+          .replace(/transition\s*:\s*([^;]+);/gi, function(_, value) {
+            return "transition: " + compactTransitionShorthand(value) + ";";
+          })
+          .replace(/transition-duration\s*:\s*([^;]+);/gi, function(_, value) {
+            return "transition-duration: " + compactCssTimeList(value, compactEntryDurationMs) + ";";
+          })
+          .replace(/transition-delay\s*:\s*([^;]+);/gi, function(_, value) {
+            return "transition-delay: " + compactCssTimeList(value, compactEntryDelayMs) + ";";
+          });
+        return selector + "{" + compactedBody + "}";
+      });
+    }
+
     /**
      * Compute the longest finite animation timeline currently applied in the DOM.
      * Used so theme-defined exit animations can finish before cleanup.
@@ -767,7 +891,7 @@
 
       // Inject CSS
       if (css) {
-        cssEl.textContent = css;
+        cssEl.textContent = compactEntryMotionCss(css);
       }
 
       // Body stays transparent (custom bg is handled inside the LT element)

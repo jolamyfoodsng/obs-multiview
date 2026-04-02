@@ -21,80 +21,65 @@ interface Props {
   onStage: (item: DockStagedItem | null) => void;
 }
 
-/** Info for a single source in the current scene */
-interface SceneSource {
-  sourceName: string;
-  sceneItemId: number;
-  sceneItemIndex: number;
-  enabled: boolean;
-  inputKind: string;
+type DockMediaKind = "video" | "image";
+
+interface DockMediaEntry {
+  key: string;
+  name: string;
+  kind: DockMediaKind;
+  originLabel: string;
+  mimeLabel?: string;
+  thumbnailUrl?: string;
+  uploadFile?: string;
+  libraryItem?: MediaItem;
+  playingKey: string;
 }
 
-/** Map of OBS input kinds → friendly labels + Material Icons icon name */
-const KIND_META: Record<string, { label: string; icon: string }> = {
-  browser_source:     { label: "Browser",    icon: "language" },
-  ffmpeg_source:      { label: "Media",      icon: "movie" },
-  vlc_source:         { label: "VLC",        icon: "movie" },
-  image_source:       { label: "Image",      icon: "image" },
-  slideshow:          { label: "Slideshow",  icon: "photo_library" },
-  text_ft2_source_v2: { label: "Text",       icon: "text_fields" },
-  text_gdiplus_v3:    { label: "Text",       icon: "text_fields" },
-  color_source_v3:    { label: "Color",      icon: "palette" },
-  dshow_input:        { label: "Camera",     icon: "videocam" },
-  av_capture_input:   { label: "Camera",     icon: "videocam" },
-  av_capture_input_v2:{ label: "Camera",     icon: "videocam" },
-  coreaudio_input_capture:  { label: "Audio", icon: "mic" },
-  coreaudio_output_capture: { label: "Audio", icon: "headphones" },
-  wasapi_input_capture:     { label: "Audio", icon: "mic" },
-  wasapi_output_capture:    { label: "Audio", icon: "headphones" },
-  window_capture:     { label: "Window",     icon: "desktop_windows" },
-  monitor_capture:    { label: "Display",    icon: "monitor" },
-  game_capture:       { label: "Game",       icon: "sports_esports" },
-  scene:              { label: "Scene",      icon: "layers" },
-  ndi_source:         { label: "NDI",        icon: "cast" },
-};
-
-function getKindMeta(kind: string): { label: string; icon: string } {
-  return KIND_META[kind] ?? { label: "Source", icon: "widgets" };
+interface ActiveMediaTargets {
+  preview: DockMediaEntry | null;
+  program: DockMediaEntry | null;
 }
 
-/** Video/media file extensions */
-const MEDIA_EXTENSIONS = new Set([
-  "mp4", "webm", "mov", "avi", "mkv", "wmv", "flv",
-  "mp3", "wav", "ogg", "aac", "flac",
-  "png", "jpg", "jpeg", "gif", "webp", "svg", "bmp",
-]);
+const VIDEO_EXTENSIONS = new Set(["mp4", "webm", "mov", "avi", "mkv", "wmv", "flv"]);
+const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"]);
 
 /** Determine icon for file type */
-function getFileIcon(name: string): string {
+function getFileIcon(kind: DockMediaKind): string {
+  return kind === "video" ? "movie" : "image";
+}
+
+function getUploadMediaKind(name: string): DockMediaKind | null {
   const ext = name.split(".").pop()?.toLowerCase() || "";
-  if (["mp4", "webm", "mov", "avi", "mkv", "wmv", "flv"].includes(ext)) return "movie";
-  if (["mp3", "wav", "ogg", "aac", "flac"].includes(ext)) return "audiotrack";
-  if (["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"].includes(ext)) return "image";
-  return "insert_drive_file";
+  if (VIDEO_EXTENSIONS.has(ext)) return "video";
+  if (IMAGE_EXTENSIONS.has(ext)) return "image";
+  return null;
 }
 
 function isMediaFile(name: string): boolean {
-  const ext = name.split(".").pop()?.toLowerCase() || "";
-  return MEDIA_EXTENSIONS.has(ext);
+  return getUploadMediaKind(name) !== null;
 }
 
 export default function DockMediaTab({ staged: _staged, onStage: _onStage }: Props) {
-  const [sources, setSources] = useState<SceneSource[]>([]);
-  const [sceneName, setSceneName] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [activeKind, setActiveKind] = useState<DockMediaKind>("video");
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const [uploadsLoading, setUploadsLoading] = useState(false);
-  const [playingFile, setPlayingFile] = useState<string | null>(null);
   const [sendingFile, setSendingFile] = useState<string | null>(null);
+  const [activeTargets, setActiveTargets] = useState<ActiveMediaTargets>({
+    preview: null,
+    program: null,
+  });
+  const [clearingTarget, setClearingTarget] = useState<"preview" | "program" | "all" | null>(null);
   const mountedRef = useRef(true);
-
-  // Track which file has its action buttons expanded
-  const [expandedFile, setExpandedFile] = useState<string | null>(null);
 
   // ── Absolute path to the uploads directory (for native OBS sources) ──
   const [uploadsDir, setUploadsDir] = useState<string | null>(null);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   // Fetch uploads directory path on mount (with retries for startup timing)
   useEffect(() => {
@@ -174,134 +159,6 @@ export default function DockMediaTab({ staged: _staged, onStage: _onStage }: Pro
     return unsub;
   }, [loadLibraryMedia]);
 
-  // ── Fetch sources for the current program scene ──
-
-  const fetchSources = useCallback(async () => {
-    if (!dockObsClient.isConnected) {
-      setError("Not connected to OBS");
-      setSources([]);
-      return;
-    }
-
-    setLoading(true);
-    setError("");
-
-    try {
-      // Get the current program scene
-      const sceneResp = (await dockObsClient.call("GetCurrentProgramScene")) as {
-        currentProgramSceneName?: string;
-        sceneName?: string;
-      };
-      const scene =
-        sceneResp.currentProgramSceneName ?? sceneResp.sceneName ?? "";
-      if (!mountedRef.current) return;
-      setSceneName(scene);
-
-      if (!scene) {
-        setSources([]);
-        setError("No active scene");
-        setLoading(false);
-        return;
-      }
-
-      // Get all items in the scene
-      const itemsResp = (await dockObsClient.call("GetSceneItemList", {
-        sceneName: scene,
-      })) as {
-        sceneItems: Array<{
-          sourceName: string;
-          sceneItemId: number;
-          sceneItemIndex: number;
-          sceneItemEnabled: boolean;
-          inputKind?: string;
-          sourceType?: string;
-        }>;
-      };
-
-      if (!mountedRef.current) return;
-
-      const items: SceneSource[] = itemsResp.sceneItems.map((item) => ({
-        sourceName: item.sourceName,
-        sceneItemId: item.sceneItemId,
-        sceneItemIndex: item.sceneItemIndex,
-        enabled: item.sceneItemEnabled,
-        inputKind: item.inputKind ?? item.sourceType ?? "unknown",
-      }));
-
-      // Sort by index descending (topmost source first — matches OBS UI order)
-      items.sort((a, b) => b.sceneItemIndex - a.sceneItemIndex);
-
-      setSources(items);
-    } catch (err) {
-      if (!mountedRef.current) return;
-      setError(err instanceof Error ? err.message : String(err));
-      setSources([]);
-    } finally {
-      if (mountedRef.current) setLoading(false);
-    }
-  }, []);
-
-  // Auto-fetch on mount and when OBS status changes
-  useEffect(() => {
-    mountedRef.current = true;
-    fetchSources();
-
-    const unsub = dockObsClient.onStatusChange((status) => {
-      if (status === "connected") {
-        fetchSources();
-      } else {
-        setSources([]);
-        setSceneName("");
-      }
-    });
-
-    // Poll every 5 seconds so the list stays fresh
-    const poll = setInterval(fetchSources, 5000);
-
-    return () => {
-      mountedRef.current = false;
-      unsub();
-      clearInterval(poll);
-    };
-  }, [fetchSources]);
-
-  // ── Toggle source visibility ──
-
-  const toggleSource = useCallback(
-    async (source: SceneSource) => {
-      if (!dockObsClient.isConnected || !sceneName) return;
-
-      const newEnabled = !source.enabled;
-
-      // Optimistic update
-      setSources((prev) =>
-        prev.map((s) =>
-          s.sceneItemId === source.sceneItemId
-            ? { ...s, enabled: newEnabled }
-            : s
-        )
-      );
-
-      try {
-        await dockObsClient.call("SetSceneItemEnabled", {
-          sceneName,
-          sceneItemId: source.sceneItemId,
-          sceneItemEnabled: newEnabled,
-        });
-      } catch {
-        // Revert on failure
-        setSources((prev) =>
-          prev.map((s) =>
-            s.sceneItemId === source.sceneItemId
-              ? { ...s, enabled: source.enabled }
-              : s
-          )
-        );
-      }
-    },
-    [sceneName]
-  );
-
   // ── Fetch uploaded files from overlay server ──
 
   const fetchUploads = useCallback(async () => {
@@ -329,13 +186,13 @@ export default function DockMediaTab({ staged: _staged, onStage: _onStage }: Pro
   // ── Play uploaded media via OBS — send to Preview or Go Live ──
 
   const playMedia = useCallback(
-    async (fileName: string, live: boolean) => {
+    async (fileName: string, live: boolean): Promise<boolean> => {
       if (!dockObsClient.isConnected) {
         console.warn("[DockMediaTab] Not connected to OBS");
-        return;
+        return false;
       }
 
-      setSendingFile(fileName);
+      setSendingFile(`upload:${fileName}`);
       try {
         // Resolve the uploads dir if we don't have it yet
         let dir = uploadsDir;
@@ -351,7 +208,7 @@ export default function DockMediaTab({ staged: _staged, onStage: _onStage }: Pro
         }
         if (!dir) {
           console.warn("[DockMediaTab] Could not resolve uploads directory");
-          return;
+          return false;
         }
 
         // Build the absolute local file path for OBS native sources
@@ -359,10 +216,10 @@ export default function DockMediaTab({ staged: _staged, onStage: _onStage }: Pro
         const filePath = `${dir}${sep}${fileName}`;
         console.log("[DockMediaTab] Sending media to OBS:", filePath, "live:", live);
         await dockObsClient.pushMedia(filePath, fileName, live);
-        setPlayingFile(fileName);
-        setExpandedFile(null);
+        return true;
       } catch (err) {
         console.warn("[DockMediaTab] Play media failed:", err);
+        return false;
       } finally {
         setSendingFile(null);
       }
@@ -370,23 +227,13 @@ export default function DockMediaTab({ staged: _staged, onStage: _onStage }: Pro
     [uploadsDir]
   );
 
-  const stopMedia = useCallback(async () => {
-    setPlayingFile(null);
-    setExpandedFile(null);
-    try {
-      await dockObsClient.clearMedia();
-    } catch (err) {
-      console.warn("[DockMediaTab] Stop media failed:", err);
-    }
-  }, []);
-
   // ── Play library media item via OBS ──
 
   const playLibraryMedia = useCallback(
-    async (item: MediaItem, live: boolean) => {
-      if (!dockObsClient.isConnected) return;
+    async (item: MediaItem, live: boolean): Promise<boolean> => {
+      if (!dockObsClient.isConnected) return false;
 
-      setSendingFile(item.id);
+      setSendingFile(`library:${item.id}`);
       try {
         let filePath: string;
 
@@ -417,10 +264,10 @@ export default function DockMediaTab({ staged: _staged, onStage: _onStage }: Pro
         }
 
         await dockObsClient.pushMedia(filePath, item.name, live);
-        setPlayingFile(item.id);
-        setExpandedFile(null);
+        return true;
       } catch (err) {
         console.warn("[DockMediaTab] Play library media failed:", err);
+        return false;
       } finally {
         setSendingFile(null);
       }
@@ -428,407 +275,292 @@ export default function DockMediaTab({ staged: _staged, onStage: _onStage }: Pro
     [uploadsDir]
   );
 
+  const refreshMedia = useCallback(async () => {
+    await Promise.all([fetchUploads(), loadLibraryMedia()]);
+  }, [fetchUploads, loadLibraryMedia]);
+
+  const uploadedEntries: DockMediaEntry[] = uploadedFiles.reduce<DockMediaEntry[]>((entries, file) => {
+      const kind = getUploadMediaKind(file);
+      if (!kind) return entries;
+      entries.push({
+        key: `upload:${file}`,
+        name: file,
+        kind,
+        originLabel: "Uploads",
+        mimeLabel: file.split(".").pop()?.toUpperCase(),
+        uploadFile: file,
+        playingKey: `upload:${file}`,
+      });
+      return entries;
+    }, []);
+
+  const libraryEntries: DockMediaEntry[] = libraryMedia
+    .filter((item) => item.type === "video" || item.type === "image")
+    .map((item) => ({
+      key: `library:${item.id}`,
+      name: item.name,
+      kind: item.type,
+      originLabel: "Library",
+      mimeLabel: item.mimeType?.split("/")[1]?.toUpperCase(),
+      thumbnailUrl: item.thumbnailUrl,
+      libraryItem: item,
+      playingKey: `library:${item.id}`,
+    }));
+
+  const videoEntries = [...uploadedEntries, ...libraryEntries].filter((entry) => entry.kind === "video");
+  const imageEntries = [...uploadedEntries, ...libraryEntries].filter((entry) => entry.kind === "image");
+  const activeEntries = activeKind === "video" ? videoEntries : imageEntries;
+
+  useEffect(() => {
+    if (activeKind === "video" && videoEntries.length === 0 && imageEntries.length > 0) {
+      setActiveKind("image");
+      return;
+    }
+    if (activeKind === "image" && imageEntries.length === 0 && videoEntries.length > 0) {
+      setActiveKind("video");
+    }
+  }, [activeKind, imageEntries.length, videoEntries.length]);
+
+  const handleSendEntry = useCallback(
+    async (entry: DockMediaEntry, live: boolean) => {
+      let success = false;
+      if (entry.uploadFile) {
+        success = await playMedia(entry.uploadFile, live);
+      } else if (entry.libraryItem) {
+        success = await playLibraryMedia(entry.libraryItem, live);
+      }
+
+      if (!success) return;
+
+      if (live) {
+        setActiveTargets((prev) => ({ ...prev, program: entry }));
+      } else {
+        setActiveTargets((prev) => ({ ...prev, preview: entry }));
+      }
+    },
+    [playLibraryMedia, playMedia]
+  );
+
+  const clearPreview = useCallback(async () => {
+    setClearingTarget("preview");
+    try {
+      await dockObsClient.clearMediaTarget(false);
+      setActiveTargets((prev) => ({ ...prev, preview: null }));
+    } catch (err) {
+      console.warn("[DockMediaTab] Clear preview media failed:", err);
+    } finally {
+      setClearingTarget(null);
+    }
+  }, []);
+
+  const clearProgram = useCallback(async () => {
+    setClearingTarget("program");
+    try {
+      await dockObsClient.clearMediaTarget(true);
+      setActiveTargets((prev) => ({ ...prev, program: null }));
+    } catch (err) {
+      console.warn("[DockMediaTab] Clear program media failed:", err);
+    } finally {
+      setClearingTarget(null);
+    }
+  }, []);
+
+  const clearAll = useCallback(async () => {
+    setClearingTarget("all");
+    try {
+      await dockObsClient.clearMedia();
+      setActiveTargets({ preview: null, program: null });
+    } catch (err) {
+      console.warn("[DockMediaTab] Clear all media failed:", err);
+    } finally {
+      setClearingTarget(null);
+    }
+  }, []);
+
+  const renderMediaRow = useCallback(
+    (entry: DockMediaEntry) => {
+      const isPreviewTarget = activeTargets.preview?.key === entry.key;
+      const isProgramTarget = activeTargets.program?.key === entry.key;
+      const isPlaying = isPreviewTarget || isProgramTarget;
+      const isSending = sendingFile === entry.playingKey;
+      const stateLabel = isPreviewTarget && isProgramTarget
+        ? "Preview + Program"
+        : isProgramTarget
+          ? "Program"
+          : isPreviewTarget
+            ? "Preview"
+            : "";
+      return (
+        <div
+          key={entry.key}
+          className={`dock-media-row${isPlaying ? " dock-media-row--playing" : ""}`}
+        >
+          <div className="dock-media-row__main">
+            {entry.thumbnailUrl ? (
+              <img
+                src={entry.thumbnailUrl}
+                alt=""
+                className="dock-media-row__thumb"
+              />
+            ) : (
+              <span className="dock-media-row__icon" aria-hidden="true">
+                <Icon name={getFileIcon(entry.kind)} size={14} />
+              </span>
+            )}
+            <div className="dock-media-row__body">
+              <div className="dock-media-row__title">{entry.name}</div>
+              <div className="dock-media-row__meta">
+                {entry.originLabel}
+                {entry.mimeLabel ? ` · ${entry.mimeLabel}` : ""}
+              </div>
+            </div>
+            {isPlaying && <span className="dock-media-row__state">{stateLabel}</span>}
+          </div>
+          <div className="dock-hover-actions dock-media-row__actions">
+            <button
+              type="button"
+              className="dock-btn dock-btn--preview dock-btn--compact dock-media-row__action"
+              disabled={isSending}
+              aria-label={`Send ${entry.name} to preview`}
+              title="Send to Preview"
+              onClick={() => void handleSendEntry(entry, false)}
+            >
+              Preview
+            </button>
+            <button
+              type="button"
+              className="dock-btn dock-btn--live dock-btn--compact dock-media-row__action"
+              disabled={isSending}
+              aria-label={`Send ${entry.name} to program`}
+              title="Send to Program"
+              onClick={() => void handleSendEntry(entry, true)}
+            >
+              Program
+            </button>
+          </div>
+        </div>
+      );
+    },
+    [activeTargets.preview, activeTargets.program, handleSendEntry, sendingFile]
+  );
+
   // ── Render ──
 
   return (
-    <>
-      {/* Header with scene name + refresh button */}
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          marginBottom: 6,
-        }}
-      >
-        <div className="dock-section-label" style={{ margin: 0 }}>
-          {sceneName ? `Scene: ${sceneName}` : "Scene Sources"}
+    <div className="dock-module dock-module--media">
+      <section className="dock-console-panel dock-console-panel--workspace">
+        <div className="dock-console-header">
+          <div>
+            <div className="dock-console-header__eyebrow">Media</div>
+            <div className="dock-console-header__title">Preview or send media live</div>
+          </div>
+          <button
+            type="button"
+            className="dock-shell-icon-btn"
+            onClick={() => void refreshMedia()}
+            disabled={uploadsLoading || libraryLoading}
+            aria-label="Refresh media lists"
+            title="Refresh media lists"
+          >
+            <Icon
+              name="refresh"
+              size={12}
+              style={{ animation: uploadsLoading || libraryLoading ? "spin 1s linear infinite" : undefined }}
+            />
+          </button>
         </div>
-        <button
-          className="dock-btn"
-          style={{ padding: "2px 6px", fontSize: 11, minWidth: 0 }}
-          onClick={fetchSources}
-          disabled={loading || !dockObsClient.isConnected}
-          title="Refresh source list"
-        >
-          <Icon name="refresh" size={14} style={{ animation: loading ? "spin 1s linear infinite" : undefined }} />
-        </button>
-      </div>
 
-      {/* Error */}
-      {error && (
-        <div
-          style={{
-            color: "#ff6b6b",
-            fontSize: 10,
-            marginBottom: 6,
-            padding: "4px 6px",
-            background: "rgba(255,107,107,.1)",
-            borderRadius: 4,
-          }}
-        >
-          {error}
-        </div>
-      )}
+        {videoEntries.length === 0 && imageEntries.length === 0 && !uploadsLoading && !libraryLoading && (
+          <div className="dock-empty">
+            <div className="dock-empty__text">No media found. Add media in the app or uploads folder first.</div>
+          </div>
+        )}
 
-      {/* Loading */}
-      {loading && sources.length === 0 && (
-        <div style={{ color: "#888", fontSize: 11, textAlign: "center", padding: 16 }}>
-          Loading sources…
-        </div>
-      )}
-
-      {/* Empty state */}
-      {!loading && !error && sources.length === 0 && (
-        <div style={{ color: "#888", fontSize: 11, textAlign: "center", padding: 16 }}>
-          No sources in the current scene.
-        </div>
-      )}
-
-      {/* Source list */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-        {sources.map((source) => {
-          const meta = getKindMeta(source.inputKind);
-          return (
-            <div
-              key={source.sceneItemId}
-              className="dock-card"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "5px 8px",
-                opacity: source.enabled ? 1 : 0.5,
-                cursor: "pointer",
-              }}
-              onClick={() => toggleSource(source)}
-              title={`${source.enabled ? "Hide" : "Show"} "${source.sourceName}"`}
-            >
-              {/* Kind icon */}
-              <Icon name={meta.icon} size={14} style={{ color: "#888", flexShrink: 0 }} />
-
-              {/* Name + kind label */}
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div
-                  className="dock-card__title"
-                  style={{
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                  }}
-                >
-                  {source.sourceName}
-                </div>
-                <div className="dock-card__subtitle">{meta.label}</div>
-              </div>
-
-              {/* Visibility toggle icon */}
-              <Icon name={source.enabled ? "visibility" : "visibility_off"} size={16} style={{ color: source.enabled ? "#4ecdc4" : "#666", flexShrink: 0 }} />
+        {(videoEntries.length > 0 || imageEntries.length > 0) && (
+          <>
+            <div className="dock-console-segmented dock-media-tabs" role="tablist" aria-label="Media type">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeKind === "video"}
+                className={`dock-console-segmented__item${activeKind === "video" ? " dock-console-segmented__item--active" : ""}`}
+                onClick={() => setActiveKind("video")}
+              >
+                Video
+                <span className="dock-media-tabs__count">{videoEntries.length}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={activeKind === "image"}
+                className={`dock-console-segmented__item${activeKind === "image" ? " dock-console-segmented__item--active" : ""}`}
+                onClick={() => setActiveKind("image")}
+              >
+                Picture Media
+                <span className="dock-media-tabs__count">{imageEntries.length}</span>
+              </button>
             </div>
-          );
-        })}
-      </div>
 
-      {/* ── Uploaded Media Files ── */}
-      <div style={{ marginTop: 10 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 4,
-          }}
-        >
-          <div className="dock-section-label" style={{ margin: 0 }}>
-            Uploaded Media
-          </div>
-          <button
-            className="dock-btn"
-            style={{ padding: "2px 6px", fontSize: 10, minWidth: 0 }}
-            onClick={fetchUploads}
-            disabled={uploadsLoading}
-            title="Refresh uploaded files"
-          >
-            <Icon name="refresh" size={12} style={{ animation: uploadsLoading ? "spin 1s linear infinite" : undefined }} />
-          </button>
-        </div>
-
-        {uploadedFiles.length === 0 && !uploadsLoading && (
-          <div style={{ color: "#888", fontSize: 10, textAlign: "center", padding: 10 }}>
-            No uploaded media files found.
-          </div>
-        )}
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {uploadedFiles.map((file) => {
-            const isPlaying = playingFile === file;
-            const isExpanded = expandedFile === file;
-            const isSending = sendingFile === file;
-            return (
-              <div key={file} style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                <div
-                  className="dock-card"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "4px 8px",
-                    cursor: "pointer",
-                    background: isPlaying ? "var(--dock-accent-soft)" : undefined,
-                    borderColor: isPlaying ? "var(--dock-accent)" : undefined,
-                    borderBottomLeftRadius: isExpanded ? 0 : undefined,
-                    borderBottomRightRadius: isExpanded ? 0 : undefined,
-                  }}
-                  onClick={() => {
-                    if (isPlaying) {
-                      stopMedia();
-                    } else {
-                      setExpandedFile(isExpanded ? null : file);
-                    }
-                  }}
-                  title={isPlaying ? `Stop "${file}"` : `Send "${file}" to OBS`}
-                >
-                  <Icon name={getFileIcon(file)} size={14} style={{ color: isPlaying ? "var(--dock-accent)" : "#888", flexShrink: 0 }} />
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      className="dock-card__title"
-                      style={{
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        fontSize: 10,
-                      }}
-                    >
-                      {file}
-                    </div>
-                  </div>
-                  <Icon name={isPlaying ? "stop" : "play_arrow"} size={14} style={{ color: isPlaying ? "var(--dock-accent)" : "var(--dock-text-dim)", flexShrink: 0 }} />
+            {activeEntries.length === 0 ? (
+              <div className="dock-empty dock-empty--inline">
+                <div className="dock-empty__text">
+                  {activeKind === "video" ? "No video media available." : "No picture media available."}
                 </div>
-                {/* Action buttons: Preview / Go Live */}
-                {isExpanded && !isPlaying && (
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 4,
-                      padding: "4px 8px",
-                      background: "var(--dock-card-bg, #22242d)",
-                      borderTop: "1px solid var(--dock-border, #2a2d3a)",
-                      borderBottomLeftRadius: 6,
-                      borderBottomRightRadius: 6,
-                    }}
-                  >
-                    <button
-                      className="dock-btn"
-                      style={{
-                        flex: 1,
-                        fontSize: 10,
-                        padding: "4px 6px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 4,
-                      }}
-                      disabled={isSending}
-                      onClick={(e) => { e.stopPropagation(); playMedia(file, false); }}
-                      title="Send to Preview"
-                    >
-                      <Icon name="preview" size={13} />
-                      Preview
-                    </button>
-                    <button
-                      className="dock-btn"
-                      style={{
-                        flex: 1,
-                        fontSize: 10,
-                        padding: "4px 6px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 4,
-                        background: "var(--dock-accent, #6c63ff)",
-                        color: "#fff",
-                        border: "none",
-                      }}
-                      disabled={isSending}
-                      onClick={(e) => { e.stopPropagation(); playMedia(file, true); }}
-                      title="Send to Live"
-                    >
-                      <Icon name="live_tv" size={13} />
-                      Go Live
-                    </button>
-                  </div>
-                )}
               </div>
-            );
-          })}
-        </div>
-      </div>
+            ) : (
+              <div key={activeKind} className="dock-console-list dock-console-list--compact dock-media-list">
+                {activeEntries.map((entry) => renderMediaRow(entry))}
+              </div>
+            )}
 
-      {/* ── Library Media (synced from the Library page) ── */}
-      <div style={{ marginTop: 10 }}>
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 4,
-          }}
-        >
-          <div className="dock-section-label" style={{ margin: 0 }}>
-            Library Media
-          </div>
-          <button
-            className="dock-btn"
-            style={{ padding: "2px 6px", fontSize: 10, minWidth: 0 }}
-            onClick={loadLibraryMedia}
-            disabled={libraryLoading}
-            title="Refresh library media"
-          >
-            <Icon name="refresh" size={12} style={{ animation: libraryLoading ? "spin 1s linear infinite" : undefined }} />
-          </button>
-        </div>
-
-        {libraryMedia.length === 0 && !libraryLoading && (
-          <div style={{ color: "#888", fontSize: 10, textAlign: "center", padding: 10 }}>
-            No library media found. Add media in the app's Library page.
-          </div>
-        )}
-
-        <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {libraryMedia.map((item) => {
-            const icon = item.type === "video" ? "movie" : "image";
-            const isPlaying = playingFile === item.id;
-            const isExpanded = expandedFile === item.id;
-            const isSending = sendingFile === item.id;
-            return (
-              <div key={item.id} style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                <div
-                  className="dock-card"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 6,
-                    padding: "4px 8px",
-                    cursor: "pointer",
-                    background: isPlaying ? "var(--dock-accent-soft)" : undefined,
-                    borderColor: isPlaying ? "var(--dock-accent)" : undefined,
-                    borderBottomLeftRadius: isExpanded ? 0 : undefined,
-                    borderBottomRightRadius: isExpanded ? 0 : undefined,
-                  }}
-                  onClick={() => {
-                    if (isPlaying) {
-                      stopMedia();
-                    } else {
-                      setExpandedFile(isExpanded ? null : item.id);
-                    }
-                  }}
-                  title={isPlaying ? `Stop "${item.name}"` : `Send "${item.name}" to OBS`}
-                >
-                  {/* Thumbnail or icon */}
-                  {item.thumbnailUrl ? (
-                    <img
-                      src={item.thumbnailUrl}
-                      alt=""
-                      style={{
-                        width: 24,
-                        height: 24,
-                        objectFit: "cover",
-                        borderRadius: 3,
-                        flexShrink: 0,
-                      }}
-                    />
-                  ) : (
-                    <Icon name={icon} size={14} style={{ color: isPlaying ? "var(--dock-accent)" : "#888", flexShrink: 0 }} />
-                  )}
-
-                  {/* Name + type badge */}
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div
-                      className="dock-card__title"
-                      style={{
-                        whiteSpace: "nowrap",
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        fontSize: 10,
-                      }}
-                    >
-                      {item.name}
-                    </div>
-                    <div className="dock-card__subtitle" style={{ fontSize: 9, textTransform: "uppercase" }}>
-                      {item.type}{item.mimeType ? ` · ${item.mimeType.split("/")[1]}` : ""}
-                    </div>
+            {(activeTargets.preview || activeTargets.program) && (
+              <div className="dock-media-clear-box">
+                <div className="dock-media-clear-box__header">
+                  <div className="dock-media-clear-box__title">Clear Output</div>
+                  <div className="dock-media-clear-box__meta">
+                    {activeTargets.preview ? `Preview: ${activeTargets.preview.name}` : "Preview empty"}
+                    {" · "}
+                    {activeTargets.program ? `Program: ${activeTargets.program.name}` : "Program empty"}
                   </div>
-
-                  {/* Play/Stop icon */}
-                  <Icon name={isPlaying ? "stop" : "play_arrow"} size={14} style={{ color: isPlaying ? "var(--dock-accent)" : "var(--dock-text-dim)", flexShrink: 0 }} />
                 </div>
-                {/* Action buttons: Preview / Go Live */}
-                {isExpanded && !isPlaying && (
-                  <div
-                    style={{
-                      display: "flex",
-                      gap: 4,
-                      padding: "4px 8px",
-                      background: "var(--dock-card-bg, #22242d)",
-                      borderTop: "1px solid var(--dock-border, #2a2d3a)",
-                      borderBottomLeftRadius: 6,
-                      borderBottomRightRadius: 6,
-                    }}
+                <div className="dock-media-clear-box__actions">
+                  <button
+                    type="button"
+                    className="dock-btn dock-btn--compact dock-media-clear-box__btn"
+                    onClick={() => void clearPreview()}
+                    disabled={!activeTargets.preview || clearingTarget !== null}
                   >
-                    <button
-                      className="dock-btn"
-                      style={{
-                        flex: 1,
-                        fontSize: 10,
-                        padding: "4px 6px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 4,
-                      }}
-                      disabled={isSending}
-                      onClick={(e) => { e.stopPropagation(); playLibraryMedia(item, false); }}
-                      title="Send to Preview"
-                    >
-                      <Icon name="preview" size={13} />
-                      Preview
-                    </button>
-                    <button
-                      className="dock-btn"
-                      style={{
-                        flex: 1,
-                        fontSize: 10,
-                        padding: "4px 6px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 4,
-                        background: "var(--dock-accent, #6c63ff)",
-                        color: "#fff",
-                        border: "none",
-                      }}
-                      disabled={isSending}
-                      onClick={(e) => { e.stopPropagation(); playLibraryMedia(item, true); }}
-                      title="Send to Live"
-                    >
-                      <Icon name="live_tv" size={13} />
-                      Go Live
-                    </button>
-                  </div>
-                )}
+                    Clear Preview
+                  </button>
+                  <button
+                    type="button"
+                    className="dock-btn dock-btn--compact dock-media-clear-box__btn"
+                    onClick={() => void clearProgram()}
+                    disabled={!activeTargets.program || clearingTarget !== null}
+                  >
+                    Clear Program
+                  </button>
+                  <button
+                    type="button"
+                    className="dock-btn dock-btn--danger dock-btn--compact dock-media-clear-box__btn"
+                    onClick={() => void clearAll()}
+                    disabled={clearingTarget !== null}
+                  >
+                    Clear All
+                  </button>
+                </div>
               </div>
-            );
-          })}
-        </div>
-      </div>
+            )}
+          </>
+        )}
+      </section>
 
-      {/* Spin animation for refresh icon */}
       <style>{`
         @keyframes spin {
           from { transform: rotate(0deg); }
           to   { transform: rotate(360deg); }
         }
       `}</style>
-    </>
+    </div>
   );
 }

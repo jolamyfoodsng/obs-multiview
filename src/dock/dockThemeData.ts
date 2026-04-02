@@ -55,7 +55,10 @@ export async function loadDockFavoriteBibleThemes(
   templateType?: BibleTheme["templateType"],
 ): Promise<BibleTheme[]> {
   const remoteFavorites = await loadJsonArray<BibleTheme>("/uploads/dock-bible-favorite-themes.json");
-  const favoriteIds = await loadDockBibleFavorites();
+  const favoriteIds =
+    templateType === "lower-third"
+      ? await loadDockLTFavorites()
+      : await loadDockBibleFavorites();
   const customThemes = await loadDockCustomBibleThemes();
   const builtinIds = new Set(BUILTIN_THEMES.map((theme) => theme.id));
   const uniqueCustom = customThemes.filter((theme) => !builtinIds.has(theme.id));

@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
-import { ImageIcon, Search, Sparkles, Star, X } from "lucide-react";
+import { ImageIcon, Search, Sparkles, X } from "lucide-react";
 import type { BibleTheme } from "../../bible/types";
 import { loadDockFavoriteBibleThemes } from "../dockThemeData";
 
@@ -45,13 +45,13 @@ export default function DockThemeBrowserModal({
   const favorites = useMemo(() => {
     const q = search.toLowerCase().trim();
     return q
-        ? allThemes.filter(
-          (theme) =>
-            theme.name.toLowerCase().includes(q) ||
-            (theme.description ?? "").toLowerCase().includes(q) ||
-            (theme.category ?? "").toLowerCase().includes(q) ||
-            (theme.categories ?? []).some((category) => category.toLowerCase().includes(q)),
-        )
+      ? allThemes.filter(
+        (theme) =>
+          theme.name.toLowerCase().includes(q) ||
+          (theme.description ?? "").toLowerCase().includes(q) ||
+          (theme.category ?? "").toLowerCase().includes(q) ||
+          (theme.categories ?? []).some((category) => category.toLowerCase().includes(q)),
+      )
       : allThemes;
   }, [allThemes, search]);
 
@@ -117,10 +117,10 @@ export default function DockThemeBrowserModal({
 
         <div className="dtb-card__info">
           <span className="dtb-card__name">{theme.name}</span>
-          <span className="dtb-card__favorite-badge">
+          {/* <span className="dtb-card__favorite-badge">
             <Star size={10} />
             Favorite
-          </span>
+          </span> */}
         </div>
 
         <div className="dtb-card__meta">

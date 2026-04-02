@@ -32,97 +32,122 @@ export default function ProductionHomePage() {
   }, [dockUrl]);
 
   return (
-    <div className="production-page">
-      <section className="production-hero">
-        <div className="production-hero__copy">
-          <span className="production-eyebrow">Pre-release Production Mode</span>
-          <h1 className="production-title">Setup in the app. Run Bible and Worship from the OBS Dock.</h1>
-          <p className="production-subtitle">
-            This pre-release keeps the main app focused on setup, songs, Bible data, and theme defaults.
-            Live Bible and Worship control now belongs in OBS.
-          </p>
-
-          <div className="production-status-row">
-            <span className={`production-status-pill${obsConnected ? " is-ok" : ""}`}>
-              <Icon name={obsConnected ? "check_circle" : "error_outline"} size={16} />
+    <div className="app-page production-page">
+      <div className="app-page__inner">
+        <header className="app-page__header">
+          <div className="app-page__header-copy">
+            <p className="app-page__eyebrow">Production Workflow</p>
+            <h1 className="app-page__title">Prepare everything here, then run the live service from OBS.</h1>
+            <p className="app-page__subtitle">
+              OBS Church Studio is the setup surface for translations, songs, media, branding, and theme defaults.
+              Operators stay inside the OBS Browser Dock during the service.
+            </p>
+          </div>
+          <div className="app-page__actions">
+            <span className={`app-chip${obsConnected ? " is-ok" : ""}`}>
+              <Icon name={obsConnected ? "check_circle" : "error_outline"} size={14} />
               {obsConnected ? "OBS connected" : "OBS disconnected"}
             </span>
-            <span className="production-status-pill">
-              <Icon name="web_asset" size={16} />
-              Dock-first workflow
+            <span className="app-chip">
+              <Icon name="dock" size={14} />
+              Dock-first control
             </span>
           </div>
-        </div>
+        </header>
 
-        <div className="production-dock-card">
-          <div className="production-card-head">
-            <div>
-              <h2>OBS Dock URL</h2>
-              <p>Add this as a Custom Browser Dock inside OBS.</p>
+        <section className="app-grid-2">
+          <article className="app-surface production-dock-card">
+            <div className="app-surface__header">
+              <div>
+                <h2 className="app-surface__title">OBS Browser Dock</h2>
+                <p className="app-surface__meta">Copy this address into OBS Studio as a Custom Browser Dock.</p>
+              </div>
+              <Icon name="cast_connected" size={18} />
             </div>
-            <Icon name="cast_connected" size={20} />
-          </div>
+            <div className="app-surface__body">
+              <label className="production-field">
+                <span>Dock address</span>
+                <input className="production-input" type="text" readOnly value={dockUrl} />
+              </label>
 
-          <label className="production-field">
-            <span>Dock address</span>
-            <input className="production-input" type="text" readOnly value={dockUrl} />
-          </label>
+              <div className="production-actions">
+                <button className="production-btn production-btn--primary" onClick={handleCopyDockUrl}>
+                  <Icon name={copied ? "check" : "content_copy"} size={16} />
+                  {copied ? "Copied" : "Copy Dock URL"}
+                </button>
+                <a
+                  className="production-btn production-btn--ghost"
+                  href="https://obsproject.com/kb/browser-source"
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  <Icon name="open_in_new" size={16} />
+                  Browser Dock Help
+                </a>
+              </div>
+            </div>
+          </article>
 
-          <div className="production-actions">
-            <button className="production-btn production-btn--primary" onClick={handleCopyDockUrl}>
-              <Icon name={copied ? "check" : "content_copy"} size={16} />
-              {copied ? "Copied" : "Copy Dock URL"}
-            </button>
-            <a
-              className="production-btn production-btn--ghost"
-              href="https://obsproject.com/kb/browser-source"
-              target="_blank"
-              rel="noreferrer"
-            >
-              <Icon name="open_in_new" size={16} />
-              OBS Browser Dock Help
-            </a>
-          </div>
+          <article className="app-surface app-surface--muted">
+            <div className="app-surface__header">
+              <div>
+                <h2 className="app-surface__title">Startup Checklist</h2>
+                <p className="app-surface__meta">Keep the path into live operation short and predictable.</p>
+              </div>
+              <Icon name="fact_check" size={18} />
+            </div>
+            <div className="app-surface__body">
+              <ol className="app-info-list">
+                <li>Open OBS Church Studio before service begins.</li>
+                <li>Add the dock URL above inside OBS once and leave it pinned.</li>
+                <li>Review resources and theme defaults before going live.</li>
+              </ol>
+            </div>
+          </article>
+        </section>
 
-          <ol className="production-checklist">
-            <li>Keep OBS Church Studio open in the background.</li>
-            <li>In OBS, add a Custom Browser Dock using the address above.</li>
-            <li>Use the dock for live Bible and Worship preview/program sends.</li>
-          </ol>
-        </div>
-      </section>
+        <section className="app-surface">
+          <div className="app-surface__header">
+            <div>
+              <h2 className="app-surface__title">Work Areas</h2>
+              <p className="app-surface__meta">These are the setup surfaces the dock depends on during live production.</p>
+            </div>
+          </div>
+          <div className="app-surface__body">
+            <div className="app-grid-3">
+              <Link className="app-compact-item production-nav-card" to="/settings">
+                <div className="app-compact-item__icon">
+                  <Icon name="settings" size={18} />
+                </div>
+                <div className="app-compact-item__copy">
+                  <h3>Settings</h3>
+                  <p>OBS connection, overlay health, branding, and Bible configuration.</p>
+                </div>
+              </Link>
 
-      <section className="production-grid">
-        <Link className="production-nav-card" to="/settings">
-          <div className="production-nav-card__icon">
-            <Icon name="settings" size={22} />
-          </div>
-          <div>
-            <h3>Settings</h3>
-            <p>OBS connection, overlay server health, branding, and Bible translations.</p>
-          </div>
-        </Link>
+              <Link className="app-compact-item production-nav-card" to="/resources">
+                <div className="app-compact-item__icon">
+                  <Icon name="library_books" size={18} />
+                </div>
+                <div className="app-compact-item__copy">
+                  <h3>Resources</h3>
+                  <p>Manage translations, worship songs, and media used by the dock.</p>
+                </div>
+              </Link>
 
-        <Link className="production-nav-card" to="/resources">
-          <div className="production-nav-card__icon">
-            <Icon name="library_books" size={22} />
+              <Link className="app-compact-item production-nav-card" to="/production/themes">
+                <div className="app-compact-item__icon">
+                  <Icon name="palette" size={18} />
+                </div>
+                <div className="app-compact-item__copy">
+                  <h3>Production Themes</h3>
+                  <p>Set the fullscreen and lower-third defaults for Bible and Worship.</p>
+                </div>
+              </Link>
+            </div>
           </div>
-          <div>
-            <h3>Resources</h3>
-            <p>Manage Bible translations, worship songs, and media assets that the OBS Dock uses.</p>
-          </div>
-        </Link>
-
-        <Link className="production-nav-card" to="/production/themes">
-          <div className="production-nav-card__icon">
-            <Icon name="palette" size={22} />
-          </div>
-          <div>
-            <h3>Production Themes</h3>
-            <p>Choose the Bible and Worship fullscreen/lower-third defaults the dock should use.</p>
-          </div>
-        </Link>
-      </section>
+        </section>
+      </div>
     </div>
   );
 }

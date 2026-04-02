@@ -37,6 +37,7 @@ import ResourcesPage from "./pages/ResourcesPage";
 import ProductionHomePage from "./pages/ProductionHomePage";
 import ProductionThemeSettingsPage from "./pages/ProductionThemeSettingsPage";
 import { buildDockProductionSettingsPayload, syncProductionSettingsToDock } from "./services/productionSettings";
+import { voiceBibleService } from "./services/voiceBibleService";
 import "./App.css";
 import "./multiview/mv.css";
 import "./bible/bible.css";
@@ -57,6 +58,7 @@ function App() {
 
     // Wire up dock commands → OBS actions (bible:go-live, speaker:go-live, etc.)
     const unsubDockCmd = initDockCommandHandler();
+    const unsubVoiceBible = voiceBibleService.init();
 
     // Relay OBS connection status to the dock
     const unsubObs = obsService.onStatusChange((status) => {
@@ -72,10 +74,12 @@ function App() {
     const unsubCmd = dockBridge.onCommand(async (cmd) => {
       if (cmd.type === "request-state") {
         const productionSettings = await buildDockProductionSettingsPayload().catch(() => undefined);
+        const voiceBible = await voiceBibleService.refreshAvailability().catch(() => voiceBibleService.getSnapshot());
         dockBridge.sendFullState({
           obsConnected: obsService.status === "connected",
           serviceStatus: svcStore.status,
           productionSettings,
+          voiceBible,
         });
       }
 
@@ -100,6 +104,7 @@ function App() {
       unsubSvc();
       unsubCmd();
       unsubDockCmd();
+      unsubVoiceBible();
     };
   }, []);
   // ── Splash state ──

@@ -11,7 +11,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import type { DockStagedItem } from "../dockTypes";
-import type { DockLTThemeRef } from "../dockObsClient";
+import { dockObsClient, type DockLTThemeRef } from "../dockObsClient";
 import DockLTThemePicker from "../components/DockLTThemePicker";
 import Icon from "../DockIcon";
 
@@ -163,12 +163,16 @@ function initials(name: string): string {
 
 export default function DockSpeakerTab({ staged, onStage }: Props) {
   const loaded = useRef(false);
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [speakers, setSpeakers] = useState<SpeakerProfile[]>([]);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [selectedTheme, setSelectedTheme] = useState<DockLTThemeRef | null>(null);
   const [newName, setNewName] = useState("");
   const [newRole, setNewRole] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const isProgramLive =
+    staged?.type === "speaker" &&
+    Boolean((staged.data as Record<string, unknown> | undefined)?._dockLive);
 
   // Load speakers from all sources on mount
   useEffect(() => {
@@ -223,21 +227,11 @@ export default function DockSpeakerTab({ staged, onStage }: Props) {
     }
   }, [speakers, selectedIdx, onStage, updateSpeakers]);
 
-  const handleSelectTheme = useCallback((theme: DockLTThemeRef) => {
-    setSelectedTheme(theme);
-    // If a speaker is already selected, re-stage with new theme
-    if (selectedIdx !== null && speakers[selectedIdx]) {
-      const sp = speakers[selectedIdx];
-      onStage({
-        type: "speaker",
-        label: sp.name,
-        subtitle: sp.role,
-        data: { ...sp, ltTheme: theme },
-      });
-    }
-  }, [selectedIdx, speakers, onStage]);
-
-  const handleSelect = (idx: number) => {
+  const pushSpeaker = useCallback(async (
+    idx: number,
+    live: boolean,
+    themeOverride?: DockLTThemeRef | null,
+  ) => {
     const sp = speakers[idx];
     if (!sp) return;
     setSelectedIdx(idx);
@@ -245,9 +239,50 @@ export default function DockSpeakerTab({ staged, onStage }: Props) {
       type: "speaker",
       label: sp.name,
       subtitle: sp.role,
-      data: { ...sp, ltTheme: selectedTheme },
+      data: { ...sp, ltTheme: themeOverride ?? selectedTheme, _dockLive: live },
     });
-  };
+
+    if (!dockObsClient.isConnected) return;
+
+    try {
+      await dockObsClient.pushLowerThird({
+        name: sp.name,
+        role: sp.role,
+        subtitle: sp.role,
+        ltTheme: themeOverride ?? selectedTheme ?? undefined,
+        context: "speaker",
+      }, live);
+    } catch (err) {
+      console.warn(`[DockSpeakerTab] ${live ? "Go live" : "Send preview"} failed:`, err);
+    }
+  }, [onStage, selectedTheme, speakers]);
+
+  const handleSelectTheme = useCallback((theme: DockLTThemeRef) => {
+    setSelectedTheme(theme);
+    if (selectedIdx !== null && speakers[selectedIdx]) {
+      void pushSpeaker(selectedIdx, isProgramLive, theme);
+    }
+  }, [isProgramLive, pushSpeaker, selectedIdx, speakers]);
+
+  const handleSelect = useCallback((idx: number) => {
+    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+    clickTimerRef.current = setTimeout(() => {
+      clickTimerRef.current = null;
+      void pushSpeaker(idx, false);
+    }, 220);
+  }, [pushSpeaker]);
+
+  const handleGoLiveSpeaker = useCallback((idx: number) => {
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+    }
+    void pushSpeaker(idx, true);
+  }, [pushSpeaker]);
+
+  useEffect(() => () => {
+    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+  }, []);
 
   return (
     <>
@@ -309,6 +344,7 @@ export default function DockSpeakerTab({ staged, onStage }: Props) {
           key={`${sp.name}-${i}`}
           className={`dock-speaker-item${selectedIdx === i ? " dock-speaker-item--active" : ""}`}
           onClick={() => handleSelect(i)}
+          onDoubleClick={() => handleGoLiveSpeaker(i)}
         >
           <div className="dock-speaker-avatar">{initials(sp.name)}</div>
           <div className="dock-speaker-info">
@@ -349,7 +385,7 @@ export default function DockSpeakerTab({ staged, onStage }: Props) {
             <div className="dock-preview__header">
               <span className="dock-preview__badge">
                 <Icon name="fiber_manual_record" size={10} />
-                Staged
+                {isProgramLive ? "Live" : "Preview"}
               </span>
             </div>
             <div className="dock-preview__ref">{staged.label}</div>

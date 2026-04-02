@@ -10,15 +10,16 @@
   flex-direction: column;
   height: 100%;
   overflow: hidden;
-  background: var(--bg-dark);
+  background: transparent;
 }
 
 /* ── Header ── */
 .lib-header {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  padding: 24px 32px 0;
+  align-items: flex-end;
+  gap: 12px;
+  padding: 16px 20px 0;
   flex-shrink: 0;
 }
 
@@ -30,17 +31,18 @@
 
 .lib-title {
   color: var(--text-primary);
-  font-size: 28px;
+  font-size: 22px;
   font-weight: 700;
   letter-spacing: -0.01em;
   margin: 0;
-  line-height: 1.2;
+  line-height: 1.1;
 }
 
 .lib-subtitle {
-  color: var(--text-muted);
-  font-size: 13px;
+  color: var(--text-secondary);
+  font-size: 12px;
   margin: 0;
+  line-height: 1.5;
 }
 
 /* ── Tab switcher pill ── */
@@ -48,35 +50,41 @@
   display: inline-flex;
   background: var(--surface-dark);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 4px;
-  gap: 0;
+  border-radius: var(--radius);
+  padding: 2px;
+  gap: 2px;
+  flex-shrink: 0;
 }
 
 .lib-tab-btn {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 20px;
-  border-radius: 6px;
-  font-size: 13px;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: var(--radius);
+  font-size: 12px;
   font-weight: 600;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   background: transparent;
   border: none;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: background 0.15s ease, color 0.15s ease;
   white-space: nowrap;
 }
 
 .lib-tab-btn:hover {
   color: var(--text-primary);
+  background: var(--surface-hover);
+}
+
+.lib-tab-btn:active {
+  transform: scale(0.98);
 }
 
 .lib-tab-btn.is-active {
-  background: var(--surface-overlay);
+  background: var(--surface-raised);
   color: var(--text-primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 /* ── Toolbar (search + filter + add) ── */
@@ -84,15 +92,15 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 32px 12px;
-  gap: 16px;
+  padding: 12px 20px;
+  gap: 12px;
   flex-shrink: 0;
 }
 
 .lib-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   flex: 1;
 }
 
@@ -100,13 +108,13 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 42px;
-  padding: 0 14px;
-  border-radius: 12px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: var(--radius);
   border: 1px solid var(--border);
-  background: var(--surface-dark);
+  background: var(--surface-raised);
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
@@ -119,11 +127,17 @@
   color: var(--text-primary);
 }
 
+.lib-archive-btn:active,
+.lib-filter-btn:active,
+.lib-add-btn:active {
+  transform: scale(0.98);
+}
+
 .lib-archive-count {
   min-width: 22px;
-  height: 22px;
+  height: 20px;
   padding: 0 6px;
-  border-radius: 999px;
+  border-radius: var(--radius);
   background: rgba(var(--primary-rgb), 0.14);
   color: var(--primary);
   display: inline-flex;
@@ -137,7 +151,7 @@
 .lib-search-wrap {
   position: relative;
   flex: 1;
-  max-width: 400px;
+  max-width: 420px;
 }
 
 .lib-search-icon {
@@ -145,18 +159,19 @@
   left: 12px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 20px;
+  font-size: 18px;
   color: var(--text-muted);
   pointer-events: none;
 }
 
 .lib-search-input {
   width: 100%;
-  background: var(--surface-dark);
+  background: var(--surface-raised);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  padding: 9px 16px 9px 40px;
-  font-size: 13px;
+  border-radius: var(--radius);
+  min-height: 34px;
+  padding: 8px 12px 8px 36px;
+  font-size: 12px;
   color: var(--text-primary);
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -181,11 +196,12 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--surface-dark);
+  background: var(--surface-raised);
   border: 1px solid var(--border);
-  padding: 8px 14px;
-  border-radius: var(--radius-lg);
-  font-size: 13px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: var(--radius);
+  font-size: 12px;
   color: var(--text-primary);
   cursor: pointer;
   transition: border-color 0.15s ease;
@@ -203,10 +219,10 @@
   z-index: 100;
   background: var(--surface-dark);
   border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius);
   padding: 4px;
   min-width: 120px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
 }
 
 .lib-filter-option {
@@ -241,19 +257,19 @@
   background: var(--primary);
   color: #fff;
   font-weight: 700;
-  font-size: 13px;
-  padding: 9px 20px;
+  font-size: 12px;
+  min-height: 34px;
+  padding: 0 14px;
   border: none;
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius);
   cursor: pointer;
-  transition: background 0.15s ease, box-shadow 0.15s ease;
-  box-shadow: 0 2px 8px rgba(var(--primary-rgb), 0.2);
+  transition: background 0.15s ease, transform 0.15s ease;
   white-space: nowrap;
 }
 
 .lib-add-btn:hover {
   background: var(--primary-hover);
-  box-shadow: 0 4px 16px rgba(var(--primary-rgb), 0.3);
+  transform: translateY(-1px);
 }
 
 .lib-add-btn svg {
@@ -284,17 +300,17 @@
 .lib-media-grid {
   flex: 1;
   overflow-y: auto;
-  padding: 4px 32px 32px;
+  padding: 0 20px 20px;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 20px;
+  gap: 12px;
   align-content: start;
 }
 
 /* Card */
 .lib-media-card {
   background: var(--surface-dark);
-  border-radius: 12px;
+  border-radius: var(--radius);
   border: 1px solid var(--border);
   overflow: visible;
   position: relative;
@@ -311,7 +327,6 @@
 
 .lib-media-card:hover {
   border-color: rgba(var(--primary-rgb), 0.4);
-  box-shadow: 0 0 15px rgba(var(--primary-rgb), 0.08);
 }
 
 /* Thumbnail area */
@@ -320,7 +335,7 @@
   background: #000;
   position: relative;
   overflow: hidden;
-  border-radius: 12px 12px 0 0;
+  border-radius: var(--radius) var(--radius) 0 0;
 }
 
 .lib-media-thumb-img {

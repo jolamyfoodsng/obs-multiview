@@ -30,6 +30,7 @@ import OBSWebSocket from "obs-websocket-js";
 import { ALL_THEMES, type ThemeLike } from "../lowerthirds/themes";
 import { getWorshipLTFavorites } from "../services/favoriteThemes";
 import { getOverlayBaseUrlSync } from "../services/overlayUrl";
+import type { DockLiveThemeOverrides } from "./dockConsoleTheme";
 import {
   DOCK_PREVIEW_STAGE_SUFFIX,
   isDockOverlaySceneName,
@@ -453,6 +454,98 @@ class DockObsClient {
         cropBottom: 0,
       },
     });
+  }
+
+  private async sleep(ms: number): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  }
+
+  private async getSceneItemBySource(
+    sceneName: string,
+    sourceName: string
+  ): Promise<{ sceneItemId: number } | null> {
+    try {
+      const resp = await this.call("GetSceneItemList", { sceneName }) as {
+        sceneItems: Array<{ sourceName: string; sceneItemId: number }>;
+      };
+      const item = resp.sceneItems.find((entry) => entry.sourceName === sourceName);
+      return item ? { sceneItemId: item.sceneItemId } : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private async setMediaSceneItemScale(
+    sceneName: string,
+    sceneItemId: number,
+    canvas: { width: number; height: number },
+    scale: number
+  ): Promise<void> {
+    const boundsWidth = canvas.width * scale;
+    const boundsHeight = canvas.height * scale;
+    const positionX = (canvas.width - boundsWidth) / 2;
+    const positionY = (canvas.height - boundsHeight) / 2;
+
+    await this.call("SetSceneItemTransform", {
+      sceneName,
+      sceneItemId,
+      sceneItemTransform: {
+        positionX,
+        positionY,
+        scaleX: 1,
+        scaleY: 1,
+        rotation: 0,
+        boundsType: "OBS_BOUNDS_STRETCH",
+        boundsWidth,
+        boundsHeight,
+        boundsAlignment: 0,
+        cropLeft: 0,
+        cropTop: 0,
+        cropRight: 0,
+        cropBottom: 0,
+      },
+    });
+  }
+
+  private async animateMediaSceneItem(
+    sceneName: string,
+    sceneItemId: number,
+    direction: "in" | "out"
+  ): Promise<void> {
+    const canvas = await this.getCanvasSize();
+    const scales = direction === "in" ? [0.965, 0.985, 1] : [1, 0.985, 0.965];
+
+    for (let index = 0; index < scales.length; index += 1) {
+      await this.setMediaSceneItemScale(sceneName, sceneItemId, canvas, scales[index]);
+      if (index < scales.length - 1) {
+        await this.sleep(45);
+      }
+    }
+
+    if (direction === "in") {
+      await this.fitSceneItemToCanvas(sceneName, sceneItemId);
+    }
+  }
+
+  private async hideMediaSourceWithAnimation(sceneName: string, sourceName: string): Promise<void> {
+    const item = await this.getSceneItemBySource(sceneName, sourceName);
+    if (!item) return;
+
+    try {
+      await this.animateMediaSceneItem(sceneName, item.sceneItemId, "out");
+    } catch {
+      // Fall through to disable even if the transform animation fails.
+    }
+
+    try {
+      await this.call("SetSceneItemEnabled", {
+        sceneName,
+        sceneItemId: item.sceneItemId,
+        sceneItemEnabled: false,
+      });
+    } catch {
+      // Ignore disable failures during clear/handover.
+    }
   }
 
   // ── Scene helpers ──
@@ -1136,6 +1229,37 @@ class DockObsClient {
     return { cleanSettings: clean, css };
   }
 
+  private mergeThemeSettingsWithLiveOverrides(
+    themeSettings: Record<string, unknown> | null | undefined,
+    liveOverrides: DockLiveThemeOverrides | Record<string, unknown> | null | undefined,
+  ): Record<string, unknown> | null {
+    if (!themeSettings && !liveOverrides) return null;
+    return {
+      ...(themeSettings ?? {}),
+      ...(liveOverrides ?? {}),
+    };
+  }
+
+  private hasVisualBackground(themeSettings: Record<string, unknown> | null | undefined): boolean {
+    if (!themeSettings) return false;
+
+    const bgColor = String(themeSettings.backgroundColor || "").trim().toLowerCase();
+    const bgImage = String(themeSettings.backgroundImage || "").trim();
+
+    if (Boolean(bgImage)) {
+      return true;
+    }
+
+    return (
+      Boolean(bgColor) &&
+      bgColor !== "transparent" &&
+      bgColor !== "#0000" &&
+      bgColor !== "#00000000" &&
+      bgColor !== "rgba(0,0,0,0)" &&
+      bgColor !== "rgba(0, 0, 0, 0)"
+    );
+  }
+
   /**
    * Update a browser source URL in OBS.
    * Optionally forces a reload by briefly blanking the source first,
@@ -1243,7 +1367,10 @@ class DockObsClient {
     enable = true,
     resources: DockResourceNames = LIVE_DOCK_RESOURCES,
   ): Promise<void> {
-    if (!themeSettings) return;
+    if (!themeSettings || !this.hasVisualBackground(themeSettings)) {
+      await this.hideFullscreenBg(sceneName, resources);
+      return;
+    }
 
     const bgColor = (themeSettings.backgroundColor as string) || "#000000";
     const bgImage = (themeSettings.backgroundImage as string) || "";
@@ -1284,7 +1411,7 @@ class DockObsClient {
     enable = true,
     resources: DockResourceNames = LIVE_DOCK_RESOURCES,
   ): Promise<void> {
-    if (!themeSettings) {
+    if (!themeSettings || !this.hasVisualBackground(themeSettings)) {
       await this.hideFullscreenBg(targetScene, resources);
       return;
     }
@@ -1862,12 +1989,16 @@ class DockObsClient {
     book: string;
     chapter: number;
     verse: number;
+    verseEnd?: number;
+    verseRange?: string;
+    referenceLabel?: string;
     translation: string;
     theme?: string;
     verseText?: string;
     overlayMode?: "fullscreen" | "lower-third";
     ltTheme?: DockLTThemeRef;
     bibleThemeSettings?: Record<string, unknown> | null;
+    liveOverrides?: DockLiveThemeOverrides | Record<string, unknown> | null;
   }, live: boolean): Promise<void> {
     const resources = getDockResources(live);
     const target = await this.getTargetScene(live);
@@ -1884,8 +2015,13 @@ class DockObsClient {
     // keep the source hidden so it doesn't appear on air.
     const shouldEnable = live || (!live && (studioMode || sceneName !== target.sceneName));
 
-    const ref = `${data.book} ${data.chapter}:${data.verse}`;
+    const verseRange = data.verseRange ?? String(data.verse);
+    const ref = data.referenceLabel ?? `${data.book} ${data.chapter}:${verseRange}`;
     const mode = data.overlayMode ?? "fullscreen";
+    const effectiveThemeSettings = this.mergeThemeSettingsWithLiveOverrides(
+      data.bibleThemeSettings,
+      data.liveOverrides,
+    );
 
     // Detect overlay-mode switch → force CEF to fully reload the new HTML file
     const prevMode = this._lastOverlayMode[resources.bibleSource];
@@ -1895,8 +2031,8 @@ class DockObsClient {
     let url: string;
     let themeCss = "";
     if (mode === "lower-third") {
-      if (data.bibleThemeSettings) {
-        const { overlayTheme } = this.prepareDedicatedLowerThirdTheme(data.bibleThemeSettings);
+      if (effectiveThemeSettings) {
+        const { overlayTheme } = this.prepareDedicatedLowerThirdTheme(effectiveThemeSettings);
         const keepSources = [resources.bibleScene, resources.bibleSource];
 
         await this.clearAllOverlays(keepSources, sceneName, resources);
@@ -1909,7 +2045,7 @@ class DockObsClient {
         const { cleanSettings, css } = this.stripThemeDataUris(overlayTheme);
         themeCss = css;
         url = this.buildBibleUrl(
-          this.buildBibleSlide(data.verseText || ref, `${ref} (${data.translation})`),
+          this.buildBibleSlide(data.verseText || ref, `${ref} (${data.translation})`, verseRange),
           live,
           false,
           cleanSettings,
@@ -1942,26 +2078,26 @@ class DockObsClient {
 
       // 2. Inside the dedicated scene, ensure BG + overlay sources exist
       await this.ensureOverlaySource(resources.bibleScene, resources.bibleSource, undefined, undefined, true);
-      await this.ensureFullscreenBg(resources.bibleScene, data.bibleThemeSettings as Record<string, unknown> | null, true, resources);
+      await this.ensureFullscreenBg(resources.bibleScene, effectiveThemeSettings, true, resources);
 
       // 3. Add the dedicated scene as a nested scene-source in the user's target scene
       await this.ensureSceneSourceInTarget(sceneName, resources.bibleScene, shouldEnable);
       await this.ensureFullscreenTargetBg(
         sceneName,
         resources.bibleScene,
-        data.bibleThemeSettings as Record<string, unknown> | null,
+        effectiveThemeSettings,
         shouldEnable,
         resources,
       );
 
       // Fullscreen Bible overlay — strip data URIs to stay within URL limits
-      const { cleanSettings, css } = this.stripThemeDataUris(data.bibleThemeSettings);
+      const { cleanSettings, css } = this.stripThemeDataUris(effectiveThemeSettings);
       themeCss = css;
       const slide = {
-        id: `dock-${data.book}-${data.chapter}-${data.verse}`,
+        id: `dock-${data.book}-${data.chapter}-${data.verse}-${data.verseEnd ?? data.verse}`,
         reference: `${ref} (${data.translation})`,
         text: data.verseText || ref,
-        verseRange: String(data.verse),
+        verseRange,
         index: 0,
         total: 1,
       };
@@ -1983,7 +2119,7 @@ class DockObsClient {
     // change doesn't render on the wrong output (e.g. "Send to Preview"
     // must not flash on Program).
     if (mode === "lower-third") {
-      if (data.bibleThemeSettings) {
+      if (effectiveThemeSettings) {
         if (live) {
           await this.hideInOppositeScene(
             live,
@@ -2024,11 +2160,11 @@ class DockObsClient {
         await this.ensureFullscreenTargetBg(
           sceneName,
           resources.bibleScene,
-          data.bibleThemeSettings as Record<string, unknown> | null,
+          effectiveThemeSettings,
           true,
           resources,
         );
-      } else if (data.bibleThemeSettings) {
+      } else if (effectiveThemeSettings) {
         await this.ensureSceneSourceInTarget(sceneName, resources.bibleScene, true);
       } else {
         await this.ensureOverlaySource(sceneName, resources.bibleSource, undefined, undefined, true);
@@ -2073,10 +2209,16 @@ class DockObsClient {
         await this.hideSceneSource(sceneName, resources.bibleScene);
         await this.removeSceneItemBySource(sceneName, resources.bibleSource);
         await this.removeSceneItemBySource(sceneName, resources.bibleScene);
-        await this.removeSceneItemBySource(sceneName, this.getTargetFullscreenBgSourceName(sceneName, resources));
+        const targetBgSourceName = this.getTargetFullscreenBgSourceName(sceneName, resources);
+        await this.removeSceneItemBySource(sceneName, targetBgSourceName);
+        await this.removeInputIfExists(targetBgSourceName);
+        delete this._lastTargetBgSignature[targetBgSourceName];
       }
       await this.removeSceneIfExists(resources.bibleScene);
       await this.removeInputIfExists(resources.bibleSource);
+      await this.removeInputIfExists(resources.fsBgSource);
+      delete this._lastOverlayMode[resources.bibleSource];
+      delete this._lastFullscreenSourceSignature[resources.bibleSource];
     }
 
     console.log("[DockOBS] Bible cleared");
@@ -2351,6 +2493,7 @@ class DockObsClient {
     overlayMode?: "fullscreen" | "lower-third";
     ltTheme?: DockLTThemeRef;
     bibleThemeSettings?: Record<string, unknown> | null;
+    liveOverrides?: DockLiveThemeOverrides | Record<string, unknown> | null;
   }, live: boolean): Promise<void> {
     const resources = getDockResources(live);
     const target = await this.getTargetScene(live);
@@ -2364,6 +2507,10 @@ class DockObsClient {
     const shouldEnable = live || (!live && (studioMode || sceneName !== target.sceneName));
 
     const mode = data.overlayMode ?? "lower-third";
+    const effectiveThemeSettings = this.mergeThemeSettingsWithLiveOverrides(
+      data.bibleThemeSettings,
+      data.liveOverrides,
+    );
     const prevMode = this._lastOverlayMode[resources.worshipSource];
     const modeChanged = prevMode !== undefined && prevMode !== mode;
     this._lastOverlayMode[resources.worshipSource] = mode;
@@ -2381,20 +2528,20 @@ class DockObsClient {
 
       // 2. Inside the dedicated scene, ensure BG + overlay sources exist
       await this.ensureOverlaySource(resources.worshipScene, resources.worshipSource, undefined, undefined, true);
-      await this.ensureFullscreenBg(resources.worshipScene, data.bibleThemeSettings as Record<string, unknown> | null, true, resources);
+      await this.ensureFullscreenBg(resources.worshipScene, effectiveThemeSettings, true, resources);
 
       // 3. Add the dedicated scene as a nested scene-source in the user's target scene
       await this.ensureSceneSourceInTarget(sceneName, resources.worshipScene, shouldEnable);
       await this.ensureFullscreenTargetBg(
         sceneName,
         resources.worshipScene,
-        data.bibleThemeSettings as Record<string, unknown> | null,
+        effectiveThemeSettings,
         shouldEnable,
         resources,
       );
 
       // Strip data URIs to stay within URL-hash limits
-      const { cleanSettings, css } = this.stripThemeDataUris(data.bibleThemeSettings);
+      const { cleanSettings, css } = this.stripThemeDataUris(effectiveThemeSettings);
       themeCss = css;
       const cleanedLabel = cleanWorshipObsLabel(data.sectionLabel);
       const slide = data.sectionText ? {
@@ -2423,8 +2570,8 @@ class DockObsClient {
         cleanSettings,
       );
     } else {
-      if (data.bibleThemeSettings) {
-        const { overlayTheme } = this.prepareDedicatedLowerThirdTheme(data.bibleThemeSettings);
+      if (effectiveThemeSettings) {
+        const { overlayTheme } = this.prepareDedicatedLowerThirdTheme(effectiveThemeSettings);
         const keepSources = [resources.worshipScene, resources.worshipSource];
 
         await this.clearAllOverlays(keepSources, sceneName, resources);
@@ -2473,7 +2620,7 @@ class DockObsClient {
         await this.hideInOppositeScene(live, [resources.worshipSource], [resources.worshipScene], true, sceneName, resources);
       }
     } else {
-      if (data.bibleThemeSettings) {
+      if (effectiveThemeSettings) {
         if (live) {
           await this.hideInOppositeScene(
             live,
@@ -2542,10 +2689,16 @@ class DockObsClient {
         await this.hideSceneSource(sceneName, resources.worshipScene);
         await this.removeSceneItemBySource(sceneName, resources.worshipSource);
         await this.removeSceneItemBySource(sceneName, resources.worshipScene);
-        await this.removeSceneItemBySource(sceneName, this.getTargetFullscreenBgSourceName(sceneName, resources));
+        const targetBgSourceName = this.getTargetFullscreenBgSourceName(sceneName, resources);
+        await this.removeSceneItemBySource(sceneName, targetBgSourceName);
+        await this.removeInputIfExists(targetBgSourceName);
+        delete this._lastTargetBgSignature[targetBgSourceName];
       }
       await this.removeSceneIfExists(resources.worshipScene);
       await this.removeInputIfExists(resources.worshipSource);
+      await this.removeInputIfExists(resources.fsBgSource);
+      delete this._lastOverlayMode[resources.worshipSource];
+      delete this._lastFullscreenSourceSignature[resources.worshipSource];
     }
 
     console.log("[DockOBS] Worship lyrics cleared");
@@ -2788,19 +2941,20 @@ class DockObsClient {
     if (isImage) {
       // ── Image: use image_source ──
       // Hide video source if it was previously active
-      await this._hideMediaSource(sceneName, resources.mediaVideoSource);
+      await this.hideMediaSourceWithAnimation(sceneName, resources.mediaVideoSource);
 
-      await this._ensureNativeMediaSource(
+      const sceneItemId = await this._ensureNativeMediaSource(
         sceneName, resources.mediaImageSource, "image_source",
         { file: filePath },
         shouldEnable,
       );
+      await this.animateMediaSceneItem(sceneName, sceneItemId, "in");
     } else {
       // ── Video / Audio: use ffmpeg_source ──
       // Hide image source if it was previously active
-      await this._hideMediaSource(sceneName, resources.mediaImageSource);
+      await this.hideMediaSourceWithAnimation(sceneName, resources.mediaImageSource);
 
-      await this._ensureNativeMediaSource(
+      const sceneItemId = await this._ensureNativeMediaSource(
         sceneName, resources.mediaVideoSource, "ffmpeg_source",
         {
           local_file: filePath,
@@ -2818,6 +2972,7 @@ class DockObsClient {
           mediaAction: "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART",
         });
       } catch { /* source may not exist yet on first play — ignore */ }
+      await this.animateMediaSceneItem(sceneName, sceneItemId, "in");
     }
 
     console.log(`[DockOBS] Media "${fileName}" (${isImage ? "image" : "video"}) pushed to ${live ? "Program" : "Preview"} scene "${sceneName}" — path: ${filePath}`);
@@ -2833,7 +2988,7 @@ class DockObsClient {
     inputKind: string,
     inputSettings: Record<string, unknown>,
     enable: boolean,
-  ): Promise<void> {
+  ): Promise<number> {
     // 1. Check if source already exists globally
     let inputExists = false;
     try {
@@ -2930,23 +3085,20 @@ class DockObsClient {
         sceneItemEnabled: enable,
       });
     } catch { /* ignore */ }
+    return sceneItem.sceneItemId;
   }
 
   /**
-   * Hide a single media source in the given scene.
+   * Stop / hide media player sources in one target scene.
    */
-  private async _hideMediaSource(sceneName: string, sourceName: string): Promise<void> {
+  async clearMediaTarget(live: boolean): Promise<void> {
+    const resources = getDockResources(live);
     try {
-      const resp = await this.call("GetSceneItemList", { sceneName }) as {
-        sceneItems: Array<{ sourceName: string; sceneItemId: number }>;
-      };
-      const item = resp.sceneItems.find((i) => i.sourceName === sourceName);
-      if (item) {
-        await this.call("SetSceneItemEnabled", {
-          sceneName,
-          sceneItemId: item.sceneItemId,
-          sceneItemEnabled: false,
-        });
+      const { sceneName } = await this.getTargetScene(live);
+      if (!sceneName) return;
+      const resolvedScene = live ? sceneName : await this.ensurePreviewTargetScene(sceneName);
+      for (const src of [resources.mediaVideoSource, resources.mediaImageSource]) {
+        await this.hideMediaSourceWithAnimation(resolvedScene, src);
       }
     } catch { /* ignore */ }
   }
@@ -2955,17 +3107,8 @@ class DockObsClient {
    * Stop / hide both media player sources (video + image).
    */
   async clearMedia(): Promise<void> {
-    const sources = [DOCK_MEDIA_VIDEO_SOURCE, DOCK_MEDIA_IMAGE_SOURCE];
-
-    for (const src of sources) {
-      try {
-        const { sceneName: progScene } = await this.getTargetScene(true);
-        if (progScene) await this.hideOverlaySource(progScene, src);
-      } catch { /* ignore */ }
-      try {
-        const { sceneName: prevScene } = await this.getTargetScene(false);
-        if (prevScene) await this.hideOverlaySource(prevScene, src);
-      } catch { /* ignore */ }
+    for (const live of [true, false] as const) {
+      await this.clearMediaTarget(live);
     }
 
     console.log("[DockOBS] Media cleared");

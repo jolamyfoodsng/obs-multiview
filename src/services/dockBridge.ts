@@ -36,6 +36,10 @@ export type DockCommandType =
   | "worship:send-preview"
   | "worship:go-live"
   | "worship:clear-lyrics"
+  // Voice Bible
+  | "voice-bible:start"
+  | "voice-bible:stop"
+  | "voice-bible:cancel"
   // General
   | "ping"
   | "request-state"
@@ -44,6 +48,7 @@ export type DockCommandType =
 export interface DockCommand {
   type: DockCommandType;
   payload?: unknown;
+  commandId?: string;
   timestamp: number;
 }
 
@@ -55,6 +60,9 @@ export type DockStateType =
   | "state:library-updated"
   | "state:songs-data"
   | "state:media-data"
+  | "state:voice-bible-status"
+  | "state:voice-bible-result"
+  | "state:voice-bible-candidates"
   | "state:pong";
 
 export interface DockStateMessage {

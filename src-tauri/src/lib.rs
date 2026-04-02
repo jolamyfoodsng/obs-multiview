@@ -6,6 +6,7 @@
 //   load_app_data      — read app_data.json (or return "{}" if missing)
 //   save_app_data      — write app_data.json
 //   get_overlay_port   — return the port of the local overlay HTTP server
+//   load_dock_data     — read dock-shared JSON from the uploads directory
 //
 // On startup, a lightweight HTTP server is spawned on a localhost port
 // to serve overlay HTML files (Bible, Worship, Lower Third) so that OBS
@@ -13,13 +14,19 @@
 // https://tauri.localhost) is NOT reachable by OBS/CEF, so we need a real
 // localhost server.
 
+use serde::Serialize;
 use std::fs;
+use std::io::{Cursor, Write};
 use std::path::{Component, Path};
 use std::sync::atomic::{AtomicU16, Ordering};
 use tauri::Manager;
+use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters};
 
 /// The port the overlay server is running on (set at startup).
 static OVERLAY_PORT: AtomicU16 = AtomicU16::new(0);
+const VOICE_BIBLE_MODEL_FILE: &str = "ggml-medium.en.bin";
+const VOICE_BIBLE_MODEL_URL: &str =
+    "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.en.bin";
 
 /// True if the directory contains the overlay HTML entrypoint(s).
 fn has_overlay_assets(dir: &std::path::Path) -> bool {
@@ -60,7 +67,11 @@ fn resolve_bundled_overlay_dir(resource_dir: &std::path::Path) -> Option<std::pa
 
     for dir in &candidates {
         let found = has_overlay_assets(dir);
-        println!("[Overlay Resolve] {:?} → {}", dir, if found { "FOUND" } else { "miss" });
+        println!(
+            "[Overlay Resolve] {:?} → {}",
+            dir,
+            if found { "FOUND" } else { "miss" }
+        );
     }
 
     candidates.into_iter().find(|dir| has_overlay_assets(dir))
@@ -239,11 +250,7 @@ fn get_overlay_port() -> u16 {
     OVERLAY_PORT.load(Ordering::Relaxed)
 }
 
-/// Save dock-shared data to a JSON file in the uploads directory.
-/// The overlay server can then serve it to the dock page.
-/// `name` is the filename (e.g. "worship-songs"), `.json` is appended.
-#[tauri::command]
-fn save_dock_data(name: String, data: String) -> Result<(), String> {
+fn resolve_dock_data_path(name: &str) -> Result<(String, std::path::PathBuf), String> {
     let safe = name
         .chars()
         .filter(|c| c.is_ascii_alphanumeric() || *c == '-' || *c == '_')
@@ -251,13 +258,213 @@ fn save_dock_data(name: String, data: String) -> Result<(), String> {
     if safe.is_empty() {
         return Err("Invalid data name".to_string());
     }
+
     let uploads_dir = app_dir()?.join("uploads");
-    fs::create_dir_all(&uploads_dir)
-        .map_err(|e| format!("Failed to create uploads dir: {}", e))?;
-    let path = uploads_dir.join(format!("{}.json", safe));
-    fs::write(&path, &data).map_err(|e| format!("Failed to write dock data: {}", e))?;
+    fs::create_dir_all(&uploads_dir).map_err(|e| format!("Failed to create uploads dir: {}", e))?;
+    Ok((safe.clone(), uploads_dir.join(format!("{}.json", safe))))
+}
+
+fn write_dock_data(name: &str, data: &str) -> Result<(), String> {
+    let (safe, path) = resolve_dock_data_path(name)?;
+    fs::write(&path, data).map_err(|e| format!("Failed to write dock data: {}", e))?;
     println!("[Tauri] Saved dock data '{}' ({} bytes)", safe, data.len());
     Ok(())
+}
+
+/// Save dock-shared data to a JSON file in the uploads directory.
+/// The overlay server can then serve it to the dock page.
+/// `name` is the filename (e.g. "worship-songs"), `.json` is appended.
+#[tauri::command]
+fn save_dock_data(name: String, data: String) -> Result<(), String> {
+    write_dock_data(&name, &data)
+}
+
+/// Load dock-shared data from the uploads directory.
+/// Returns an empty string when the file has not been written yet.
+#[tauri::command]
+fn load_dock_data(name: String) -> Result<String, String> {
+    let (safe, path) = resolve_dock_data_path(&name)?;
+    if !path.exists() {
+        return Ok(String::new());
+    }
+
+    let contents = fs::read_to_string(&path)
+        .map_err(|e| format!("Failed to read dock data '{}': {}", safe, e))?;
+    println!(
+        "[Tauri] Loaded dock data '{}' ({} bytes)",
+        safe,
+        contents.len()
+    );
+    Ok(contents)
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct VoiceBibleRuntimeStatus {
+    model_ready: bool,
+    model_name: String,
+    model_path: Option<String>,
+}
+
+fn voice_bible_dir() -> Result<std::path::PathBuf, String> {
+    let dir = app_dir()?.join("voice-bible");
+    fs::create_dir_all(&dir).map_err(|e| format!("Failed to create voice-bible dir: {}", e))?;
+    Ok(dir)
+}
+
+fn voice_bible_model_path() -> Result<std::path::PathBuf, String> {
+    Ok(voice_bible_dir()?.join(VOICE_BIBLE_MODEL_FILE))
+}
+
+fn current_voice_bible_status() -> Result<VoiceBibleRuntimeStatus, String> {
+    let model_path = voice_bible_model_path()?;
+    let model_ready = model_path.is_file()
+        && fs::metadata(&model_path)
+            .map(|metadata| metadata.len() > 1_000_000)
+            .unwrap_or(false);
+
+    Ok(VoiceBibleRuntimeStatus {
+        model_ready,
+        model_name: "medium.en".to_string(),
+        model_path: if model_ready {
+            Some(
+                model_path
+                    .to_str()
+                    .ok_or("Model path contains invalid UTF-8")?
+                    .to_string(),
+            )
+        } else {
+            None
+        },
+    })
+}
+
+fn ensure_voice_bible_model() -> Result<std::path::PathBuf, String> {
+    let status = current_voice_bible_status()?;
+    if status.model_ready {
+        return voice_bible_model_path();
+    }
+
+    let model_path = voice_bible_model_path()?;
+    let temp_path = model_path.with_extension("bin.part");
+    let client = reqwest::blocking::Client::builder()
+        .build()
+        .map_err(|e| format!("Failed to create download client: {}", e))?;
+    let mut response = client
+        .get(VOICE_BIBLE_MODEL_URL)
+        .send()
+        .map_err(|e| format!("Failed to download Whisper model: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!(
+            "Failed to download Whisper model: HTTP {}",
+            response.status()
+        ));
+    }
+
+    let mut file = fs::File::create(&temp_path)
+        .map_err(|e| format!("Failed to create temporary model file: {}", e))?;
+    response
+        .copy_to(&mut file)
+        .map_err(|e| format!("Failed to write Whisper model: {}", e))?;
+    file.flush()
+        .map_err(|e| format!("Failed to flush Whisper model: {}", e))?;
+
+    fs::rename(&temp_path, &model_path)
+        .map_err(|e| format!("Failed to finalize Whisper model: {}", e))?;
+    Ok(model_path)
+}
+
+#[tauri::command]
+fn get_voice_bible_runtime_status() -> Result<VoiceBibleRuntimeStatus, String> {
+    current_voice_bible_status()
+}
+
+#[tauri::command]
+fn prepare_voice_bible_model() -> Result<VoiceBibleRuntimeStatus, String> {
+    ensure_voice_bible_model()?;
+    current_voice_bible_status()
+}
+
+#[tauri::command]
+fn transcribe_voice_audio(wav_data: Vec<u8>) -> Result<String, String> {
+    if wav_data.is_empty() {
+        return Err("No audio data received".to_string());
+    }
+
+    let model_path = ensure_voice_bible_model()?;
+    let reader = hound::WavReader::new(Cursor::new(wav_data))
+        .map_err(|e| format!("Failed to read WAV audio: {}", e))?;
+    let spec = reader.spec();
+
+    if spec.sample_rate != 16_000 {
+        return Err(format!(
+            "Voice audio must be 16kHz mono PCM. Received {}Hz.",
+            spec.sample_rate
+        ));
+    }
+
+    let channels = usize::from(spec.channels);
+    if channels == 0 || channels > 2 {
+        return Err("Voice audio must be mono or stereo".to_string());
+    }
+
+    if spec.bits_per_sample != 16 || spec.sample_format != hound::SampleFormat::Int {
+        return Err("Voice audio must be 16-bit PCM WAV".to_string());
+    }
+
+    let samples: Vec<i16> = reader
+        .into_samples::<i16>()
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| format!("Failed to decode WAV samples: {}", e))?;
+
+    let mut audio = vec![0.0f32; samples.len()];
+    whisper_rs::convert_integer_to_float_audio(&samples, &mut audio)
+        .map_err(|e| format!("Failed to convert audio samples: {}", e))?;
+
+    let mono_audio = if channels == 1 {
+        audio
+    } else {
+        let mut output = vec![0.0f32; audio.len() / channels];
+        whisper_rs::convert_stereo_to_mono_audio(&audio, &mut output)
+            .map_err(|e| format!("Failed to convert stereo audio: {}", e))?;
+        output
+    };
+
+    let ctx = WhisperContext::new_with_params(
+        model_path
+            .to_str()
+            .ok_or("Model path contains invalid UTF-8")?,
+        WhisperContextParameters::default(),
+    )
+    .map_err(|e| format!("Failed to load Whisper model: {}", e))?;
+    let mut state = ctx
+        .create_state()
+        .map_err(|e| format!("Failed to create Whisper state: {}", e))?;
+
+    let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 0 });
+    let threads = std::thread::available_parallelism()
+        .map(|parallelism| parallelism.get().min(4) as i32)
+        .unwrap_or(2);
+    params.set_n_threads(threads);
+    params.set_translate(false);
+    params.set_language(Some("en"));
+    params.set_print_special(false);
+    params.set_print_progress(false);
+    params.set_print_realtime(false);
+    params.set_print_timestamps(false);
+
+    state
+        .full(params, &mono_audio)
+        .map_err(|e| format!("Whisper transcription failed: {}", e))?;
+
+    let transcript = state
+        .as_iter()
+        .map(|segment| segment.to_string())
+        .collect::<Vec<_>>()
+        .join(" ");
+    let normalized = transcript.split_whitespace().collect::<Vec<_>>().join(" ");
+    Ok(normalized)
 }
 
 /// Start a tiny HTTP server that serves files from the frontend dist folder.
@@ -295,7 +502,10 @@ fn start_overlay_server(resource_dir: std::path::PathBuf) -> u16 {
         }
     };
     OVERLAY_PORT.store(port, Ordering::Relaxed);
-    println!("[Overlay Server] Serving files from {:?} on http://127.0.0.1:{}", resource_dir, port);
+    println!(
+        "[Overlay Server] Serving files from {:?} on http://127.0.0.1:{}",
+        resource_dir, port
+    );
 
     std::thread::spawn(move || {
         for mut request in server.incoming_requests() {
@@ -314,8 +524,7 @@ fn start_overlay_server(resource_dir: std::path::PathBuf) -> u16 {
 
             // Security: don't allow path traversal
             if clean.contains("..") {
-                let resp = tiny_http::Response::from_string("Forbidden")
-                    .with_status_code(403);
+                let resp = tiny_http::Response::from_string("Forbidden").with_status_code(403);
                 let _ = request.respond(resp);
                 continue;
             }
@@ -341,11 +550,12 @@ fn start_overlay_server(resource_dir: std::path::PathBuf) -> u16 {
                 files.sort();
                 let json = serde_json::to_string(&files).unwrap_or_else(|_| "[]".to_string());
                 let header = tiny_http::Header::from_bytes(
-                    "Content-Type", "application/json; charset=utf-8"
-                ).unwrap();
-                let cors = tiny_http::Header::from_bytes(
-                    "Access-Control-Allow-Origin", "*"
-                ).unwrap();
+                    "Content-Type",
+                    "application/json; charset=utf-8",
+                )
+                .unwrap();
+                let cors =
+                    tiny_http::Header::from_bytes("Access-Control-Allow-Origin", "*").unwrap();
                 let resp = tiny_http::Response::from_string(json)
                     .with_header(header)
                     .with_header(cors);
@@ -362,11 +572,12 @@ fn start_overlay_server(resource_dir: std::path::PathBuf) -> u16 {
                     .to_string();
                 let json = serde_json::json!({ "path": dir_path }).to_string();
                 let header = tiny_http::Header::from_bytes(
-                    "Content-Type", "application/json; charset=utf-8"
-                ).unwrap();
-                let cors = tiny_http::Header::from_bytes(
-                    "Access-Control-Allow-Origin", "*"
-                ).unwrap();
+                    "Content-Type",
+                    "application/json; charset=utf-8",
+                )
+                .unwrap();
+                let cors =
+                    tiny_http::Header::from_bytes("Access-Control-Allow-Origin", "*").unwrap();
                 let resp = tiny_http::Response::from_string(json)
                     .with_header(header)
                     .with_header(cors);
@@ -379,8 +590,8 @@ fn start_overlay_server(resource_dir: std::path::PathBuf) -> u16 {
             if clean == "api/save-media" && request.method() == &tiny_http::Method::Post {
                 let mut body = String::new();
                 if let Err(_) = request.as_reader().read_to_string(&mut body) {
-                    let resp = tiny_http::Response::from_string("Bad Request")
-                        .with_status_code(400);
+                    let resp =
+                        tiny_http::Response::from_string("Bad Request").with_status_code(400);
                     let _ = request.respond(resp);
                     continue;
                 }
@@ -391,8 +602,10 @@ fn start_overlay_server(resource_dir: std::path::PathBuf) -> u16 {
                         let data_url = val.get("dataUrl").and_then(|v| v.as_str()).unwrap_or("");
 
                         if file_name.is_empty() || data_url.is_empty() {
-                            let resp = tiny_http::Response::from_string(r#"{"error":"fileName and dataUrl required"}"#)
-                                .with_status_code(400);
+                            let resp = tiny_http::Response::from_string(
+                                r#"{"error":"fileName and dataUrl required"}"#,
+                            )
+                            .with_status_code(400);
                             let _ = request.respond(resp);
                             continue;
                         }
@@ -418,14 +631,23 @@ fn start_overlay_server(resource_dir: std::path::PathBuf) -> u16 {
                                     match fs::write(&dest, file_bytes) {
                                         Ok(_) => {
                                             let abs = dest.to_str().unwrap_or("").to_string();
-                                            println!("[Overlay API] Saved media: {} ({} bytes)", abs, bytes.len());
-                                            let json = serde_json::json!({ "path": abs }).to_string();
+                                            println!(
+                                                "[Overlay API] Saved media: {} ({} bytes)",
+                                                abs,
+                                                bytes.len()
+                                            );
+                                            let json =
+                                                serde_json::json!({ "path": abs }).to_string();
                                             let header = tiny_http::Header::from_bytes(
-                                                "Content-Type", "application/json; charset=utf-8"
-                                            ).unwrap();
+                                                "Content-Type",
+                                                "application/json; charset=utf-8",
+                                            )
+                                            .unwrap();
                                             let cors = tiny_http::Header::from_bytes(
-                                                "Access-Control-Allow-Origin", "*"
-                                            ).unwrap();
+                                                "Access-Control-Allow-Origin",
+                                                "*",
+                                            )
+                                            .unwrap();
                                             let resp = tiny_http::Response::from_string(json)
                                                 .with_header(header)
                                                 .with_header(cors);
@@ -439,15 +661,17 @@ fn start_overlay_server(resource_dir: std::path::PathBuf) -> u16 {
                                         }
                                     }
                                 } else {
-                                    let resp = tiny_http::Response::from_string(r#"{"error":"uploads dir not available"}"#)
-                                        .with_status_code(500);
+                                    let resp = tiny_http::Response::from_string(
+                                        r#"{"error":"uploads dir not available"}"#,
+                                    )
+                                    .with_status_code(500);
                                     let _ = request.respond(resp);
                                 }
                             }
                             Err(e) => {
                                 let json = serde_json::json!({ "error": format!("Base64 decode failed: {}", e) }).to_string();
-                                let resp = tiny_http::Response::from_string(json)
-                                    .with_status_code(400);
+                                let resp =
+                                    tiny_http::Response::from_string(json).with_status_code(400);
                                 let _ = request.respond(resp);
                             }
                         }
@@ -462,14 +686,73 @@ fn start_overlay_server(resource_dir: std::path::PathBuf) -> u16 {
                 }
             }
 
+            // API: save arbitrary dock JSON payloads to uploads/<name>.json
+            // POST /api/save-dock-data with JSON body { "name": "...", "data": "..." }
+            if clean == "api/save-dock-data" && request.method() == &tiny_http::Method::Post {
+                let mut body = String::new();
+                if request.as_reader().read_to_string(&mut body).is_err() {
+                    let resp =
+                        tiny_http::Response::from_string("Bad Request").with_status_code(400);
+                    let _ = request.respond(resp);
+                    continue;
+                }
+
+                let parsed: Result<serde_json::Value, _> = serde_json::from_str(&body);
+                match parsed {
+                    Ok(val) => {
+                        let name = val.get("name").and_then(|v| v.as_str()).unwrap_or("");
+                        let data = val.get("data").and_then(|v| v.as_str()).unwrap_or("");
+
+                        if name.is_empty() {
+                            let resp =
+                                tiny_http::Response::from_string(r#"{"error":"name is required"}"#)
+                                    .with_status_code(400);
+                            let _ = request.respond(resp);
+                            continue;
+                        }
+
+                        match write_dock_data(name, data) {
+                            Ok(_) => {
+                                let header = tiny_http::Header::from_bytes(
+                                    "Content-Type",
+                                    "application/json; charset=utf-8",
+                                )
+                                .unwrap();
+                                let cors = tiny_http::Header::from_bytes(
+                                    "Access-Control-Allow-Origin",
+                                    "*",
+                                )
+                                .unwrap();
+                                let resp = tiny_http::Response::from_string(r#"{"ok":true}"#)
+                                    .with_header(header)
+                                    .with_header(cors);
+                                let _ = request.respond(resp);
+                            }
+                            Err(err) => {
+                                let json = serde_json::json!({ "error": err }).to_string();
+                                let resp =
+                                    tiny_http::Response::from_string(json).with_status_code(500);
+                                let _ = request.respond(resp);
+                            }
+                        }
+                    }
+                    Err(_) => {
+                        let resp = tiny_http::Response::from_string(r#"{"error":"Invalid JSON"}"#)
+                            .with_status_code(400);
+                        let _ = request.respond(resp);
+                    }
+                }
+                continue;
+            }
+
             // API: save dock favorites — POST /api/save-dock-favorites with JSON body [...]
             // This allows the dock CEF browser to persist favorites back to the
             // overlay server even when it can't use Tauri invoke.
             if clean == "api/save-dock-favorites" && request.method() == &tiny_http::Method::Post {
                 let mut body = String::new();
                 if request.as_reader().read_to_string(&mut body).is_err() {
-                    let resp = tiny_http::Response::from_string("Bad Request")
-                        .with_status_code(400);
+                    let resp =
+                        tiny_http::Response::from_string("Bad Request").with_status_code(400);
                     let _ = request.respond(resp);
                     continue;
                 }
@@ -482,13 +765,20 @@ fn start_overlay_server(resource_dir: std::path::PathBuf) -> u16 {
                             let path = udir.join("dock-lt-favorites.json");
                             match fs::write(&path, &body) {
                                 Ok(_) => {
-                                    println!("[Overlay API] Saved dock-lt-favorites ({} bytes)", body.len());
+                                    println!(
+                                        "[Overlay API] Saved dock-lt-favorites ({} bytes)",
+                                        body.len()
+                                    );
                                     let header = tiny_http::Header::from_bytes(
-                                        "Content-Type", "application/json; charset=utf-8"
-                                    ).unwrap();
+                                        "Content-Type",
+                                        "application/json; charset=utf-8",
+                                    )
+                                    .unwrap();
                                     let cors = tiny_http::Header::from_bytes(
-                                        "Access-Control-Allow-Origin", "*"
-                                    ).unwrap();
+                                        "Access-Control-Allow-Origin",
+                                        "*",
+                                    )
+                                    .unwrap();
                                     let resp = tiny_http::Response::from_string(r#"{"ok":true}"#)
                                         .with_header(header)
                                         .with_header(cors);
@@ -502,14 +792,17 @@ fn start_overlay_server(resource_dir: std::path::PathBuf) -> u16 {
                                 }
                             }
                         } else {
-                            let resp = tiny_http::Response::from_string(r#"{"error":"uploads dir not available"}"#)
-                                .with_status_code(500);
+                            let resp = tiny_http::Response::from_string(
+                                r#"{"error":"uploads dir not available"}"#,
+                            )
+                            .with_status_code(500);
                             let _ = request.respond(resp);
                         }
                     }
                     Err(_) => {
-                        let resp = tiny_http::Response::from_string(r#"{"error":"Invalid JSON array"}"#)
-                            .with_status_code(400);
+                        let resp =
+                            tiny_http::Response::from_string(r#"{"error":"Invalid JSON array"}"#)
+                                .with_status_code(400);
                         let _ = request.respond(resp);
                     }
                 }
@@ -524,8 +817,8 @@ fn start_overlay_server(resource_dir: std::path::PathBuf) -> u16 {
                     let rel = clean.strip_prefix("uploads/").unwrap_or(clean);
                     let rel_path = Path::new(rel);
                     if !is_safe_relative_path(rel_path) {
-                        let resp = tiny_http::Response::from_string("Forbidden")
-                            .with_status_code(403);
+                        let resp =
+                            tiny_http::Response::from_string("Forbidden").with_status_code(403);
                         let _ = request.respond(resp);
                         continue;
                     }
@@ -563,16 +856,17 @@ fn start_overlay_server(resource_dir: std::path::PathBuf) -> u16 {
                         // Redirect to Vite dev server (localhost:1420) so it handles
                         // module transforms, HMR, etc.
                         let redirect_url = format!("http://localhost:1420/{}", clean);
-                        let header = tiny_http::Header::from_bytes(
-                            "Location", redirect_url.as_str()
-                        ).unwrap();
-                        let cors = tiny_http::Header::from_bytes(
-                            "Access-Control-Allow-Origin", "*"
-                        ).unwrap();
-                        let resp = tiny_http::Response::from_string("Redirecting to Vite dev server")
-                            .with_status_code(302)
-                            .with_header(header)
-                            .with_header(cors);
+                        let header =
+                            tiny_http::Header::from_bytes("Location", redirect_url.as_str())
+                                .unwrap();
+                        let cors =
+                            tiny_http::Header::from_bytes("Access-Control-Allow-Origin", "*")
+                                .unwrap();
+                        let resp =
+                            tiny_http::Response::from_string("Redirecting to Vite dev server")
+                                .with_status_code(302)
+                                .with_header(header)
+                                .with_header(cors);
                         let _ = request.respond(resp);
                         continue;
                     }
@@ -604,12 +898,11 @@ fn start_overlay_server(resource_dir: std::path::PathBuf) -> u16 {
                             Some("otf") => "font/otf",
                             _ => "application/octet-stream",
                         };
-                        let header = tiny_http::Header::from_bytes(
-                            "Content-Type", content_type
-                        ).unwrap();
-                        let cors = tiny_http::Header::from_bytes(
-                            "Access-Control-Allow-Origin", "*"
-                        ).unwrap();
+                        let header =
+                            tiny_http::Header::from_bytes("Content-Type", content_type).unwrap();
+                        let cors =
+                            tiny_http::Header::from_bytes("Access-Control-Allow-Origin", "*")
+                                .unwrap();
                         let resp = tiny_http::Response::from_data(data)
                             .with_header(header)
                             .with_header(cors);
@@ -631,11 +924,13 @@ fn start_overlay_server(resource_dir: std::path::PathBuf) -> u16 {
                     match fs::read(&index_path) {
                         Ok(data) => {
                             let header = tiny_http::Header::from_bytes(
-                                "Content-Type", "text/html; charset=utf-8"
-                            ).unwrap();
-                            let cors = tiny_http::Header::from_bytes(
-                                "Access-Control-Allow-Origin", "*"
-                            ).unwrap();
+                                "Content-Type",
+                                "text/html; charset=utf-8",
+                            )
+                            .unwrap();
+                            let cors =
+                                tiny_http::Header::from_bytes("Access-Control-Allow-Origin", "*")
+                                    .unwrap();
                             let resp = tiny_http::Response::from_data(data)
                                 .with_header(header)
                                 .with_header(cors);
@@ -648,8 +943,7 @@ fn start_overlay_server(resource_dir: std::path::PathBuf) -> u16 {
                         }
                     }
                 } else {
-                    let resp = tiny_http::Response::from_string("Not Found")
-                        .with_status_code(404);
+                    let resp = tiny_http::Response::from_string("Not Found").with_status_code(404);
                     let _ = request.respond(resp);
                 }
             }
@@ -689,7 +983,10 @@ pub fn run() {
             println!("[Tauri] Overlay resource dir : {:?}", resource_dir);
             println!("[Tauri] Overlay serve dir    : {:?}", serve_dir);
             println!("[Tauri] serve dir exists?     {}", serve_dir.exists());
-            println!("[Tauri] has overlay assets?   {}", has_overlay_assets(&serve_dir));
+            println!(
+                "[Tauri] has overlay assets?   {}",
+                has_overlay_assets(&serve_dir)
+            );
 
             // Log what files are actually in the serve directory
             if serve_dir.exists() {
@@ -698,8 +995,11 @@ pub fn run() {
                         .filter_map(|e| e.ok())
                         .map(|e| e.file_name().to_string_lossy().to_string())
                         .collect();
-                    println!("[Tauri] serve dir contents ({} entries): {:?}",
-                        names.len(), &names[..names.len().min(20)]);
+                    println!(
+                        "[Tauri] serve dir contents ({} entries): {:?}",
+                        names.len(),
+                        &names[..names.len().min(20)]
+                    );
                 }
             }
 
@@ -713,7 +1013,11 @@ pub fn run() {
             load_app_data,
             save_app_data,
             get_overlay_port,
-            save_dock_data
+            save_dock_data,
+            load_dock_data,
+            get_voice_bible_runtime_status,
+            prepare_voice_bible_model,
+            transcribe_voice_audio
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

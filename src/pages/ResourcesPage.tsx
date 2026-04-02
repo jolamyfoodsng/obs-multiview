@@ -68,53 +68,56 @@ export default function ResourcesPage() {
   const copy = TAB_COPY[tab];
 
   return (
-    <div className="resources-page">
-      <div className="resources-content">
-        <div className="lib-page">
-          <div className="lib-header">
-            <div className="lib-header-left">
-              <h1 className="lib-title">{copy.title}</h1>
-              <p className="lib-subtitle">{copy.subtitle}</p>
-            </div>
-
-            <div className="lib-tab-switcher">
-              <button
-                className={`lib-tab-btn${tab === "bible" ? " is-active" : ""}`}
-                onClick={() => handleTab("bible")}
-              >
-                <Icon name="menu_book" size={18} />
-                Bible
-              </button>
-              <button
-                className={`lib-tab-btn${tab === "worship" ? " is-active" : ""}`}
-                onClick={() => handleTab("worship")}
-              >
-                <Icon name="music_note" size={18} />
-                Worship
-              </button>
-              <button
-                className={`lib-tab-btn${tab === "media" ? " is-active" : ""}`}
-                onClick={() => handleTab("media")}
-              >
-                <Icon name="perm_media" size={18} />
-                Media
-              </button>
-            </div>
+    <div className="app-page resources-page">
+      <div className="app-page__inner resources-page__inner">
+        <header className="app-page__header">
+          <div className="app-page__header-copy">
+            <p className="app-page__eyebrow">Resources</p>
+            <h1 className="app-page__title">{copy.title}</h1>
+            <p className="app-page__subtitle">{copy.subtitle}</p>
           </div>
 
-          {tab === "bible" && (
-            <div className="resources-embedded-panel" data-resource-tab="bible">
-              <BibleLibrary
-                open
-                onClose={() => {}}
-                mode="embedded"
-                closeOnUse={false}
-              />
-            </div>
-          )}
+          <div className="lib-tab-switcher" role="tablist" aria-label="Resource sections">
+            <button
+              className={`lib-tab-btn${tab === "bible" ? " is-active" : ""}`}
+              onClick={() => handleTab("bible")}
+            >
+              <Icon name="menu_book" size={18} />
+              Bible
+            </button>
+            <button
+              className={`lib-tab-btn${tab === "worship" ? " is-active" : ""}`}
+              onClick={() => handleTab("worship")}
+            >
+              <Icon name="music_note" size={18} />
+              Worship
+            </button>
+            <button
+              className={`lib-tab-btn${tab === "media" ? " is-active" : ""}`}
+              onClick={() => handleTab("media")}
+            >
+              <Icon name="perm_media" size={18} />
+              Media
+            </button>
+          </div>
+        </header>
 
-          {tab === "worship" && <SongsTab />}
-          {tab === "media" && <MediaTab />}
+        <div className="resources-content">
+          <div className="lib-page">
+            {tab === "bible" && (
+              <div className="resources-embedded-panel" data-resource-tab="bible">
+                <BibleLibrary
+                  open
+                  onClose={() => {}}
+                  mode="embedded"
+                  closeOnUse={false}
+                />
+              </div>
+            )}
+
+            {tab === "worship" && <SongsTab />}
+            {tab === "media" && <MediaTab />}
+          </div>
         </div>
       </div>
     </div>

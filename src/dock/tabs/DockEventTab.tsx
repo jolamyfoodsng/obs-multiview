@@ -5,9 +5,9 @@
  * and stage event graphics for display on OBS.
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import type { DockStagedItem, DockEvent } from "../dockTypes";
-import type { DockLTThemeRef } from "../dockObsClient";
+import { dockObsClient, type DockLTThemeRef } from "../dockObsClient";
 import DockLTThemePicker from "../components/DockLTThemePicker";
 import Icon from "../DockIcon";
 
@@ -19,9 +19,13 @@ interface Props {
 let nextEventId = 1;
 
 export default function DockEventTab({ staged, onStage }: Props) {
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [events, setEvents] = useState<DockEvent[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedTheme, setSelectedTheme] = useState<DockLTThemeRef | null>(null);
+  const isProgramLive =
+    staged?.type === "event" &&
+    Boolean((staged.data as Record<string, unknown> | undefined)?._dockLive);
 
   // Quick-add form
   const [newName, setNewName] = useState("");
@@ -45,41 +49,73 @@ export default function DockEventTab({ staged, onStage }: Props) {
     setNewDescription("");
   }, [newName, newDate, newLocation, newDescription]);
 
+  const pushEvent = useCallback(async (
+    ev: DockEvent,
+    live: boolean,
+    themeOverride?: DockLTThemeRef | null,
+  ) => {
+    setSelectedId(ev.id);
+    onStage({
+      type: "event",
+      label: ev.name,
+      subtitle: ev.date ? `${ev.date}${ev.location ? ` • ${ev.location}` : ""}` : ev.location || undefined,
+      data: { ...ev, ltTheme: themeOverride ?? selectedTheme, _dockLive: live },
+    });
+
+    if (!dockObsClient.isConnected) return;
+
+    try {
+      await dockObsClient.pushLowerThird({
+        name: ev.name,
+        title: ev.name,
+        date: ev.date,
+        location: ev.location,
+        description: ev.description,
+        subtitle: ev.date ? `${ev.date}${ev.location ? ` • ${ev.location}` : ""}` : ev.location || undefined,
+        ltTheme: themeOverride ?? selectedTheme ?? undefined,
+        context: "event",
+      }, live);
+    } catch (err) {
+      console.warn(`[DockEventTab] ${live ? "Go live" : "Send preview"} failed:`, err);
+    }
+  }, [onStage, selectedTheme]);
+
   const handleSelectTheme = useCallback(
     (theme: DockLTThemeRef) => {
       setSelectedTheme(theme);
-      // If an event is already selected, re-stage with new theme
       if (selectedId) {
         const ev = events.find((e) => e.id === selectedId);
         if (ev) {
-          onStage({
-            type: "event",
-            label: ev.name,
-            subtitle: ev.date ? `${ev.date}${ev.location ? ` • ${ev.location}` : ""}` : ev.location || undefined,
-            data: { ...ev, ltTheme: theme },
-          });
+          void pushEvent(ev, isProgramLive, theme);
         }
       }
     },
-    [selectedId, events, onStage]
+    [events, isProgramLive, pushEvent, selectedId]
   );
 
-  const handleSelect = useCallback(
-    (ev: DockEvent) => {
-      setSelectedId(ev.id);
-      onStage({
-        type: "event",
-        label: ev.name,
-        subtitle: ev.date ? `${ev.date}${ev.location ? ` • ${ev.location}` : ""}` : ev.location || undefined,
-        data: { ...ev, ltTheme: selectedTheme },
-      });
-    },
-    [onStage, selectedTheme]
-  );
+  const handleSelect = useCallback((ev: DockEvent) => {
+    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+    clickTimerRef.current = setTimeout(() => {
+      clickTimerRef.current = null;
+      void pushEvent(ev, false);
+    }, 220);
+  }, [pushEvent]);
+
+  const handleGoLiveEvent = useCallback((ev: DockEvent) => {
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+    }
+    void pushEvent(ev, true);
+  }, [pushEvent]);
 
   const handleRemove = useCallback((id: string) => {
     setEvents((prev) => prev.filter((e) => e.id !== id));
     setSelectedId((cur) => (cur === id ? null : cur));
+  }, []);
+
+  useEffect(() => () => {
+    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
   }, []);
 
   return (
@@ -102,6 +138,7 @@ export default function DockEventTab({ staged, onStage }: Props) {
           key={ev.id}
           className={`dock-card${selectedId === ev.id ? " dock-card--active" : ""}`}
           onClick={() => handleSelect(ev)}
+          onDoubleClick={() => handleGoLiveEvent(ev)}
         >
           <div className="dock-row dock-row--between">
             <div>
@@ -190,7 +227,7 @@ export default function DockEventTab({ staged, onStage }: Props) {
             <div className="dock-preview__header">
               <span className="dock-preview__badge">
                 <Icon name="fiber_manual_record" size={10} />
-                Staged
+                {isProgramLive ? "Live" : "Preview"}
               </span>
             </div>
             <div className="dock-preview__ref">{staged.label}</div>

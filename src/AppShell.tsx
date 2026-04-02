@@ -9,7 +9,7 @@
  *   Logo circle + Cancel + Go Live / End Service
  */
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { obsService } from "./services/obsService";
 import { serviceStore } from "./services/serviceStore";
@@ -108,9 +108,9 @@ function MenuDropdown({ def }: { def: MenuDropdownDef }) {
 }
 
 const NAV_ITEMS: ReadonlyArray<{ to: string; icon: string; label: string; end?: boolean }> = [
-  { to: "/", icon: "home", label: "Production Home", end: true },
+  { to: "/", icon: "home", label: "Home", end: true },
   { to: "/resources", icon: "library_books", label: "Resources" },
-  { to: "/production/themes", icon: "palette", label: "Production Themes" },
+  { to: "/production/themes", icon: "palette", label: "Themes" },
   { to: "/settings", icon: "settings", label: "Settings" },
 ];
 
@@ -123,6 +123,13 @@ export function AppShell() {
 
   const isServiceActive = svc.status !== "idle" && svc.status !== "ended";
   const isServiceEnded = svc.status === "ended";
+  const currentSectionLabel = useMemo(() => {
+    if (location.pathname.startsWith("/resources")) return "Resources";
+    if (location.pathname.startsWith("/production/themes")) return "Production Themes";
+    if (location.pathname.startsWith("/settings")) return "Settings";
+    if (location.pathname.startsWith("/dev")) return "Developer";
+    return "Production Home";
+  }, [location.pathname]);
 
   // ── End-service confirmation modal ──
   const [showEndConfirm, setShowEndConfirm] = useState(false);
@@ -214,9 +221,12 @@ export function AppShell() {
             <div className="app-topnav-logo">
               <AppLogo alt="OBS Church Studio" />
             </div>
-            {!isServiceActive && (
-              <span className="app-topnav-title">Production Setup</span>
-            )}
+            <div className="app-topnav-brand-copy">
+              <span className="app-topnav-title">OBS Church Studio</span>
+              {!isServiceActive && (
+                <span className="app-topnav-section-label">{currentSectionLabel}</span>
+              )}
+            </div>
           </div>
 
           {!isServiceActive && (
@@ -316,7 +326,8 @@ export function AppShell() {
         {!isServiceActive && (
           <div className="app-topnav-right">
             {/* OBS Status */}
-            <div className={`app-topnav-obs${obsConnected ? " is-connected" : ""}`}>
+            <div className={`app-topnav-obs${obsConnected ? " is-connected" : ""}`} aria-live="polite">
+              <Icon name={obsConnected ? "link" : "link_off"} size={14} />
               <span className="app-topnav-obs-dot" />
               <span>{obsConnected ? "Connected" : "Disconnected"}</span>
             </div>
@@ -330,15 +341,14 @@ export function AppShell() {
               <Icon name={effective === "dark" ? "light_mode" : "dark_mode"} size={20} />
             </button>
 
-            {/* Notifications */}
-            <button className="app-topnav-icon-btn" title="Notifications">
-              <Icon name="notifications" size={20} />
+            <button
+              className="app-topnav-icon-btn"
+              title="Keyboard shortcuts"
+              aria-label="Keyboard shortcuts"
+              onClick={() => setShowShortcuts(true)}
+            >
+              <Icon name="keyboard" size={18} />
             </button>
-
-            {/* User Avatar */}
-            <div className="app-topnav-avatar">
-              <Icon name="person" size={20} />
-            </div>
           </div>
         )}
       </header>

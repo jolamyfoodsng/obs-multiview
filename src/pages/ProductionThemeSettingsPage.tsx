@@ -245,13 +245,15 @@ export default function ProductionThemeSettingsPage() {
 
   if (loading) {
     return (
-      <div className="production-page">
-        <section className="production-panel">
+      <div className="app-page production-page">
+        <div className="app-page__inner">
+          <section className="production-panel">
           <div className="production-loading">
             <Icon name="hourglass_empty" size={18} />
             Loading production theme settings...
           </div>
-        </section>
+          </section>
+        </div>
       </div>
     );
   }
@@ -324,146 +326,148 @@ export default function ProductionThemeSettingsPage() {
   );
 
   return (
-    <div className="production-page">
-      <section className="production-hero production-hero--compact">
-        <div className="production-hero__copy">
-          <span className="production-eyebrow">Production Theme Settings</span>
-          <h1 className="production-title">Set the Bible and Worship defaults that the OBS Dock should use.</h1>
-          <p className="production-subtitle">
-            Theme editing stays here in the app. Operators only choose Bible, Worship, preview, program, and mode inside OBS.
-          </p>
-        </div>
-
-        <div className="production-actions production-actions--stacked">
-          <button
-            className="production-btn production-btn--ghost"
-            onClick={() => {
-              setEditingTheme(null);
-              setShowCreator(true);
-            }}
-          >
-            <Icon name="add" size={16} />
-            Create Theme
-          </button>
-          <button
-            className="production-btn production-btn--primary"
-            onClick={handleSaveDefaults}
-            disabled={saving}
-          >
-            <Icon name={saving ? "hourglass_empty" : "save"} size={16} />
-            {saving ? "Saving..." : "Save Production Defaults"}
-          </button>
-        </div>
-      </section>
-
-      {status && (
-        <div className={`production-status-banner production-status-banner--${status.tone}`}>
-          <Icon name={status.tone === "success" ? "check_circle" : "error_outline"} size={16} />
-          <span>{status.text}</span>
-        </div>
-      )}
-
-      <section className="production-panel">
-        <div className="production-card-head">
-          <div>
-            <h2>Dock behavior</h2>
-            <p>These defaults are pushed to the OBS Dock and used every time an operator stages Bible or Worship.</p>
+    <div className="app-page production-page">
+      <div className="app-page__inner">
+        <header className="app-page__header">
+          <div className="app-page__header-copy">
+            <p className="app-page__eyebrow">Production Themes</p>
+            <h1 className="app-page__title">Set the defaults the OBS Dock should use for Bible and Worship.</h1>
+            <p className="app-page__subtitle">
+              Theme editing stays in the app. The dock only stages content using the defaults you set here.
+            </p>
           </div>
-          <Icon name="tune" size={20} />
+
+          <div className="app-page__actions">
+            <button
+              className="production-btn production-btn--ghost"
+              onClick={() => {
+                setEditingTheme(null);
+                setShowCreator(true);
+              }}
+            >
+              <Icon name="add" size={16} />
+              Create Theme
+            </button>
+            <button
+              className="production-btn production-btn--primary"
+              onClick={handleSaveDefaults}
+              disabled={saving}
+            >
+              <Icon name={saving ? "hourglass_empty" : "save"} size={16} />
+              {saving ? "Saving..." : "Save Defaults"}
+            </button>
+          </div>
+        </header>
+
+        {status && (
+          <div className={`production-status-banner production-status-banner--${status.tone}`}>
+            <Icon name={status.tone === "success" ? "check_circle" : "error_outline"} size={16} />
+            <span>{status.text}</span>
+          </div>
+        )}
+
+        <section className="production-panel">
+          <div className="production-card-head">
+            <div>
+              <h2>Dock behavior</h2>
+              <p>These defaults are pushed to the OBS Dock and applied whenever an operator stages Bible or Worship.</p>
+            </div>
+            <Icon name="tune" size={20} />
+          </div>
+
+          <ul className="production-checklist">
+            <li>The dock can still switch between fullscreen and lower-third live.</li>
+            <li>Theme selection now happens here in the app, not inside OBS.</li>
+            <li>Changes take effect after you save without rebuilding OBS sources.</li>
+          </ul>
+        </section>
+
+        <div className="production-module-grid">
+          {renderModuleCard(
+            "bible",
+            "Bible Defaults",
+            "Used by Bible preview/program sends from the OBS Dock.",
+            resolvedSettings.bible.defaultMode,
+            resolvedSettings.bible.fullscreenTheme,
+            resolvedSettings.bible.lowerThirdTheme,
+          )}
+          {renderModuleCard(
+            "worship",
+            "Worship Defaults",
+            "Used by Worship lyric preview/program sends from the OBS Dock.",
+            resolvedSettings.worship.defaultMode,
+            resolvedSettings.worship.fullscreenTheme,
+            resolvedSettings.worship.lowerThirdTheme,
+          )}
         </div>
 
-        <ul className="production-checklist">
-          <li>The dock can still switch between fullscreen and lower-third live.</li>
-          <li>Theme selection now happens here in the app, not inside OBS.</li>
-          <li>Changes take effect after you save, without rebuilding OBS sources.</li>
-        </ul>
-      </section>
+        <section className="production-panel">
+          <div className="production-card-head">
+            <div>
+              <h2>Custom Themes</h2>
+              <p>Create and maintain the custom fullscreen and lower-third looks used in production mode.</p>
+            </div>
+            <span className="production-count-pill">{customThemes.length} custom</span>
+          </div>
 
-      <div className="production-module-grid">
-        {renderModuleCard(
-          "bible",
-          "Bible Defaults",
-          "Used by Bible preview/program sends from the OBS Dock.",
-          resolvedSettings.bible.defaultMode,
-          resolvedSettings.bible.fullscreenTheme,
-          resolvedSettings.bible.lowerThirdTheme,
-        )}
-        {renderModuleCard(
-          "worship",
-          "Worship Defaults",
-          "Used by Worship lyric preview/program sends from the OBS Dock.",
-          resolvedSettings.worship.defaultMode,
-          resolvedSettings.worship.fullscreenTheme,
-          resolvedSettings.worship.lowerThirdTheme,
+          {customThemes.length === 0 ? (
+            <div className="production-empty">
+              <Icon name="palette" size={18} />
+              <div>
+                <strong>No custom themes yet.</strong>
+                <p>Create one here and then assign it above as a Bible or Worship default.</p>
+              </div>
+            </div>
+          ) : (
+            <div className="production-theme-list">
+              {customThemes
+                .slice()
+                .sort((a, b) => a.name.localeCompare(b.name))
+                .map((theme) => (
+                  <div key={theme.id} className="production-theme-row">
+                    <div className="production-theme-row__swatch" style={{ background: theme.settings.backgroundColor }} />
+                    <div className="production-theme-row__copy">
+                      <strong>{theme.name}</strong>
+                      <span>
+                        {theme.templateType === "lower-third" ? "Lower Third" : "Fullscreen"} • {themeCategories(theme)}
+                      </span>
+                    </div>
+                    <div className="production-theme-row__actions">
+                      <button
+                        className="production-btn production-btn--ghost"
+                        onClick={() => {
+                          setEditingTheme(theme);
+                          setShowCreator(true);
+                        }}
+                      >
+                        <Icon name="edit" size={16} />
+                        Edit
+                      </button>
+                      <button
+                        className="production-btn production-btn--danger"
+                        onClick={() => void handleDeleteTheme(theme)}
+                      >
+                        <Icon name="delete" size={16} />
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
+        </section>
+
+        {showCreator && (
+          <ThemeCreatorModal
+            editTheme={editingTheme}
+            onClose={() => {
+              setShowCreator(false);
+              setEditingTheme(null);
+            }}
+            onSaved={(theme) => void handleThemeSaved(theme)}
+          />
         )}
       </div>
-
-      <section className="production-panel">
-        <div className="production-card-head">
-          <div>
-            <h2>Custom Themes</h2>
-            <p>Create and maintain the custom fullscreen and lower-third looks used in production mode.</p>
-          </div>
-          <span className="production-count-pill">{customThemes.length} custom</span>
-        </div>
-
-        {customThemes.length === 0 ? (
-          <div className="production-empty">
-            <Icon name="palette" size={18} />
-            <div>
-              <strong>No custom themes yet.</strong>
-              <p>Create one here and then assign it above as a Bible or Worship default.</p>
-            </div>
-          </div>
-        ) : (
-          <div className="production-theme-list">
-            {customThemes
-              .slice()
-              .sort((a, b) => a.name.localeCompare(b.name))
-              .map((theme) => (
-                <div key={theme.id} className="production-theme-row">
-                  <div className="production-theme-row__swatch" style={{ background: theme.settings.backgroundColor }} />
-                  <div className="production-theme-row__copy">
-                    <strong>{theme.name}</strong>
-                    <span>
-                      {theme.templateType === "lower-third" ? "Lower Third" : "Fullscreen"} • {themeCategories(theme)}
-                    </span>
-                  </div>
-                  <div className="production-theme-row__actions">
-                    <button
-                      className="production-btn production-btn--ghost"
-                      onClick={() => {
-                        setEditingTheme(theme);
-                        setShowCreator(true);
-                      }}
-                    >
-                      <Icon name="edit" size={16} />
-                      Edit
-                    </button>
-                    <button
-                      className="production-btn production-btn--danger"
-                      onClick={() => void handleDeleteTheme(theme)}
-                    >
-                      <Icon name="delete" size={16} />
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
-          </div>
-        )}
-      </section>
-
-      {showCreator && (
-        <ThemeCreatorModal
-          editTheme={editingTheme}
-          onClose={() => {
-            setShowCreator(false);
-            setEditingTheme(null);
-          }}
-          onSaved={(theme) => void handleThemeSaved(theme)}
-        />
-      )}
     </div>
   );
 }

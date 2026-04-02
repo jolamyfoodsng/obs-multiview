@@ -327,10 +327,11 @@
     root.setProperty('--border-radius', (s.borderRadius || 12) + 'px');
     root.setProperty('--padding', effectivePadding + 'px');
     root.setProperty('--safe-area', effectiveSafeArea + 'px');
-    root.setProperty('--anim-duration', (s.animationDuration || 400) + 'ms');
-    root.setProperty('--bg-enter-duration', Math.max(180, Math.round((s.animationDuration || 400) * 0.6)) + 'ms');
-    root.setProperty('--text-enter-duration', Math.max(180, Math.round((s.animationDuration || 400) * 0.75)) + 'ms');
-    root.setProperty('--text-enter-delay', Math.max(80, Math.round((s.animationDuration || 400) * 0.28)) + 'ms');
+    const effectiveAnimDuration = Math.max(95, Math.min(170, Math.round((s.animationDuration || 400) * 0.38)));
+    root.setProperty('--anim-duration', effectiveAnimDuration + 'ms');
+    root.setProperty('--bg-enter-duration', Math.max(70, Math.round(effectiveAnimDuration * 0.42)) + 'ms');
+    root.setProperty('--text-enter-duration', Math.max(82, Math.round(effectiveAnimDuration * 0.54)) + 'ms');
+    root.setProperty('--text-enter-delay', Math.max(12, Math.round(effectiveAnimDuration * 0.08)) + 'ms');
     root.setProperty('--lt-justify',
       s.lowerThirdPosition === 'center'
         ? 'center'

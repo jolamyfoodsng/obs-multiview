@@ -19,6 +19,12 @@ import { OT_BOOKS, NT_BOOKS, BOOK_CHAPTERS } from "./dockTypes";
 
 const ALL_BOOKS = [...OT_BOOKS, ...NT_BOOKS];
 
+const ROMAN_NUMERAL_PREFIX: Record<"1" | "2" | "3", string> = {
+  "1": "i",
+  "2": "ii",
+  "3": "iii",
+};
+
 // ---------------------------------------------------------------------------
 // Abbreviation map — multiple short forms per book
 // ---------------------------------------------------------------------------
@@ -97,11 +103,31 @@ const BOOK_ALIASES: BookAlias[] = [
   { book: "Revelation", aliases: ["rev", "re", "rv"] },
 ];
 
+function getExtendedAliases(entry: BookAlias): string[] {
+  const aliases = new Set(entry.aliases);
+  const numberedMatch = entry.book.match(/^([123])\s+(.+)$/);
+
+  if (numberedMatch) {
+    const digit = numberedMatch[1] as "1" | "2" | "3";
+    const romanPrefix = ROMAN_NUMERAL_PREFIX[digit];
+
+    for (const alias of entry.aliases) {
+      if (alias.startsWith(digit)) {
+        aliases.add(`${romanPrefix}${alias.slice(1)}`);
+      }
+    }
+
+    aliases.add(`${romanPrefix}${numberedMatch[2].toLowerCase().replace(/\s+/g, "")}`);
+  }
+
+  return [...aliases];
+}
+
 // Build a flat lookup: alias → book name
 const ALIAS_MAP = new Map<string, string>();
 for (const entry of BOOK_ALIASES) {
   // Add all aliases
-  for (const alias of entry.aliases) {
+  for (const alias of getExtendedAliases(entry)) {
     ALIAS_MAP.set(alias, entry.book);
   }
   // Also add the full lowercase name
@@ -155,7 +181,7 @@ export function parseBibleSearch(query: string): BibleSearchResult[] {
   //   "1 john 3:16"  → book="1john", nums="3:16"
 
   // Handle numbered books: "1 samuel" → "1samuel", "2 kings" → "2kings"
-  const normalized = q.replace(/^(\d)\s+/, "$1");
+  const normalized = q.replace(/^((?:\d|iii|ii|i))\s+/, "$1");
 
   // Split into book text and number portion
   // Match: optional leading digit, then letters (book name), then numbers/separators
@@ -261,7 +287,7 @@ function findBooks(bookPart: string): Array<{ book: string; score: number }> {
 
   // 2. Prefix match on aliases
   for (const entry of BOOK_ALIASES) {
-    for (const alias of entry.aliases) {
+    for (const alias of getExtendedAliases(entry)) {
       if (alias.startsWith(bookPart)) {
         results.push({ book: entry.book, score: 80 });
         break; // One match per book is enough

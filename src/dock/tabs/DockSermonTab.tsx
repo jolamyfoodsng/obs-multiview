@@ -12,7 +12,7 @@
 
 import { useState, useCallback, useEffect, useRef } from "react";
 import type { DockStagedItem, DockSermonPoint } from "../dockTypes";
-import type { DockLTThemeRef } from "../dockObsClient";
+import { dockObsClient, type DockLTThemeRef } from "../dockObsClient";
 import DockLTThemePicker from "../components/DockLTThemePicker";
 import Icon from "../DockIcon";
 
@@ -83,6 +83,7 @@ let nextId = Date.now();
 
 export default function DockSermonTab({ staged, onStage }: Props) {
   const loaded = useRef(false);
+  const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [title, setTitle] = useState("");
   const [series, setSeries] = useState("");
   const [speaker, setSpeaker] = useState("");
@@ -95,6 +96,15 @@ export default function DockSermonTab({ staged, onStage }: Props) {
   const [saved, setSaved] = useState(false);
   const [messageSaved, setMessageSaved] = useState(false);
   const [editingMessage, setEditingMessage] = useState(false);
+  const stagedSermonData =
+    staged?.type === "sermon" ? (staged.data as Record<string, unknown>) : null;
+  const isProgramLive =
+    staged?.type === "sermon" &&
+    Boolean(stagedSermonData?._dockLive);
+  const isMessageSelected =
+    staged?.type === "sermon" &&
+    !stagedSermonData?.point &&
+    staged.label === title;
 
   // ── Load persisted data on mount ──
   useEffect(() => {
@@ -149,40 +159,119 @@ export default function DockSermonTab({ staged, onStage }: Props) {
     setNewPointAttribution("");
   }, [newPointText, newPointType, newPointAttribution, speaker]);
 
+  const pushSermonMessage = useCallback(async (
+    live: boolean,
+    themeOverride?: DockLTThemeRef | null,
+  ) => {
+    if (!title.trim()) return;
+    setSelectedId(null);
+    onStage({
+      type: "sermon",
+      label: title,
+      subtitle: [series, speaker].filter(Boolean).join(" • ") || undefined,
+      data: { title, series, speaker, ltTheme: themeOverride ?? selectedTheme, _dockLive: live },
+    });
+
+    if (!dockObsClient.isConnected) return;
+
+    try {
+      await dockObsClient.pushLowerThird({
+        title,
+        name: title,
+        series,
+        speaker,
+        subtitle: [series, speaker].filter(Boolean).join(" • "),
+        ltTheme: themeOverride ?? selectedTheme ?? undefined,
+        context: "sermon",
+      }, live);
+    } catch (err) {
+      console.warn(`[DockSermonTab] ${live ? "Go live" : "Send preview"} failed:`, err);
+    }
+  }, [onStage, selectedTheme, series, speaker, title]);
+
+  const pushSermonPoint = useCallback(async (
+    point: DockSermonPoint,
+    live: boolean,
+    themeOverride?: DockLTThemeRef | null,
+  ) => {
+    setSelectedId(point.id);
+    onStage({
+      type: "sermon",
+      label: point.type === "quote" ? `"${point.text}"` : point.text,
+      subtitle: point.attribution
+        ? `${point.type === "quote" ? "Quote" : "Point"} — ${point.attribution}`
+        : `${point.type === "quote" ? "Quote" : "Point"} — ${title || "Untitled Message"}`,
+      data: { point, title, series, speaker, ltTheme: themeOverride ?? selectedTheme, _dockLive: live },
+    });
+
+    if (!dockObsClient.isConnected) return;
+
+    try {
+      await dockObsClient.pushLowerThird({
+        title: point.text,
+        point: point.text,
+        series,
+        speaker,
+        subtitle: point.attribution
+          ? `${point.type === "quote" ? "Quote" : "Point"} — ${point.attribution}`
+          : `${point.type === "quote" ? "Quote" : "Point"} — ${title || "Untitled Message"}`,
+        ltTheme: themeOverride ?? selectedTheme ?? undefined,
+        context: "sermon",
+      }, live);
+    } catch (err) {
+      console.warn(`[DockSermonTab] ${live ? "Go live" : "Send preview"} failed:`, err);
+    }
+  }, [onStage, selectedTheme, series, speaker, title]);
+
   const handleSelectTheme = useCallback(
     (theme: DockLTThemeRef) => {
       setSelectedTheme(theme);
       if (selectedId) {
         const point = points.find((p) => p.id === selectedId);
         if (point) {
-          onStage({
-            type: "sermon",
-            label: point.type === "quote" ? `"${point.text}"` : point.text,
-            subtitle: point.attribution
-              ? `${point.type === "quote" ? "Quote" : "Point"} — ${point.attribution}`
-              : `${point.type === "quote" ? "Quote" : "Point"} — ${title || "Untitled Message"}`,
-            data: { point, title, series, speaker, ltTheme: theme },
-          });
+          void pushSermonPoint(point, isProgramLive, theme);
         }
+      } else if (staged?.type === "sermon" && !stagedSermonData?.point && title.trim()) {
+        void pushSermonMessage(isProgramLive, theme);
       }
     },
-    [selectedId, points, onStage, title, series, speaker]
+    [isProgramLive, points, pushSermonMessage, pushSermonPoint, selectedId, staged, stagedSermonData, title]
   );
 
   const handleSelectPoint = useCallback(
     (point: DockSermonPoint) => {
-      setSelectedId(point.id);
-      onStage({
-        type: "sermon",
-        label: point.type === "quote" ? `"${point.text}"` : point.text,
-        subtitle: point.attribution
-          ? `${point.type === "quote" ? "Quote" : "Point"} — ${point.attribution}`
-          : `${point.type === "quote" ? "Quote" : "Point"} — ${title || "Untitled Message"}`,
-        data: { point, title, series, speaker, ltTheme: selectedTheme },
-      });
+      if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = setTimeout(() => {
+        clickTimerRef.current = null;
+        void pushSermonPoint(point, false);
+      }, 220);
     },
-    [onStage, title, series, speaker, selectedTheme]
+    [pushSermonPoint]
   );
+
+  const handleGoLivePoint = useCallback((point: DockSermonPoint) => {
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+    }
+    void pushSermonPoint(point, true);
+  }, [pushSermonPoint]);
+
+  const handleSelectMessage = useCallback(() => {
+    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+    clickTimerRef.current = setTimeout(() => {
+      clickTimerRef.current = null;
+      void pushSermonMessage(false);
+    }, 220);
+  }, [pushSermonMessage]);
+
+  const handleGoLiveMessage = useCallback(() => {
+    if (clickTimerRef.current) {
+      clearTimeout(clickTimerRef.current);
+      clickTimerRef.current = null;
+    }
+    void pushSermonMessage(true);
+  }, [pushSermonMessage]);
 
   const handleRemovePoint = useCallback((id: string) => {
     setPoints((prev) => prev.filter((p) => p.id !== id));
@@ -198,6 +287,10 @@ export default function DockSermonTab({ staged, onStage }: Props) {
     setMessageSaved(false);
     localStorage.removeItem(STORAGE_KEY);
     syncSermonToMvSettings({ title: "", series: "", speaker: "", points: [] });
+  }, []);
+
+  useEffect(() => () => {
+    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
   }, []);
 
   return (
@@ -267,7 +360,12 @@ export default function DockSermonTab({ staged, onStage }: Props) {
 
       {/* Pinned message card (shows when saved and NOT editing) */}
       {messageSaved && title && !editingMessage && (
-        <div className="dock-sermon-pinned" style={{ position: "relative" }}>
+        <div
+          className={`dock-sermon-pinned${isMessageSelected ? " dock-card--active" : ""}`}
+          style={{ position: "relative", cursor: "pointer" }}
+          onClick={handleSelectMessage}
+          onDoubleClick={handleGoLiveMessage}
+        >
           <Icon name="church" size={16} style={{ color: "var(--dock-accent, #6c63ff)" }} />
           <div className="dock-sermon-pinned__info" style={{ flex: 1 }}>
             <div className="dock-sermon-pinned__title">{title}</div>
@@ -280,7 +378,10 @@ export default function DockSermonTab({ staged, onStage }: Props) {
             <button
               className="dock-btn dock-btn--preview"
               style={{ padding: "3px 8px", fontSize: 10 }}
-              onClick={() => setEditingMessage(true)}
+              onClick={(event) => {
+                event.stopPropagation();
+                setEditingMessage(true);
+              }}
               title="Edit message details"
             >
               <Icon name="edit" size={12} />
@@ -289,7 +390,10 @@ export default function DockSermonTab({ staged, onStage }: Props) {
             <button
               className="dock-btn dock-btn--preview"
               style={{ padding: "3px 8px", fontSize: 10 }}
-              onClick={handleClearAll}
+              onClick={(event) => {
+                event.stopPropagation();
+                handleClearAll();
+              }}
               title="Clear all"
             >
               <Icon name="delete_outline" size={12} />
@@ -315,6 +419,7 @@ export default function DockSermonTab({ staged, onStage }: Props) {
           key={point.id}
           className={`dock-sermon-point${selectedId === point.id ? " dock-sermon-point--active" : ""}`}
           onClick={() => handleSelectPoint(point)}
+          onDoubleClick={() => handleGoLivePoint(point)}
         >
           <div
             className={`dock-sermon-point__icon dock-sermon-point__icon--${point.type}`}
@@ -407,7 +512,7 @@ export default function DockSermonTab({ staged, onStage }: Props) {
             <div className="dock-preview__header">
               <span className="dock-preview__badge">
                 <Icon name="fiber_manual_record" size={10} />
-                Staged
+                {isProgramLive ? "Live" : "Preview"}
               </span>
             </div>
             <div className="dock-preview__ref">{staged.label}</div>
