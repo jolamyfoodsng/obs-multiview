@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { obsService } from "../../services/obsService";
+import { getDisplaySceneName } from "../../services/obsSceneTargets";
 import { serviceStore } from "../../services/serviceStore";
 import { getSettings as getMVSettings } from "../../multiview/mvStore";
 import { lowerThirdObsService } from "../../lowerthirds/lowerThirdObsService";
@@ -269,9 +270,9 @@ export function TickerModule({ isActive = true }: TickerModuleProps) {
       return { ...prev, scene: defaultScene };
     });
 
-    setProgramScene(await obsService.getCurrentProgramScene());
+    setProgramScene(getDisplaySceneName(await obsService.getCurrentProgramScene()));
     try {
-      setPreviewScene(await obsService.getCurrentPreviewScene());
+      setPreviewScene(getDisplaySceneName(await obsService.getCurrentPreviewScene()));
     } catch {
       setPreviewScene("");
     }
@@ -658,7 +659,10 @@ export function TickerModule({ isActive = true }: TickerModuleProps) {
     }
   }, [obsConnected, messages, applyActiveDurationMode, settings]);
 
-  const sendTickerToScene = useCallback(async (sceneName: string) => {
+  const sendTickerToScene = useCallback(async (
+    sceneName: string,
+    _mode: "scene" | "preview" | "program" = "scene",
+  ) => {
     if (!sceneName) return;
     const ok = await startTickerInScene(sceneName);
     pushToast(
@@ -1374,8 +1378,8 @@ export function TickerModule({ isActive = true }: TickerModuleProps) {
               disabled={messages.length === 0}
               sendLabel="Send"
               onRefresh={handleRefreshScenes}
-              onSendToScene={async (sceneName) => {
-                await sendTickerToScene(sceneName);
+              onSendToScene={async (sceneName, mode) => {
+                await sendTickerToScene(sceneName, mode);
               }}
             />
           </div>

@@ -36,6 +36,7 @@ import type { LTSize, LTFontSize, LTPosition, LTAnimationIn, LTCustomStyle } fro
 import { getOverlayBaseUrlSync } from "../../services/overlayUrl";
 import { buildOverlayUrl } from "../../lowerthirds/lowerThirdObsService";
 import { obsService } from "../../services/obsService";
+import { getDisplaySceneName } from "../../services/obsSceneTargets";
 import { serviceStore } from "../../services/serviceStore";
 import { getSettings, MV_SETTINGS_UPDATED_EVENT, type MVSettings } from "../../multiview/mvStore";
 import { applyRuntimeBranding, isLogoVariable } from "../../lowerthirds/runtimeBranding";
@@ -622,12 +623,12 @@ export function LowerThirdsModule({ isActive = true }: LowerThirdsModuleProps) {
       }
       refreshScenes();
       try {
-        setProgramScene(await obsService.getCurrentProgramScene());
+        setProgramScene(getDisplaySceneName(await obsService.getCurrentProgramScene()));
       } catch {
         setProgramScene("");
       }
       try {
-        setPreviewScene(await obsService.getCurrentPreviewScene());
+        setPreviewScene(getDisplaySceneName(await obsService.getCurrentPreviewScene()));
       } catch {
         setPreviewScene("");
       }
@@ -730,7 +731,10 @@ export function LowerThirdsModule({ isActive = true }: LowerThirdsModuleProps) {
   }, [state.selectedTheme, state.isSending, sendToAll, checkServiceActive, markDurationShown]);
 
   const handleSendToScene = useCallback(
-    async (sceneName: string) => {
+    async (
+      sceneName: string,
+      _mode: "scene" | "preview" | "program" = "scene",
+    ) => {
       if (!state.selectedTheme || state.isSending) return;
       if (!checkServiceActive("send lower thirds to OBS")) return;
       try {
@@ -1888,8 +1892,8 @@ export function LowerThirdsModule({ isActive = true }: LowerThirdsModuleProps) {
                   await refreshSources();
                   await refreshScenes();
                 }}
-                onSendToScene={async (sceneName) => {
-                  await handleSendToScene(sceneName);
+                onSendToScene={async (sceneName, mode) => {
+                  await handleSendToScene(sceneName, mode);
                 }}
               />
             </div>

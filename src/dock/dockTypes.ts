@@ -10,7 +10,7 @@
 // ---------------------------------------------------------------------------
 
 export type DockTab = "ministry" | "bible" | "worship" | "media";
-export type DockStageType = DockTab | "speaker" | "sermon" | "event" | "media" | "ministry";
+export type DockStageType = DockTab | "speaker" | "sermon" | "event" | "media" | "ministry" | "animated-lt";
 
 export interface DockTabDef {
   id: DockTab;

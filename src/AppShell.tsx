@@ -110,6 +110,7 @@ function MenuDropdown({ def }: { def: MenuDropdownDef }) {
 const NAV_ITEMS: ReadonlyArray<{ to: string; icon: string; label: string; end?: boolean }> = [
   { to: "/", icon: "home", label: "Home", end: true },
   { to: "/resources", icon: "library_books", label: "Resources" },
+  { to: "/speech-to-scripture", icon: "mic", label: "Speech" },
   { to: "/production/themes", icon: "palette", label: "Themes" },
   { to: "/settings", icon: "settings", label: "Settings" },
 ];
@@ -125,6 +126,7 @@ export function AppShell() {
   const isServiceEnded = svc.status === "ended";
   const currentSectionLabel = useMemo(() => {
     if (location.pathname.startsWith("/resources")) return "Resources";
+    if (location.pathname.startsWith("/speech-to-scripture")) return "Speech to Scripture";
     if (location.pathname.startsWith("/production/themes")) return "Production Themes";
     if (location.pathname.startsWith("/settings")) return "Settings";
     if (location.pathname.startsWith("/dev")) return "Developer";

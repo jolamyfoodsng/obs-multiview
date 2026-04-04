@@ -30,6 +30,7 @@ import { getTranslationData } from "./bibleDb";
 
 const translationCache = new Map<string, RawBibleData>();
 const corpusCache = new Map<string, BibleCorpusEntry[]>();
+const searchVocabularyCache = new Map<string, Map<string, number>>();
 
 export interface BibleCorpusEntry {
   book: string;
@@ -325,6 +326,18 @@ const SEARCH_STOP_WORDS = new Set([
   "you",
   "your",
 ]);
+const COMMON_SEARCH_TOKEN_ALIASES = new Map<string, string>([
+  ["captity", "captivity"],
+  ["captivty", "captivity"],
+  ["captiviti", "captivity"],
+  ["captivite", "captivity"],
+  ["bonus", "bones"],
+  ["word", "world"],
+  ["load", "lord"],
+  ["ion", "zion"],
+  ["vally", "valley"],
+  ["rejoyce", "rejoice"],
+]);
 
 function normalizeSearchText(value: string): string {
   return value
@@ -348,6 +361,161 @@ function tokenizeSearch(value: string): string[] {
   return filtered.length > 0 ? filtered : tokens.filter((token) => token.length > 1);
 }
 
+function normalizeSearchToken(token: string): string {
+  if (token.length <= 4) return token;
+
+  if (token.endsWith("eth") && token.length > 5) {
+    return token.slice(0, -3);
+  }
+  if (token.endsWith("est") && token.length > 5) {
+    return token.slice(0, -3);
+  }
+  if (token.endsWith("ing") && token.length > 6) {
+    return token.slice(0, -3);
+  }
+  if (token.endsWith("ed") && token.length > 5) {
+    return token.slice(0, -2);
+  }
+  if (token.endsWith("es") && token.length > 5) {
+    return token.slice(0, -2);
+  }
+  if (token.endsWith("s") && token.length > 4) {
+    return token.slice(0, -1);
+  }
+
+  return token;
+}
+
+function tokensEquivalent(a: string, b: string): boolean {
+  return normalizeSearchToken(a) === normalizeSearchToken(b);
+}
+
+function buildSearchVocabulary(
+  translation: BibleTranslation,
+  data: RawBibleData,
+): Map<string, number> {
+  const key = translation.toUpperCase();
+  const cached = searchVocabularyCache.get(key);
+  if (cached) return cached;
+
+  const vocabulary = new Map<string, number>();
+
+  for (const book of BIBLE_BOOKS) {
+    const bookData = data[book];
+    if (!bookData) continue;
+
+    for (const chapterData of Object.values(bookData)) {
+      for (const text of Object.values(chapterData)) {
+        for (const token of normalizeSearchText(text).split(" ").filter(Boolean)) {
+          if (token.length < 2) continue;
+          vocabulary.set(token, (vocabulary.get(token) ?? 0) + 1);
+        }
+      }
+    }
+  }
+
+  searchVocabularyCache.set(key, vocabulary);
+  return vocabulary;
+}
+
+function boundedEditDistance(a: string, b: string, maxDistance: number): number {
+  const aLength = a.length;
+  const bLength = b.length;
+
+  if (Math.abs(aLength - bLength) > maxDistance) {
+    return maxDistance + 1;
+  }
+
+  const previous = new Array<number>(bLength + 1);
+  const current = new Array<number>(bLength + 1);
+
+  for (let column = 0; column <= bLength; column += 1) {
+    previous[column] = column;
+  }
+
+  for (let row = 1; row <= aLength; row += 1) {
+    current[0] = row;
+    let rowMin = current[0];
+
+    for (let column = 1; column <= bLength; column += 1) {
+      const substitutionCost = a[row - 1] === b[column - 1] ? 0 : 1;
+      current[column] = Math.min(
+        previous[column] + 1,
+        current[column - 1] + 1,
+        previous[column - 1] + substitutionCost,
+      );
+      rowMin = Math.min(rowMin, current[column]);
+    }
+
+    if (rowMin > maxDistance) {
+      return maxDistance + 1;
+    }
+
+    for (let column = 0; column <= bLength; column += 1) {
+      previous[column] = current[column];
+    }
+  }
+
+  return previous[bLength];
+}
+
+function repairSearchQuery(
+  query: string,
+  translation: BibleTranslation,
+  data: RawBibleData,
+): string {
+  const normalized = normalizeSearchText(query);
+  if (!normalized) return normalized;
+
+  const vocabulary = buildSearchVocabulary(translation, data);
+  const corrected = normalized.split(" ").filter(Boolean).map((token) => {
+    const alias = COMMON_SEARCH_TOKEN_ALIASES.get(token);
+    if (alias) return alias;
+
+    if (
+      token.length < 4 ||
+      SEARCH_STOP_WORDS.has(token) ||
+      /^\d+$/.test(token) ||
+      vocabulary.has(token)
+    ) {
+      return token;
+    }
+
+    let bestCandidate: string | null = null;
+    let bestDistance = Number.POSITIVE_INFINITY;
+    let bestFrequency = -1;
+
+    for (const [candidate, frequency] of vocabulary) {
+      if (
+        candidate.length < 4 ||
+        Math.abs(candidate.length - token.length) > 2 ||
+        candidate[0] !== token[0]
+      ) {
+        continue;
+      }
+
+      const distance = boundedEditDistance(token, candidate, 2);
+      if (distance > 2) continue;
+
+      if (
+        distance < bestDistance ||
+        (distance === bestDistance && frequency > bestFrequency)
+      ) {
+        bestCandidate = candidate;
+        bestDistance = distance;
+        bestFrequency = frequency;
+      }
+    }
+
+    return bestCandidate && bestDistance <= 2 ? bestCandidate : token;
+  });
+
+  return corrected.join(" ")
+    .replace(/\breverse\b(?=.*\bcaptivity\b)/g, "turn")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function orderedTokenCoverage(queryTokens: string[], textTokens: string[]): number {
   if (queryTokens.length === 0 || textTokens.length === 0) return 0;
 
@@ -355,7 +523,9 @@ function orderedTokenCoverage(queryTokens: string[], textTokens: string[]): numb
   let startIndex = 0;
 
   for (const queryToken of queryTokens) {
-    const foundIndex = textTokens.indexOf(queryToken, startIndex);
+    const foundIndex = textTokens.findIndex(
+      (textToken, index) => index >= startIndex && tokensEquivalent(queryToken, textToken),
+    );
     if (foundIndex === -1) continue;
     matches += 1;
     startIndex = foundIndex + 1;
@@ -372,11 +542,11 @@ function nearbyPairCoverage(queryTokens: string[], textTokens: string[]): number
   for (let index = 0; index < queryTokens.length - 1; index += 1) {
     const first = queryTokens[index];
     const second = queryTokens[index + 1];
-    const firstIndex = textTokens.indexOf(first);
+    const firstIndex = textTokens.findIndex((textToken) => tokensEquivalent(first, textToken));
     if (firstIndex === -1) continue;
 
     const window = textTokens.slice(firstIndex + 1, firstIndex + 4);
-    if (window.includes(second)) {
+    if (window.some((textToken) => tokensEquivalent(second, textToken))) {
       matchedPairs += 1;
     }
   }
@@ -421,7 +591,9 @@ function scoreVerseMatch(
   const textTokens = normalizedText.split(" ").filter(Boolean);
   if (textTokens.length === 0 || queryTokens.length === 0) return 0;
 
-  const tokenMatches = queryTokens.filter((token) => textTokens.includes(token)).length;
+  const tokenMatches = queryTokens.filter((token) =>
+    textTokens.some((textToken) => tokensEquivalent(token, textToken)),
+  ).length;
   if (tokenMatches === 0) return 0;
 
   const tokenCoverage = tokenMatches / queryTokens.length;
@@ -443,8 +615,13 @@ async function searchBibleInTranslation(
 ): Promise<RankedSearchResult[]> {
   const data = await loadTranslation(translation);
   const results: RankedSearchResult[] = [];
-  const normalizedQuery = normalizeSearchText(query);
-  const queryTokens = tokenizeSearch(query);
+  const repairedQuery = repairSearchQuery(query, translation, data);
+  const queryVariants = Array.from(
+    new Set([normalizeSearchText(query), normalizeSearchText(repairedQuery)].filter(Boolean)),
+  ).map((variant) => ({
+    normalizedQuery: variant,
+    queryTokens: tokenizeSearch(variant),
+  }));
 
   for (const book of BIBLE_BOOKS) {
     const bookData = data[book];
@@ -452,7 +629,18 @@ async function searchBibleInTranslation(
 
     for (const [chStr, chData] of Object.entries(bookData)) {
       for (const [vStr, text] of Object.entries(chData)) {
-        const score = scoreVerseMatch(text, normalizedQuery, queryTokens);
+        let bestScore = 0;
+        let bestTokens: string[] = [];
+
+        for (const variant of queryVariants) {
+          const score = scoreVerseMatch(text, variant.normalizedQuery, variant.queryTokens);
+          if (score > bestScore) {
+            bestScore = score;
+            bestTokens = variant.queryTokens;
+          }
+        }
+
+        const score = bestScore;
         if (score < 0.42) continue;
 
         results.push({
@@ -460,7 +648,7 @@ async function searchBibleInTranslation(
           chapter: parseInt(chStr, 10),
           verse: parseInt(vStr, 10),
           text,
-          snippet: buildSearchSnippet(text, queryTokens),
+          snippet: buildSearchSnippet(text, bestTokens),
           score,
         });
       }

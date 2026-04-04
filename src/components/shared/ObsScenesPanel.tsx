@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { obsService } from "../../services/obsService";
+import { getDisplaySceneName, getRawPreviewScene, getRawProgramScene } from "../../services/obsSceneTargets";
 import { getSettings, updateSettings } from "../../multiview/mvStore";
 import "./obs-scenes-panel.css";
 import Icon from "../Icon";
@@ -26,26 +26,6 @@ interface ObsScenesPanelProps {
   sendLabel?: string;
   onRefresh?: () => void | Promise<void>;
   onSendToScene: (sceneName: string, mode: ObsSendMode) => void | Promise<void>;
-}
-
-async function resolvePreviewScene(fallback: string): Promise<string> {
-  if (fallback) return fallback;
-  try {
-    const scene = await obsService.getCurrentPreviewScene();
-    return scene || fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-async function resolveProgramScene(fallback: string): Promise<string> {
-  if (fallback) return fallback;
-  try {
-    const scene = await obsService.getCurrentProgramScene();
-    return scene || fallback;
-  } catch {
-    return fallback;
-  }
 }
 
 export function ObsScenesPanel({
@@ -95,7 +75,7 @@ export function ObsScenesPanel({
 
   const handleSendPreview = useCallback(async () => {
     if (disabled || !connected || busyKey) return;
-    const target = await resolvePreviewScene(previewScene);
+    const target = await getRawPreviewScene(previewScene);
     await safeSend(target, "preview", "preview");
   }, [disabled, connected, busyKey, previewScene, safeSend]);
 
@@ -112,7 +92,7 @@ export function ObsScenesPanel({
 
   const handleSendProgram = useCallback(async () => {
     if (disabled || !connected || busyKey) return;
-    const target = await resolveProgramScene(programScene);
+    const target = await getRawProgramScene(programScene);
     if (!target) return;
     const settings = getSettings();
     if (settings.confirmBeforeProgramSend) {
@@ -224,7 +204,7 @@ export function ObsScenesPanel({
             </div>
             <div className="obs-scenes-modal-body">
               <p>
-                You are about to send this {contentLabel} directly to <strong>{programTarget}</strong>, the current OBS Program scene.
+                You are about to send this {contentLabel} directly to <strong>{getDisplaySceneName(programTarget)}</strong>, the current OBS Program scene.
               </p>
               <p>The audience will see this immediately.</p>
               <label className="obs-scenes-modal-check">

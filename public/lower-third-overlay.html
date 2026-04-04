@@ -44,6 +44,12 @@
     }
     #overlay-root {
       z-index: 1;
+      opacity: 1;
+      transition: opacity 260ms ease;
+    }
+
+    #overlay-root.exit-fading {
+      opacity: 0;
     }
 
     /* Size-driven overrides — applied via CSS custom properties */
@@ -811,6 +817,7 @@
       var widthPct = Math.max(0, data.widthPct || 80);
       root.innerHTML = renderThemeHtml(data.html || "", data.values || {}, "in");
       root.className = "";
+      root.classList.remove("exit-fading");
       applySize(root, widthPct, data.fontScale, data.fontSizeScale, data.heightPx);
       applyCustomStyles(root, data);
       applyPosition(root, data);
@@ -841,6 +848,7 @@
         applyPosition(root, payload);
         // Ensure computed styles are up-to-date before reading animation timings.
         void root.offsetWidth;
+        root.classList.add("exit-fading");
         var exitDuration = resolveThemeExitDuration(root);
         setTimeout(() => {
           root.innerHTML = "";

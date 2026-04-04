@@ -65,7 +65,7 @@ const BOOK_ALIASES: BookAlias[] = [
   { book: "Hosea", aliases: ["hos", "ho"] },
   { book: "Joel", aliases: ["joel", "jl"] },
   { book: "Amos", aliases: ["amos", "am"] },
-  { book: "Obadiah", aliases: ["obad", "ob"] },
+  { book: "Obadiah", aliases: ["obad", "ob", "obadia", "obadya", "obedia", "obediah"] },
   { book: "Jonah", aliases: ["jonah", "jon", "jnh"] },
   { book: "Micah", aliases: ["mic", "mc"] },
   { book: "Nahum", aliases: ["nah", "na"] },
@@ -85,7 +85,7 @@ const BOOK_ALIASES: BookAlias[] = [
   { book: "Galatians", aliases: ["gal", "ga"] },
   { book: "Ephesians", aliases: ["eph", "ep"] },
   { book: "Philippians", aliases: ["phil", "php", "pp"] },
-  { book: "Colossians", aliases: ["col", "co"] },
+  { book: "Colossians", aliases: ["col", "co", "coloss", "collossians"] },
   { book: "1 Thessalonians", aliases: ["1thes", "1th", "1thess"] },
   { book: "2 Thessalonians", aliases: ["2thes", "2th", "2thess"] },
   { book: "1 Timothy", aliases: ["1tim", "1ti", "1tm"] },
@@ -211,6 +211,22 @@ export function parseBibleSearch(query: string): BibleSearchResult[] {
   for (const { book, score: bookScore } of matchedBooks) {
     const maxCh = BOOK_CHAPTERS[book] ?? 1;
 
+    if (maxCh === 1 && numPart) {
+      const singleChapterCandidates = parseSingleChapterVerseCandidates(numPart);
+      if (singleChapterCandidates.length > 0) {
+        for (const candidate of singleChapterCandidates) {
+          results.push({
+            book,
+            chapter: 1,
+            verse: candidate.verse,
+            label: `${book} 1:${candidate.verse}`,
+            score: bookScore + candidate.confidence,
+          });
+        }
+        continue;
+      }
+    }
+
     if (candidates.length === 0) {
       // Book-only match
       results.push({
@@ -238,6 +254,16 @@ export function parseBibleSearch(query: string): BibleSearchResult[] {
               verse: null,
               label: `${book} ${chapter}`,
               score: bookScore + confidence - 5,
+            });
+          }
+        } else if (chapter !== null && verse !== null) {
+          for (const repaired of recoverInvalidExplicitCandidates(chapter, verse, maxCh, confidence)) {
+            results.push({
+              book,
+              chapter: repaired.chapter,
+              verse: repaired.verse,
+              label: `${book} ${repaired.chapter}:${repaired.verse}`,
+              score: bookScore + repaired.confidence,
             });
           }
         }
@@ -331,6 +357,79 @@ interface ChapterVerseCandidate {
   confidence: number;
 }
 
+function recoverInvalidExplicitCandidates(
+  chapter: number,
+  verse: number | null,
+  maxChapter: number,
+  confidence: number,
+): ChapterVerseCandidate[] {
+  if (verse === null || chapter <= maxChapter || maxChapter >= 10) {
+    return [];
+  }
+
+  const recovered: ChapterVerseCandidate[] = [];
+  const seen = new Set<string>();
+  const chapterDigits = String(chapter);
+
+  const pushRecovered = (nextChapter: number, nextVerse: number | null, penalty: number) => {
+    if (!Number.isFinite(nextChapter) || nextChapter < 1 || nextChapter > maxChapter) return;
+    if (nextVerse !== null && (!Number.isFinite(nextVerse) || nextVerse < 1)) return;
+    const key = `${nextChapter}:${nextVerse ?? ""}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    recovered.push({
+      chapter: nextChapter,
+      verse: nextVerse,
+      confidence: Math.max(10, confidence - penalty),
+    });
+  };
+
+  if (chapterDigits.endsWith("0")) {
+    const strippedChapter = Number.parseInt(chapterDigits.slice(0, -1), 10);
+    pushRecovered(strippedChapter, verse, 4);
+  }
+
+  if (chapterDigits.length >= 2) {
+    const mergedChapter = Number.parseInt(chapterDigits[0], 10);
+    const mergedVerseDigits = `${chapterDigits.slice(1)}${verse}`;
+    const mergedVerse = Number.parseInt(mergedVerseDigits.replace(/^0+/, "") || "0", 10);
+    pushRecovered(mergedChapter, mergedVerse, 6);
+  }
+
+  return recovered;
+}
+
+function parseSingleChapterVerseCandidates(numPart: string): ChapterVerseCandidate[] {
+  if (!numPart) return [];
+
+  const cleaned = numPart
+    .replace(/vs/gi, ":")
+    .replace(/v/gi, ":")
+    .replace(/\./g, ":")
+    .replace(/[-–—]/g, ":")
+    .replace(/\s+/g, ":");
+
+  const parts = cleaned.split(":").filter(Boolean);
+  if (parts.length === 0) return [];
+
+  if (parts.length >= 2) {
+    const chapter = parseInt(parts[0], 10);
+    const verse = parseInt(parts[1], 10);
+    if (chapter === 1 && Number.isFinite(verse) && verse >= 1) {
+      return [{ chapter: 1, verse, confidence: 32 }];
+    }
+  }
+
+  if (parts.length === 1) {
+    const verse = parseInt(parts[0], 10);
+    if (Number.isFinite(verse) && verse >= 1) {
+      return [{ chapter: 1, verse, confidence: parts[0].length === 1 ? 26 : 23 }];
+    }
+  }
+
+  return [];
+}
+
 /**
  * Parse a number portion into one or more chapter:verse candidates.
  *
@@ -347,6 +446,7 @@ function parseChapterVerseCandidates(numPart: string): ChapterVerseCandidate[] {
     .replace(/vs/gi, ":")
     .replace(/v/gi, ":")
     .replace(/\./g, ":")
+    .replace(/[-–—]/g, ":")
     .replace(/\s+/g, ":");
 
   // Split by ":"

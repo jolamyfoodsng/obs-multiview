@@ -27,6 +27,11 @@
     background-position: center;
     opacity: var(--bg-opacity, 1);
     z-index: 0;
+    transition: opacity var(--anim-duration, 400ms) ease;
+  }
+
+  #background.blank {
+    opacity: 0;
   }
 
   /* Soft readability shade above BG and below text */
@@ -37,6 +42,12 @@
     z-index: 0;
     pointer-events: none;
     display: var(--bg-shade-display, none);
+    opacity: 1;
+    transition: opacity var(--anim-duration, 400ms) ease;
+  }
+
+  #background-shade.blank {
+    opacity: 0;
   }
 
   /* Content layer — this is what transitions */
@@ -191,6 +202,7 @@
   const CONTENT_PADDING_MIN = 18;
 
   const overlay = document.getElementById('overlay');
+  const background = document.getElementById('background');
   const backgroundShade = document.getElementById('background-shade');
   const content = document.getElementById('content');
   const verseText = document.getElementById('verse-text');
@@ -204,6 +216,7 @@
   let baseFontSize = 48;
   let baseRefFontSize = 24;
   let basePadding = 60;
+  let lastCssOverlayData = '';
 
   function clamp01(value, fallback) {
     const n = Number(value);
@@ -440,6 +453,8 @@
 
     if (!data.slide) {
       overlay.classList.add('hidden');
+      background.classList.remove('blank');
+      if (backgroundShade) backgroundShade.classList.remove('blank');
       currentSlideId = null;
       hasShownOnce = false;  // Reset so next appearance animates
       return;
@@ -455,9 +470,13 @@
 
     if (data.blanked) {
       overlay.classList.add('blank');
+      background.classList.add('blank');
+      if (backgroundShade) backgroundShade.classList.add('blank');
       return;
     } else {
       overlay.classList.remove('blank');
+      background.classList.remove('blank');
+      if (backgroundShade) backgroundShade.classList.remove('blank');
     }
 
     // Always show the overlay when we have a slide — the dock/app controls
@@ -483,6 +502,20 @@
         runEntranceAnimation(anim);
       }
     }
+  }
+
+  function readFromCssVar() {
+    try {
+      const raw = getComputedStyle(document.documentElement).getPropertyValue('--overlay-data').trim();
+      if (!raw || raw === lastCssOverlayData) return false;
+      lastCssOverlayData = raw;
+      const normalized = raw.replace(/^['"]|['"]$/g, '');
+      if (!normalized) return false;
+      const data = JSON.parse(decodeURIComponent(normalized));
+      applySlide(data);
+      return true;
+    } catch { /* parse error */ }
+    return false;
   }
 
   // --- Method 1: Read from URL hash (OBS updates URL via SetInputSettings) ---
@@ -528,13 +561,13 @@
 
   // --- Unified polling loop ---
   setInterval(() => {
-    if (!readFromUrlHash()) {
+    if (!readFromCssVar() && !readFromUrlHash()) {
       readFromLocalStorage();
     }
   }, POLL_INTERVAL);
 
   // Initial read
-  readFromUrlHash() || readFromLocalStorage();
+  readFromCssVar() || readFromUrlHash() || readFromLocalStorage();
 </script>
 </body>
 </html>

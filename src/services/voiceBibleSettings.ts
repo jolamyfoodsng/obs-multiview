@@ -12,10 +12,11 @@ const VOICE_BIBLE_SETTINGS_KEY = "voice-bible-settings";
 
 export const DEFAULT_VOICE_BIBLE_SETTINGS: VoiceBibleSettings = {
   audioSourceMode: "system-mic",
-  sttModel: "medium.en",
+  sttModel: "large-v3",
   semanticMode: "ollama",
   ollamaBaseUrl: "http://127.0.0.1:11434",
   ollamaModel: "qwen3-embedding:4b",
+  ollamaNormalizerModel: "qwen2.5:3b",
 };
 
 const OBS_AUDIO_INPUT_KINDS = new Set([
@@ -40,7 +41,7 @@ function normalizeVoiceBibleSettings(
       typeof raw?.obsInputName === "string" && raw.obsInputName.trim()
         ? raw.obsInputName
         : undefined,
-    sttModel: "medium.en",
+    sttModel: "large-v3",
     semanticMode:
       raw?.semanticMode === "lexical-only" ? "lexical-only" : "ollama",
     ollamaBaseUrl:
@@ -51,6 +52,10 @@ function normalizeVoiceBibleSettings(
       typeof raw?.ollamaModel === "string" && raw.ollamaModel.trim()
         ? raw.ollamaModel
         : DEFAULT_VOICE_BIBLE_SETTINGS.ollamaModel,
+    ollamaNormalizerModel:
+      typeof raw?.ollamaNormalizerModel === "string" && raw.ollamaNormalizerModel.trim()
+        ? raw.ollamaNormalizerModel.trim()
+        : DEFAULT_VOICE_BIBLE_SETTINGS.ollamaNormalizerModel,
   };
 }
 
@@ -121,15 +126,19 @@ export async function requestMicrophoneAccess(
         ? {
             deviceId: { exact: deviceId },
             channelCount: 1,
-            echoCancellation: false,
+            echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
+            sampleRate: 48_000,
+            sampleSize: 16,
           }
         : {
             channelCount: 1,
-            echoCancellation: false,
+            echoCancellation: true,
             noiseSuppression: true,
             autoGainControl: true,
+            sampleRate: 48_000,
+            sampleSize: 16,
           },
     });
     stream.getTracks().forEach((track) => track.stop());

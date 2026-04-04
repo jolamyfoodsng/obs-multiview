@@ -8,7 +8,7 @@ export type VoiceBibleStatus =
 
 export type VoiceBibleAudioSourceMode = "system-mic" | "obs-input";
 export type VoiceBibleSemanticMode = "ollama" | "lexical-only";
-export type VoiceBibleModel = "medium.en";
+export type VoiceBibleModel = "large-v3";
 
 export interface VoiceBibleSettings {
   audioSourceMode: VoiceBibleAudioSourceMode;
@@ -18,6 +18,7 @@ export interface VoiceBibleSettings {
   semanticMode: VoiceBibleSemanticMode;
   ollamaBaseUrl?: string;
   ollamaModel?: string;
+  ollamaNormalizerModel?: string;
 }
 
 export interface VoiceBibleRuntimeStatus {
@@ -45,6 +46,7 @@ export interface VoiceBibleContextPayload {
   selectedVerse?: number | null;
   translation: string;
   availableTranslations: Array<{ value: string; label: string }>;
+  liveInterim?: boolean;
 }
 
 export interface VoiceBibleCandidate {
@@ -70,8 +72,11 @@ export interface VoiceBibleResult {
 
 export interface VoiceBibleSnapshot {
   status: VoiceBibleStatus;
+  inputLevel?: number;
   detail?: string;
   transcript?: string;
+  matchDetail?: string;
+  matching?: boolean;
   error?: string;
   modelReady: boolean;
   semanticReady: boolean;

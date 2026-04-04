@@ -36,6 +36,7 @@ import { syncInstalledTranslationsToDock } from "./bible/bibleDb";
 import ResourcesPage from "./pages/ResourcesPage";
 import ProductionHomePage from "./pages/ProductionHomePage";
 import ProductionThemeSettingsPage from "./pages/ProductionThemeSettingsPage";
+import SpeechToScripturePage from "./pages/SpeechToScripturePage";
 import { buildDockProductionSettingsPayload, syncProductionSettingsToDock } from "./services/productionSettings";
 import { voiceBibleService } from "./services/voiceBibleService";
 import "./App.css";
@@ -256,6 +257,7 @@ function App() {
               <Route element={<AppShell />}>
                 <Route index element={<ProductionHomePage />} />
                 <Route path="resources" element={<BibleProvider><ResourcesPage /></BibleProvider>} />
+                <Route path="speech-to-scripture" element={<BibleProvider><SpeechToScripturePage /></BibleProvider>} />
                 <Route path="songs" element={<Navigate to="/resources?tab=worship" replace />} />
                 <Route path="bible-library" element={<Navigate to="/resources?tab=bible" replace />} />
                 <Route path="bible/translations" element={<Navigate to="/resources?tab=bible" replace />} />

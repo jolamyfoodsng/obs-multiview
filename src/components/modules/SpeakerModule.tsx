@@ -10,6 +10,7 @@ import {
 import { lowerThirdObsService, buildOverlayUrl } from "../../lowerthirds/lowerThirdObsService";
 import { useLowerThird } from "../../lowerthirds/lowerThirdStore";
 import { obsService } from "../../services/obsService";
+import { getDisplaySceneName } from "../../services/obsSceneTargets";
 import { serviceStore } from "../../services/serviceStore";
 import { useServiceGate } from "../../hooks/useServiceGate";
 import { ObsScenesPanel } from "../shared/ObsScenesPanel";
@@ -765,12 +766,12 @@ export function SpeakerModule({
       }
       await lt.refreshScenes();
       try {
-        setProgramScene(await obsService.getCurrentProgramScene());
+        setProgramScene(getDisplaySceneName(await obsService.getCurrentProgramScene()));
       } catch {
         setProgramScene("");
       }
       try {
-        setPreviewScene(await obsService.getCurrentPreviewScene());
+        setPreviewScene(getDisplaySceneName(await obsService.getCurrentPreviewScene()));
       } catch {
         setPreviewScene("");
       }

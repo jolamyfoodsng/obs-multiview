@@ -245,7 +245,7 @@ export function MVSettings() {
   const [voiceBibleSettings, setVoiceBibleSettings] = useState<VoiceBibleSettings>(DEFAULT_VOICE_BIBLE_SETTINGS);
   const [voiceRuntime, setVoiceRuntime] = useState<VoiceBibleRuntimeStatus>({
     modelReady: false,
-    modelName: "medium.en",
+    modelName: "large-v3",
     modelPath: null,
   });
   const [voicePermission, setVoicePermission] = useState<PermissionState | "unsupported">("unsupported");
@@ -287,7 +287,7 @@ export function MVSettings() {
     const [runtime, permission, devices] = await Promise.all([
       getVoiceBibleRuntimeStatus().catch(() => ({
         modelReady: false,
-        modelName: "medium.en",
+        modelName: "large-v3",
         modelPath: null,
       })),
       getMicrophonePermissionState(),
@@ -647,7 +647,7 @@ export function MVSettings() {
     try {
       const runtime = await prepareVoiceBibleModel();
       setVoiceRuntime(runtime);
-      setVoiceStatusMessage("Whisper medium.en is ready.");
+      setVoiceStatusMessage("Whisper large-v3 is ready.");
       setVoiceStatusType("ok");
       await voiceBibleService.refreshAvailability();
     } catch (err) {
@@ -1602,7 +1602,7 @@ export function MVSettings() {
             {" "}Voice Bible
           </h2>
           <p className="mv-settings-desc">
-            Configure local speech-to-verse lookup for the OBS dock hold-to-talk mic button.
+            Configure local speech-to-verse lookup for the OBS dock mic button.
           </p>
           <p className="mv-settings-hint">
             Supported commands include: “John 1 verse 2”, “next verse”, “previous verse”, “go to chapter 4”, “last chapter”, and “use NIV”.
@@ -1711,6 +1711,18 @@ export function MVSettings() {
                     placeholder="qwen3-embedding:4b"
                   />
                 </label>
+                <label className="mv-settings-field" style={{ maxWidth: 300 }}>
+                  <span className="mv-settings-field-label">Normalizer Model</span>
+                  <input
+                    className="mv-input"
+                    type="text"
+                    value={voiceBibleSettings.ollamaNormalizerModel ?? ""}
+                    onChange={(e) =>
+                      updateVoiceBibleDraft({ ollamaNormalizerModel: e.target.value })
+                    }
+                    placeholder="qwen2.5:3b"
+                  />
+                </label>
               </>
             )}
           </div>
@@ -1750,8 +1762,8 @@ export function MVSettings() {
               <span className="mv-settings-field-label">Whisper Runtime</span>
               <div className="mv-settings-hint">
                 {voiceRuntime.modelReady
-                  ? "medium.en is downloaded locally and ready."
-                  : "medium.en will be downloaded to Documents/OBSChurchStudio/voice-bible on first use."}
+                  ? "large-v3 is downloaded locally and ready."
+                  : "large-v3 will be downloaded to Documents/OBSChurchStudio/voice-bible on first use."}
               </div>
             </div>
             <div className="mv-settings-field" style={{ maxWidth: 360 }}>
@@ -1762,6 +1774,16 @@ export function MVSettings() {
                     ? "Configured Ollama embedding model is reachable."
                     : "Configured Ollama model is not ready; lexical matching will be used."
                   : "Lexical-only mode is active."}
+              </div>
+            </div>
+            <div className="mv-settings-field" style={{ maxWidth: 360 }}>
+              <span className="mv-settings-field-label">Ollama Normalizer</span>
+              <div className="mv-settings-hint">
+                {voiceBibleSettings.semanticMode !== "ollama"
+                  ? "Disabled while lexical-only mode is active."
+                  : voiceBibleSettings.ollamaNormalizerModel?.trim()
+                    ? "Uses the configured chat model to rewrite noisy speech like “John 3-1 go to verse 5” into a clean reference."
+                    : "Optional. Add a chat/instruct Ollama model to rewrite malformed spoken references before matching."}
               </div>
             </div>
           </div>

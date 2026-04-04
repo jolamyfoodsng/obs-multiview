@@ -19,14 +19,32 @@ use std::fs;
 use std::io::{Cursor, Write};
 use std::path::{Component, Path};
 use std::sync::atomic::{AtomicU16, Ordering};
+use std::sync::{Arc, Mutex, OnceLock};
 use tauri::Manager;
-use whisper_rs::{FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters};
+use whisper_rs::{
+    FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters, WhisperState,
+};
 
 /// The port the overlay server is running on (set at startup).
 static OVERLAY_PORT: AtomicU16 = AtomicU16::new(0);
-const VOICE_BIBLE_MODEL_FILE: &str = "ggml-medium.en.bin";
+const VOICE_BIBLE_MODEL_FILE: &str = "ggml-large-v3.bin";
 const VOICE_BIBLE_MODEL_URL: &str =
-    "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-medium.en.bin";
+    "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3.bin";
+const VOICE_BIBLE_MODEL_NAME: &str = "large-v3";
+static VOICE_BIBLE_CONTEXT: OnceLock<Mutex<Option<Arc<WhisperContext>>>> = OnceLock::new();
+static VOICE_BIBLE_STATE: OnceLock<Mutex<Option<WhisperState>>> = OnceLock::new();
+const LIVE_CHUNK_SILENCE_THRESHOLD: f32 = 0.0065;
+const LIVE_CHUNK_MIN_ACTIVE_SAMPLES: usize = 16_000 / 12;
+const LIVE_CHUNK_EDGE_PADDING_SAMPLES: usize = 16_000 / 10;
+const LIVE_CHUNK_MAX_DURATION_MS: i32 = 2_200;
+const COMMON_LIVE_HALLUCINATIONS: &[&str] = &[
+    "thank you",
+    "thank you.",
+    "thanks for watching",
+    "thanks for watching.",
+    "thank you for watching",
+    "thank you for watching.",
+];
 
 /// True if the directory contains the overlay HTML entrypoint(s).
 fn has_overlay_assets(dir: &std::path::Path) -> bool {
@@ -290,11 +308,13 @@ fn load_dock_data(name: String) -> Result<String, String> {
 
     let contents = fs::read_to_string(&path)
         .map_err(|e| format!("Failed to read dock data '{}': {}", safe, e))?;
-    println!(
-        "[Tauri] Loaded dock data '{}' ({} bytes)",
-        safe,
-        contents.len()
-    );
+    if !safe.starts_with("dock-voice-bible-") {
+        println!(
+            "[Tauri] Loaded dock data '{}' ({} bytes)",
+            safe,
+            contents.len()
+        );
+    }
     Ok(contents)
 }
 
@@ -325,7 +345,7 @@ fn current_voice_bible_status() -> Result<VoiceBibleRuntimeStatus, String> {
 
     Ok(VoiceBibleRuntimeStatus {
         model_ready,
-        model_name: "medium.en".to_string(),
+        model_name: VOICE_BIBLE_MODEL_NAME.to_string(),
         model_path: if model_ready {
             Some(
                 model_path
@@ -386,13 +406,12 @@ fn prepare_voice_bible_model() -> Result<VoiceBibleRuntimeStatus, String> {
     current_voice_bible_status()
 }
 
-#[tauri::command]
-fn transcribe_voice_audio(wav_data: Vec<u8>) -> Result<String, String> {
+fn transcribe_voice_audio_blocking(wav_data: Vec<u8>) -> Result<String, String> {
     if wav_data.is_empty() {
         return Err("No audio data received".to_string());
     }
 
-    let model_path = ensure_voice_bible_model()?;
+    let context = get_voice_bible_context()?;
     let reader = hound::WavReader::new(Cursor::new(wav_data))
         .map_err(|e| format!("Failed to read WAV audio: {}", e))?;
     let spec = reader.spec();
@@ -431,21 +450,21 @@ fn transcribe_voice_audio(wav_data: Vec<u8>) -> Result<String, String> {
         output
     };
 
-    let ctx = WhisperContext::new_with_params(
-        model_path
-            .to_str()
-            .ok_or("Model path contains invalid UTF-8")?,
-        WhisperContextParameters::default(),
-    )
-    .map_err(|e| format!("Failed to load Whisper model: {}", e))?;
-    let mut state = ctx
-        .create_state()
-        .map_err(|e| format!("Failed to create Whisper state: {}", e))?;
-
     let mut params = FullParams::new(SamplingStrategy::Greedy { best_of: 0 });
     let threads = std::thread::available_parallelism()
-        .map(|parallelism| parallelism.get().min(4) as i32)
+        .map(|parallelism| parallelism.get().min(6) as i32)
         .unwrap_or(2);
+    let audio_duration_ms = ((mono_audio.len() as f32 / 16_000.0) * 1000.0).round() as i32;
+    let is_live_chunk = audio_duration_ms <= LIVE_CHUNK_MAX_DURATION_MS;
+    let prepared_audio = if is_live_chunk {
+        match trim_live_chunk_silence(&mono_audio) {
+            Some(trimmed) => trimmed,
+            None => return Ok(String::new()),
+        }
+    } else {
+        mono_audio
+    };
+
     params.set_n_threads(threads);
     params.set_translate(false);
     params.set_language(Some("en"));
@@ -453,18 +472,190 @@ fn transcribe_voice_audio(wav_data: Vec<u8>) -> Result<String, String> {
     params.set_print_progress(false);
     params.set_print_realtime(false);
     params.set_print_timestamps(false);
+    params.set_no_timestamps(true);
 
-    state
-        .full(params, &mono_audio)
-        .map_err(|e| format!("Whisper transcription failed: {}", e))?;
+    if is_live_chunk {
+        params.set_suppress_blank(true);
+        params.set_suppress_nst(true);
+        params.set_no_context(true);
+        params.set_single_segment(true);
+        params.set_max_tokens(56);
+    }
 
-    let transcript = state
-        .as_iter()
-        .map(|segment| segment.to_string())
-        .collect::<Vec<_>>()
-        .join(" ");
+    let transcript = with_voice_bible_state(&context, |state| {
+        state
+            .full(params, &prepared_audio)
+            .map_err(|e| format!("Whisper transcription failed: {}", e))?;
+
+        Ok::<String, String>(
+            state
+                .as_iter()
+                .map(|segment| segment.to_string())
+                .collect::<Vec<_>>()
+                .join(" "),
+        )
+    })?;
     let normalized = transcript.split_whitespace().collect::<Vec<_>>().join(" ");
+    if is_live_chunk
+        && (is_common_live_hallucination(&normalized) || is_suspicious_live_transcript(&normalized))
+    {
+        return Ok(String::new());
+    }
     Ok(normalized)
+}
+
+fn trim_live_chunk_silence(audio: &[f32]) -> Option<Vec<f32>> {
+    if audio.is_empty() {
+        return None;
+    }
+
+    let mut first_active = None;
+    let mut last_active = None;
+
+    for (index, sample) in audio.iter().enumerate() {
+        if sample.abs() >= LIVE_CHUNK_SILENCE_THRESHOLD {
+            if first_active.is_none() {
+                first_active = Some(index);
+            }
+            last_active = Some(index);
+        }
+    }
+
+    let (first_active, last_active) = match (first_active, last_active) {
+        (Some(first), Some(last)) => (first, last),
+        _ => return None,
+    };
+
+    if last_active.saturating_sub(first_active) < LIVE_CHUNK_MIN_ACTIVE_SAMPLES {
+        return None;
+    }
+
+    let start = first_active.saturating_sub(LIVE_CHUNK_EDGE_PADDING_SAMPLES);
+    let end = (last_active + LIVE_CHUNK_EDGE_PADDING_SAMPLES).min(audio.len().saturating_sub(1));
+    let trimmed = audio[start..=end].to_vec();
+
+    let rms = (trimmed.iter().map(|sample| sample * sample).sum::<f32>() / trimmed.len() as f32).sqrt();
+    if rms < 0.0065 {
+        return None;
+    }
+
+    Some(trimmed)
+}
+
+fn is_common_live_hallucination(transcript: &str) -> bool {
+    let normalized = transcript.trim().to_lowercase();
+    COMMON_LIVE_HALLUCINATIONS
+        .iter()
+        .any(|candidate| normalized == *candidate)
+}
+
+fn is_suspicious_live_transcript(transcript: &str) -> bool {
+    let trimmed = transcript.trim();
+    if trimmed.is_empty() {
+        return true;
+    }
+
+    if !trimmed.is_ascii() {
+        return true;
+    }
+
+    let tokens: Vec<String> = trimmed
+        .split_whitespace()
+        .map(|token| {
+            token.to_lowercase()
+                .chars()
+                .filter(|character| character.is_ascii_alphanumeric() || *character == '\'')
+                .collect::<String>()
+        })
+        .filter(|token| !token.is_empty())
+        .collect();
+
+    if tokens.is_empty() {
+        return true;
+    }
+
+    let mut repeated_run = 1usize;
+    for index in 1..tokens.len() {
+        if tokens[index] == tokens[index - 1] {
+            repeated_run += 1;
+            if repeated_run >= 4 {
+                return true;
+            }
+        } else {
+            repeated_run = 1;
+        }
+    }
+
+    let unique_count = tokens.iter().collect::<std::collections::HashSet<_>>().len();
+    if tokens.len() >= 4 && unique_count <= 2 {
+        return true;
+    }
+
+    let mut counts = std::collections::HashMap::<&str, usize>::new();
+    for token in &tokens {
+        *counts.entry(token.as_str()).or_insert(0) += 1;
+    }
+
+    let highest_frequency = counts.values().copied().max().unwrap_or(0);
+    tokens.len() >= 5 && (highest_frequency as f32 / tokens.len() as f32) >= 0.6
+}
+
+fn get_voice_bible_context() -> Result<Arc<WhisperContext>, String> {
+    let cache = VOICE_BIBLE_CONTEXT.get_or_init(|| Mutex::new(None));
+    let mut guard = cache
+        .lock()
+        .map_err(|_| "Failed to lock Whisper context cache".to_string())?;
+
+    if let Some(context) = guard.as_ref() {
+        return Ok(Arc::clone(context));
+    }
+
+    let model_path = ensure_voice_bible_model()?;
+    let context = WhisperContext::new_with_params(
+        model_path
+            .to_str()
+            .ok_or("Model path contains invalid UTF-8")?,
+        WhisperContextParameters::default(),
+    )
+    .map_err(|e| format!("Failed to load Whisper model: {}", e))?;
+    let cached = Arc::new(context);
+    *guard = Some(Arc::clone(&cached));
+    Ok(cached)
+}
+
+fn with_voice_bible_state<T>(
+    context: &Arc<WhisperContext>,
+    action: impl FnOnce(&mut WhisperState) -> Result<T, String>,
+) -> Result<T, String> {
+    let cache = VOICE_BIBLE_STATE.get_or_init(|| Mutex::new(None));
+    let mut guard = cache
+        .lock()
+        .map_err(|_| "Failed to lock Whisper state cache".to_string())?;
+
+    if guard.is_none() {
+        let state = context
+            .create_state()
+            .map_err(|e| format!("Failed to create Whisper state: {}", e))?;
+        *guard = Some(state);
+    }
+
+    let result = match guard.as_mut() {
+        Some(state) => action(state),
+        None => Err("Whisper state cache was not initialized".to_string()),
+    };
+
+    if result.is_err() {
+        *guard = None;
+    }
+
+    result
+}
+
+#[tauri::command]
+async fn transcribe_voice_audio(wav_data: Vec<u8>) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || transcribe_voice_audio_blocking(wav_data))
+        .await
+        .map_err(|e| format!("Voice transcription task failed: {}", e))?
 }
 
 /// Start a tiny HTTP server that serves files from the frontend dist folder.

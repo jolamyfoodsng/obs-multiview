@@ -10,9 +10,10 @@ import { dockObsClient } from "../dockObsClient";
 import DockSpeakerTab from "./DockSpeakerTab";
 import DockSermonTab from "./DockSermonTab";
 import DockEventTab from "./DockEventTab";
+import DockAnimatedLTTab from "./DockAnimatedLTTab";
 import Icon from "../DockIcon";
 
-type MinistrySubTab = "speakers" | "sermon" | "events";
+type MinistrySubTab = "speakers" | "sermon" | "events" | "animated-lt";
 
 const DOCK_MINISTRY_PREFS_KEY = "ocs-dock-ministry-preferences";
 
@@ -20,6 +21,7 @@ const SUB_TABS: { id: MinistrySubTab; label: string; icon: string }[] = [
   { id: "speakers", label: "Speakers", icon: "person" },
   { id: "sermon", label: "Sermon", icon: "record_voice_over" },
   { id: "events", label: "Events", icon: "event" },
+  { id: "animated-lt", label: "Animated LT", icon: "subtitles" },
 ];
 
 interface Props {
@@ -30,7 +32,7 @@ interface Props {
 function loadActiveSubTab(): MinistrySubTab {
   try {
     const raw = localStorage.getItem(DOCK_MINISTRY_PREFS_KEY);
-    if (raw === "speakers" || raw === "sermon" || raw === "events") {
+    if (raw === "speakers" || raw === "sermon" || raw === "events" || raw === "animated-lt") {
       return raw;
     }
   } catch {
@@ -44,7 +46,8 @@ export default function DockMinistryTab({ staged, onStage }: Props) {
   const hasLowerThirdStage =
     staged?.type === "speaker" ||
     staged?.type === "sermon" ||
-    staged?.type === "event";
+    staged?.type === "event" ||
+    staged?.type === "animated-lt";
 
   useEffect(() => {
     try {
@@ -93,6 +96,7 @@ export default function DockMinistryTab({ staged, onStage }: Props) {
         {activeSubTab === "speakers" && <DockSpeakerTab staged={staged} onStage={onStage} />}
         {activeSubTab === "sermon" && <DockSermonTab staged={staged} onStage={onStage} />}
         {activeSubTab === "events" && <DockEventTab staged={staged} onStage={onStage} />}
+        {activeSubTab === "animated-lt" && <DockAnimatedLTTab staged={staged} onStage={onStage} />}
       </section>
 
       <section className="dock-console-panel dock-console-panel--deck dock-console-panel--deck-compact">

@@ -63,6 +63,7 @@ class BibleObsService {
   /** Cache: last image path written to disk (avoids redundant Tauri calls) */
   private _lastBgImagePath: string | null = null;
   private _lastBgImageHash: string | null = null;
+  private _lastOverlayTransportSignature: string | null = null;
 
   private async enableSceneItemSafe(sceneName: string, sceneItemId: number | null): Promise<void> {
     if (!sceneName || sceneItemId === null) return;
@@ -87,6 +88,12 @@ class BibleObsService {
     } catch {
       return { width: 1920, height: 1080 };
     }
+  }
+
+  private buildOverlayDataCss(packet: Record<string, unknown>, customCss = ""): string {
+    const encodedPacket = encodeURIComponent(JSON.stringify(packet));
+    const overlayCss = `:root { --overlay-data: "${encodedPacket}"; }`;
+    return customCss ? `${overlayCss}\n${customCss}` : overlayCss;
   }
 
   private async resolveMainSourceNames(): Promise<Set<string>> {
@@ -838,10 +845,13 @@ class BibleObsService {
         const overlayFile = this.currentTemplateType === "fullscreen"
           ? "bible-overlay-fullscreen.html"
           : "bible-overlay-lower-third.html";
-        const url = `${base}/${overlayFile}#data=${encoded}`;
-
-        const inputSettings: Record<string, unknown> = { url };
-        inputSettings.css = customCss || "";
+        const baseUrl = `${base}/${overlayFile}`;
+        const url = `${baseUrl}#data=${encoded}`;
+        const overlayCss = this.buildOverlayDataCss(packet as unknown as Record<string, unknown>, customCss || "");
+        const sourceSignature = JSON.stringify({
+          baseUrl,
+          css: customCss || "",
+        });
         if (this.bgSceneItemId !== null) {
           await this.enforceBgPlacement(BIBLE_SCENE_NAME, this.bgSceneItemId);
         }
@@ -855,10 +865,13 @@ class BibleObsService {
           if (found) resolvedInputName = found.inputName;
         }
 
-        await obsService.call("SetInputSettings", {
-          inputName: resolvedInputName,
-          inputSettings,
-        });
+        if (this._lastOverlayTransportSignature !== sourceSignature || blanked || !slide) {
+          await obsService.call("SetInputSettings", {
+            inputName: resolvedInputName,
+            inputSettings: { url, css: overlayCss },
+          });
+          this._lastOverlayTransportSignature = sourceSignature;
+        }
 
         // ── Push BG source — fingerprint-based dedup ──
         // • Image background → save to disk, use OBS image_source

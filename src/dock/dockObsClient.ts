@@ -248,6 +248,10 @@ class DockObsClient {
   private _lastTargetBgSignature: Record<string, string> = {};
   /** Cache fullscreen browser-source config so verse changes do not force source reloads */
   private _lastFullscreenSourceSignature: Record<string, string> = {};
+  /** Keep the latest CSS-driven overlay packet per browser source for smooth verse/song updates and clears */
+  private _lastCssOverlayPacketBySource: Record<string, Record<string, unknown>> = {};
+  private _lastCssOverlayBaseUrlBySource: Record<string, string> = {};
+  private _lastCssOverlayThemeCssBySource: Record<string, string> = {};
   /** Remember the user's real scenes so Preview can recover from managed overlay scenes */
   private _lastUserProgramScene = "";
   private _lastUserPreviewScene = "";
@@ -1286,6 +1290,15 @@ class DockObsClient {
     });
   }
 
+  private buildCssOverlayDataCss(
+    packet: Record<string, unknown>,
+    themeCss = "",
+  ): string {
+    const encodedPacket = encodeURIComponent(JSON.stringify(packet));
+    const overlayCss = `:root { --overlay-data: "${encodedPacket}"; }`;
+    return themeCss ? `${overlayCss}\n${themeCss}` : overlayCss;
+  }
+
   private buildFullscreenBackgroundUrl(
     themeSettings?: Record<string, unknown> | null,
   ): string {
@@ -1718,7 +1731,7 @@ class DockObsClient {
 
   private resolveLTTheme(
     theme: DockLTThemeRef | undefined,
-    context: "speaker" | "sermon" | "event" | "worship" | "bible" | "ticker",
+    context: "speaker" | "sermon" | "event" | "worship" | "bible" | "ticker" | "custom",
   ): DockLTThemeRef {
     if (theme) return theme;
 
@@ -1729,6 +1742,7 @@ class DockObsClient {
       worship: ["worship", "lyrics", "song", "chorus", "verse", "music"],
       bible: ["bible", "scripture", "verse", "reference", "word"],
       ticker: ["ticker", "news", "announcement", "headline"],
+      custom: ["lower third", "headline", "subtitle", "title", "name", "keyword"],
     };
 
     const categoryHint =
@@ -1813,6 +1827,48 @@ class DockObsClient {
     };
     const encoded = encodeURIComponent(JSON.stringify(payload));
     return `${this.getOverlayBaseUrl()}/lower-third-overlay.html#data=${encoded}`;
+  }
+
+  private parseOverlayPayloadUrl(url: string): { baseUrl: string; payload: Record<string, unknown> } | null {
+    if (!url || url === "about:blank" || !url.includes("#data=")) return null;
+
+    try {
+      const [baseUrl, encoded] = url.split("#data=");
+      if (!baseUrl || !encoded) return null;
+      const parsed = JSON.parse(decodeURIComponent(encoded));
+      if (!parsed || typeof parsed !== "object") return null;
+      return { baseUrl, payload: parsed as Record<string, unknown> };
+    } catch {
+      return null;
+    }
+  }
+
+  private buildOverlayUrlFromPayload(baseUrl: string, payload: Record<string, unknown>): string {
+    const encoded = encodeURIComponent(JSON.stringify(payload));
+    return `${baseUrl}#data=${encoded}`;
+  }
+
+  private async buildBlankedOverlayUrlFromCurrentSource(
+    inputName: string,
+    fallbackUrl: string,
+  ): Promise<string> {
+    try {
+      const current = await this.call("GetInputSettings", { inputName }) as {
+        inputSettings?: { url?: string };
+      };
+      const currentUrl = current.inputSettings?.url ?? "";
+      const parsed = this.parseOverlayPayloadUrl(currentUrl);
+      if (!parsed) return fallbackUrl;
+
+      return this.buildOverlayUrlFromPayload(parsed.baseUrl, {
+        ...parsed.payload,
+        live: false,
+        blanked: true,
+        timestamp: Date.now(),
+      });
+    } catch {
+      return fallbackUrl;
+    }
   }
 
   /**
@@ -2030,6 +2086,9 @@ class DockObsClient {
 
     let url: string;
     let themeCss = "";
+    let cssOverlayPacket: Record<string, unknown> | null = null;
+    let cssOverlayBaseUrl = "";
+    let useCssOverlayTransport = false;
     if (mode === "lower-third") {
       if (effectiveThemeSettings) {
         const { overlayTheme } = this.prepareDedicatedLowerThirdTheme(effectiveThemeSettings);
@@ -2044,13 +2103,17 @@ class DockObsClient {
 
         const { cleanSettings, css } = this.stripThemeDataUris(overlayTheme);
         themeCss = css;
-        url = this.buildBibleUrl(
-          this.buildBibleSlide(data.verseText || ref, `${ref} (${data.translation})`, verseRange),
-          live,
-          false,
-          cleanSettings,
-          "lower-third",
-        );
+        const slide = this.buildBibleSlide(data.verseText || ref, `${ref} (${data.translation})`, verseRange);
+        cssOverlayPacket = {
+          slide,
+          theme: cleanSettings ?? null,
+          live: true,
+          blanked: false,
+          timestamp: Date.now(),
+        };
+        cssOverlayBaseUrl = `${this.getOverlayBaseUrl()}/bible-overlay-lower-third.html`;
+        useCssOverlayTransport = true;
+        url = `${cssOverlayBaseUrl}#data=${encodeURIComponent(JSON.stringify(cssOverlayPacket))}`;
       } else {
         // ── Lower-third: direct browser source in user's scene ──
         await this.clearAllOverlays(resources.bibleSource, sceneName, resources);
@@ -2109,7 +2172,10 @@ class DockObsClient {
         timestamp: Date.now(),
       };
       this.publishFullscreenOverlayPacket(packet);
-      url = this.buildBibleUrl(slide, live, false, cleanSettings, "fullscreen");
+      cssOverlayPacket = packet;
+      cssOverlayBaseUrl = `${this.getOverlayBaseUrl()}/bible-overlay-fullscreen.html`;
+      useCssOverlayTransport = true;
+      url = `${cssOverlayBaseUrl}#data=${encodeURIComponent(JSON.stringify(packet))}`;
     }
 
     // CRITICAL: Hide the overlay in the OPPOSITE scene BEFORE setting the URL.
@@ -2141,15 +2207,26 @@ class DockObsClient {
       }
     }
 
-    if (mode === "fullscreen") {
+    if (useCssOverlayTransport && cssOverlayPacket) {
+      this.publishFullscreenOverlayPacket({
+        slide: (cssOverlayPacket.slide as Record<string, unknown> | null) ?? null,
+        theme: (cssOverlayPacket.theme as Record<string, unknown> | null) ?? null,
+        live: true,
+        blanked: Boolean(cssOverlayPacket.blanked),
+        timestamp: Number(cssOverlayPacket.timestamp) || Date.now(),
+      });
       const sourceSignature = JSON.stringify({
-        url,
+        baseUrl: cssOverlayBaseUrl,
         css: themeCss || "",
       });
+      const overlayCss = this.buildCssOverlayDataCss(cssOverlayPacket, themeCss);
       if (modeChanged || this._lastFullscreenSourceSignature[resources.bibleSource] !== sourceSignature) {
-        await this.setBrowserSourceUrl(resources.bibleSource, url, modeChanged, themeCss || undefined);
+        await this.setBrowserSourceUrl(resources.bibleSource, url, modeChanged, overlayCss);
         this._lastFullscreenSourceSignature[resources.bibleSource] = sourceSignature;
       }
+      this._lastCssOverlayPacketBySource[resources.bibleSource] = cssOverlayPacket;
+      this._lastCssOverlayBaseUrlBySource[resources.bibleSource] = cssOverlayBaseUrl;
+      this._lastCssOverlayThemeCssBySource[resources.bibleSource] = themeCss || "";
     } else {
       await this.setBrowserSourceUrl(resources.bibleSource, url, modeChanged, themeCss || undefined);
     }
@@ -2183,10 +2260,29 @@ class DockObsClient {
   async clearBible(): Promise<void> {
     for (const resources of getAllDockResources()) {
       const lastMode = this._lastOverlayMode[resources.bibleSource] ?? "fullscreen";
-      const url = lastMode === "lower-third"
-        ? this.buildBibleUrl(null, false, true, null, "lower-third")
-        : this.buildBibleUrl(null, false, true, null);
-      try { await this.setBrowserSourceUrl(resources.bibleSource, url); } catch { /* ignore */ }
+      try {
+        const cachedPayload = this._lastCssOverlayPacketBySource[resources.bibleSource];
+        const cachedBaseUrl = this._lastCssOverlayBaseUrlBySource[resources.bibleSource];
+        if (cachedPayload && cachedBaseUrl) {
+          const blankedPacket = {
+            ...cachedPayload,
+            live: false,
+            blanked: true,
+            timestamp: Date.now(),
+          };
+          const overlayCss = this.buildCssOverlayDataCss(
+            blankedPacket,
+            this._lastCssOverlayThemeCssBySource[resources.bibleSource] || "",
+          );
+          await this.setBrowserSourceUrl(resources.bibleSource, `${cachedBaseUrl}#data=${encodeURIComponent(JSON.stringify(blankedPacket))}`, false, overlayCss);
+        } else {
+          const fallbackUrl = lastMode === "lower-third"
+            ? this.buildBibleUrl(null, false, true, null, "lower-third")
+            : this.buildBibleUrl(null, false, true, null);
+          const url = await this.buildBlankedOverlayUrlFromCurrentSource(resources.bibleSource, fallbackUrl);
+          await this.setBrowserSourceUrl(resources.bibleSource, url);
+        }
+      } catch { /* ignore */ }
     }
 
     // Wait for exit animation before hiding the source
@@ -2219,6 +2315,9 @@ class DockObsClient {
       await this.removeInputIfExists(resources.fsBgSource);
       delete this._lastOverlayMode[resources.bibleSource];
       delete this._lastFullscreenSourceSignature[resources.bibleSource];
+      delete this._lastCssOverlayPacketBySource[resources.bibleSource];
+      delete this._lastCssOverlayBaseUrlBySource[resources.bibleSource];
+      delete this._lastCssOverlayThemeCssBySource[resources.bibleSource];
     }
 
     console.log("[DockOBS] Bible cleared");
@@ -2240,7 +2339,8 @@ class DockObsClient {
     location?: string;
     description?: string;
     ltTheme?: DockLTThemeRef;
-    context?: "speaker" | "sermon" | "event";
+    context?: "speaker" | "sermon" | "event" | "custom";
+    values?: Record<string, string>;
   }, live: boolean): Promise<void> {
     const resources = getDockResources(live);
     const target = await this.getTargetScene(live);
@@ -2320,11 +2420,30 @@ class DockObsClient {
         line1: evName,
         line2: sub,
       });
+    } else if (ctx === "custom") {
+      Object.assign(values, {
+        name: data.name || data.title || "",
+        title: data.title || data.name || "",
+        headline: data.title || data.name || "",
+        subtitle: data.subtitle || data.role || "",
+        subline: data.subtitle || data.role || "",
+        role: data.role || data.subtitle || "",
+        label: data.name || data.title || "",
+        details: data.description || data.subtitle || "",
+        description: data.description || "",
+        meta: data.description || "",
+        line1: data.title || data.name || "",
+        line2: data.subtitle || data.description || "",
+      });
+    }
+
+    if (data.values) {
+      Object.assign(values, data.values);
     }
 
     // ── Inject church logo from brand settings ──
     const logoUrl = this._getLogoUrl();
-    if (logoUrl) {
+    if (logoUrl && !values.logoUrl) {
       values.logoUrl = logoUrl;
     }
 
@@ -2346,9 +2465,12 @@ class DockObsClient {
    * Sends a blanked URL first (triggers exit animation), waits, then hides.
    */
   async clearLowerThirds(): Promise<void> {
-    const url = this.buildLowerThirdUrl({}, false, true);
     for (const resources of getAllDockResources()) {
-      try { await this.setBrowserSourceUrl(resources.ltSource, url); } catch { /* ignore */ }
+      try {
+        const fallbackUrl = this.buildLowerThirdUrl({}, false, true);
+        const url = await this.buildBlankedOverlayUrlFromCurrentSource(resources.ltSource, fallbackUrl);
+        await this.setBrowserSourceUrl(resources.ltSource, url);
+      } catch { /* ignore */ }
     }
 
     // Wait for exit animation before hiding the source
@@ -2517,6 +2639,9 @@ class DockObsClient {
 
     let url: string;
     let themeCss = "";
+    let cssOverlayPacket: Record<string, unknown> | null = null;
+    let cssOverlayBaseUrl = "";
+    let useCssOverlayTransport = false;
 
     if (mode === "fullscreen") {
       // ── Fullscreen: dedicated scene approach ──
@@ -2560,15 +2685,10 @@ class DockObsClient {
         timestamp: Date.now(),
       };
       this.publishFullscreenOverlayPacket(packet);
-      url = this.buildWorshipFullscreenUrl(
-        data.sectionText,
-        data.sectionLabel,
-        data.songTitle,
-        data.artist || "",
-        live,
-        false,
-        cleanSettings,
-      );
+      cssOverlayPacket = packet;
+      cssOverlayBaseUrl = `${this.getOverlayBaseUrl()}/bible-overlay-fullscreen.html`;
+      useCssOverlayTransport = true;
+      url = `${cssOverlayBaseUrl}#data=${encodeURIComponent(JSON.stringify(packet))}`;
     } else {
       if (effectiveThemeSettings) {
         const { overlayTheme } = this.prepareDedicatedLowerThirdTheme(effectiveThemeSettings);
@@ -2583,16 +2703,20 @@ class DockObsClient {
 
         const { cleanSettings, css } = this.stripThemeDataUris(overlayTheme);
         themeCss = css;
-        url = this.buildBibleUrl(
-          this.buildBibleSlide(
-            data.sectionText,
-            cleanWorshipObsLabel(data.sectionLabel),
-          ),
-          live,
-          false,
-          cleanSettings,
-          "lower-third",
+        const slide = this.buildBibleSlide(
+          data.sectionText,
+          cleanWorshipObsLabel(data.sectionLabel),
         );
+        cssOverlayPacket = {
+          slide,
+          theme: cleanSettings ?? null,
+          live: true,
+          blanked: false,
+          timestamp: Date.now(),
+        };
+        cssOverlayBaseUrl = `${this.getOverlayBaseUrl()}/bible-overlay-lower-third.html`;
+        useCssOverlayTransport = true;
+        url = `${cssOverlayBaseUrl}#data=${encodeURIComponent(JSON.stringify(cssOverlayPacket))}`;
       } else {
         // ── Lower-third: direct browser source in user's scene ──
         await this.clearAllOverlays(resources.worshipSource, sceneName, resources);
@@ -2638,15 +2762,26 @@ class DockObsClient {
       }
     }
 
-    if (mode === "fullscreen") {
+    if (useCssOverlayTransport && cssOverlayPacket) {
+      this.publishFullscreenOverlayPacket({
+        slide: (cssOverlayPacket.slide as Record<string, unknown> | null) ?? null,
+        theme: (cssOverlayPacket.theme as Record<string, unknown> | null) ?? null,
+        live: true,
+        blanked: Boolean(cssOverlayPacket.blanked),
+        timestamp: Number(cssOverlayPacket.timestamp) || Date.now(),
+      });
       const sourceSignature = JSON.stringify({
-        url,
+        baseUrl: cssOverlayBaseUrl,
         css: themeCss || "",
       });
+      const overlayCss = this.buildCssOverlayDataCss(cssOverlayPacket, themeCss);
       if (modeChanged || this._lastFullscreenSourceSignature[resources.worshipSource] !== sourceSignature) {
-        await this.setBrowserSourceUrl(resources.worshipSource, url, modeChanged, themeCss || undefined);
+        await this.setBrowserSourceUrl(resources.worshipSource, url, modeChanged, overlayCss);
         this._lastFullscreenSourceSignature[resources.worshipSource] = sourceSignature;
       }
+      this._lastCssOverlayPacketBySource[resources.worshipSource] = cssOverlayPacket;
+      this._lastCssOverlayBaseUrlBySource[resources.worshipSource] = cssOverlayBaseUrl;
+      this._lastCssOverlayThemeCssBySource[resources.worshipSource] = themeCss || "";
     } else {
       await this.setBrowserSourceUrl(resources.worshipSource, url, modeChanged, themeCss || undefined);
     }
@@ -2663,10 +2798,29 @@ class DockObsClient {
   async clearWorshipLyrics(): Promise<void> {
     for (const resources of getAllDockResources()) {
       const lastMode = this._lastOverlayMode[resources.worshipSource] ?? "lower-third";
-      const url = lastMode === "fullscreen"
-        ? this.buildWorshipFullscreenUrl("", "", "", "", false, true)
-        : this.buildBibleUrl(null, false, true, null, "lower-third");
-      try { await this.setBrowserSourceUrl(resources.worshipSource, url); } catch { /* ignore */ }
+      try {
+        const cachedPayload = this._lastCssOverlayPacketBySource[resources.worshipSource];
+        const cachedBaseUrl = this._lastCssOverlayBaseUrlBySource[resources.worshipSource];
+        if (cachedPayload && cachedBaseUrl) {
+          const blankedPacket = {
+            ...cachedPayload,
+            live: false,
+            blanked: true,
+            timestamp: Date.now(),
+          };
+          const overlayCss = this.buildCssOverlayDataCss(
+            blankedPacket,
+            this._lastCssOverlayThemeCssBySource[resources.worshipSource] || "",
+          );
+          await this.setBrowserSourceUrl(resources.worshipSource, `${cachedBaseUrl}#data=${encodeURIComponent(JSON.stringify(blankedPacket))}`, false, overlayCss);
+        } else {
+          const fallbackUrl = lastMode === "fullscreen"
+            ? this.buildWorshipFullscreenUrl("", "", "", "", false, true)
+            : this.buildBibleUrl(null, false, true, null, "lower-third");
+          const url = await this.buildBlankedOverlayUrlFromCurrentSource(resources.worshipSource, fallbackUrl);
+          await this.setBrowserSourceUrl(resources.worshipSource, url);
+        }
+      } catch { /* ignore */ }
     }
 
     // Wait for exit animation before hiding the source
@@ -2699,6 +2853,9 @@ class DockObsClient {
       await this.removeInputIfExists(resources.fsBgSource);
       delete this._lastOverlayMode[resources.worshipSource];
       delete this._lastFullscreenSourceSignature[resources.worshipSource];
+      delete this._lastCssOverlayPacketBySource[resources.worshipSource];
+      delete this._lastCssOverlayBaseUrlBySource[resources.worshipSource];
+      delete this._lastCssOverlayThemeCssBySource[resources.worshipSource];
     }
 
     console.log("[DockOBS] Worship lyrics cleared");

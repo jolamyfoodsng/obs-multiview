@@ -448,7 +448,7 @@ export default function DockMediaTab({ staged: _staged, onStage: _onStage }: Pro
 
   return (
     <div className="dock-module dock-module--media">
-      <section className="dock-console-panel dock-console-panel--workspace">
+      <section className="dock-console-panel dock-console-panel--workspace dock-media-shell">
         <div className="dock-console-header">
           <div>
             <div className="dock-console-header__eyebrow">Media</div>
@@ -501,17 +501,19 @@ export default function DockMediaTab({ staged: _staged, onStage: _onStage }: Pro
               </button>
             </div>
 
-            {activeEntries.length === 0 ? (
-              <div className="dock-empty dock-empty--inline">
-                <div className="dock-empty__text">
-                  {activeKind === "video" ? "No video media available." : "No picture media available."}
+            <div className="dock-media-scroll">
+              {activeEntries.length === 0 ? (
+                <div className="dock-empty dock-empty--inline">
+                  <div className="dock-empty__text">
+                    {activeKind === "video" ? "No video media available." : "No picture media available."}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div key={activeKind} className="dock-console-list dock-console-list--compact dock-media-list">
-                {activeEntries.map((entry) => renderMediaRow(entry))}
-              </div>
-            )}
+              ) : (
+                <div key={activeKind} className="dock-console-list dock-console-list--compact dock-media-list">
+                  {activeEntries.map((entry) => renderMediaRow(entry))}
+                </div>
+              )}
+            </div>
 
             {(activeTargets.preview || activeTargets.program) && (
               <div className="dock-media-clear-box">

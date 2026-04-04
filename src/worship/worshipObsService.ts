@@ -45,6 +45,7 @@ class WorshipObsService {
   private _currentBgKind: "color" | "image" | null = null;
   private _lastBgImagePath: string | null = null;
   private _lastBgImageHash: string | null = null;
+  private _lastOverlayTransportSignature: string | null = null;
 
   private async moveSceneItemToTop(sceneName: string, sceneItemId: number): Promise<void> {
     try {
@@ -72,6 +73,12 @@ class WorshipObsService {
     } catch {
       return { width: 1920, height: 1080 };
     }
+  }
+
+  private buildOverlayDataCss(packet: Record<string, unknown>, customCss = ""): string {
+    const encodedPacket = encodeURIComponent(JSON.stringify(packet));
+    const overlayCss = `:root { --overlay-data: "${encodedPacket}"; }`;
+    return customCss ? `${overlayCss}\n${customCss}` : overlayCss;
   }
 
   getLiveState() {
@@ -703,10 +710,13 @@ class WorshipObsService {
       const packet = { slide, theme: themeForHash, live, blanked, timestamp: Date.now() };
       const encoded = encodeURIComponent(JSON.stringify(packet));
       const base = getOverlayBaseUrlSync();
-      const url = `${base}/bible-overlay-fullscreen.html#data=${encoded}`;
-
-      const inputSettings: Record<string, unknown> = { url };
-      inputSettings.css = customCss || "";
+      const baseUrl = `${base}/bible-overlay-fullscreen.html`;
+      const url = `${baseUrl}#data=${encoded}`;
+      const overlayCss = this.buildOverlayDataCss(packet as unknown as Record<string, unknown>, customCss || "");
+      const sourceSignature = JSON.stringify({
+        baseUrl,
+        css: customCss || "",
+      });
 
       let resolvedInputName = WORSHIP_SOURCE_NAME;
       const regInput = await getInputBySlot(SLOT_INPUT);
@@ -716,7 +726,13 @@ class WorshipObsService {
         if (found) resolvedInputName = found.inputName;
       }
 
-      await obsService.call("SetInputSettings", { inputName: resolvedInputName, inputSettings });
+      if (this._lastOverlayTransportSignature !== sourceSignature || blanked || !slide) {
+        await obsService.call("SetInputSettings", {
+          inputName: resolvedInputName,
+          inputSettings: { url, css: overlayCss },
+        });
+        this._lastOverlayTransportSignature = sourceSignature;
+      }
 
       // Keep BG layered correctly even when OBS item order was changed manually.
       // BG source lives inside the overlay scene, not the target scene

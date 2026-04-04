@@ -77,6 +77,16 @@ export interface OBSStats {
   outputTotalFrames: number;
 }
 
+interface CurrentProgramSceneResponse {
+  currentProgramSceneName?: string;
+  sceneName?: string;
+}
+
+interface CurrentPreviewSceneResponse {
+  currentPreviewSceneName?: string;
+  sceneName?: string;
+}
+
 export type StatusChangeCallback = (
   status: ConnectionStatus,
   error?: string
@@ -287,8 +297,12 @@ class OBSService {
    */
   async getCurrentProgramScene(): Promise<string> {
     this.ensureConnected();
-    const response = await this.obs.call("GetCurrentProgramScene");
-    const sceneName = response.sceneName as string;
+    const response = await this.obs.call("GetCurrentProgramScene") as CurrentProgramSceneResponse;
+    const sceneName = (
+      response.currentProgramSceneName ??
+      response.sceneName ??
+      ""
+    ).trim();
     console.log("[OBSService] Current program scene:", sceneName);
     return sceneName;
   }
@@ -299,8 +313,12 @@ class OBSService {
    */
   async getCurrentPreviewScene(): Promise<string> {
     this.ensureConnected();
-    const response = await this.obs.call("GetCurrentPreviewScene");
-    const sceneName = response.sceneName as string;
+    const response = await this.obs.call("GetCurrentPreviewScene") as CurrentPreviewSceneResponse;
+    const sceneName = (
+      response.currentPreviewSceneName ??
+      response.sceneName ??
+      ""
+    ).trim();
     console.log("[OBSService] Current preview scene:", sceneName);
     return sceneName;
   }

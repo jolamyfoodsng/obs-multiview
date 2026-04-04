@@ -5,7 +5,7 @@
  * Resolves straight into a fast chapter reader with stage / live actions per verse.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import type { SearchResult as BibleKeywordResult } from "../../bible/bibleData";
 import { BUILTIN_THEMES } from "../../bible/themes/builtinThemes";
 import type { BiblePassage, BibleTheme } from "../../bible/types";
@@ -66,6 +66,11 @@ interface DockBiblePreferences {
 }
 
 type ColumnTranslations = string[];
+type LiveTranscriptWordChip = {
+  id: string;
+  text: string;
+  lane: "start" | "end";
+};
 
 function normalizeColumnTranslations(
   values?: string[] | null,
@@ -110,6 +115,58 @@ function saveDockBiblePreferences(next: DockBiblePreferences): void {
   }
 }
 
+function normalizeTranscriptStackWord(word: string): string {
+  return word.toLowerCase().replace(/^[^\w']+|[^\w']+$/g, "");
+}
+
+function splitTranscriptStackWords(transcript: string): string[] {
+  return transcript
+    .split(/\s+/)
+    .map((word) => word.trim())
+    .filter(Boolean);
+}
+
+function extractTranscriptWordTail(previousWords: string[], nextWords: string[]): string[] {
+  if (nextWords.length === 0) return [];
+  if (previousWords.length === 0) return nextWords;
+
+  const normalizedPrevious = previousWords.map(normalizeTranscriptStackWord).filter(Boolean);
+  const normalizedNext = nextWords.map(normalizeTranscriptStackWord).filter(Boolean);
+  const maxOverlap = Math.min(normalizedPrevious.length, normalizedNext.length, 18);
+
+  for (let overlap = maxOverlap; overlap >= 1; overlap -= 1) {
+    let matches = true;
+    for (let index = 0; index < overlap; index += 1) {
+      if (
+        normalizedPrevious[normalizedPrevious.length - overlap + index] !==
+        normalizedNext[index]
+      ) {
+        matches = false;
+        break;
+      }
+    }
+
+    if (matches) {
+      return nextWords.slice(overlap);
+    }
+  }
+
+  return nextWords;
+}
+
+function isVerseRowVisibleWithinContainer(
+  container: HTMLElement,
+  target: HTMLElement,
+): boolean {
+  const containerRect = container.getBoundingClientRect();
+  const targetRect = target.getBoundingClientRect();
+
+  return (
+    targetRect.top >= containerRect.top &&
+    targetRect.bottom <= containerRect.bottom
+  );
+}
+
 type DockBibleSearchOption =
   | ({ kind: "reference" } & BibleSearchResult)
   | {
@@ -124,6 +181,7 @@ type DockBibleSearchOption =
 function emptyVoiceBibleSnapshot(): VoiceBibleSnapshot {
   return {
     status: "idle",
+    inputLevel: 0,
     modelReady: false,
     semanticReady: false,
     candidates: [],
@@ -164,6 +222,7 @@ export default function DockBibleTab({
   const [voiceBible, setVoiceBible] = useState<VoiceBibleSnapshot>(
     () => initialVoiceBible ?? emptyVoiceBibleSnapshot(),
   );
+  const [, setLiveTranscriptWords] = useState<LiveTranscriptWordChip[]>([]);
   const [voiceHeld, setVoiceHeld] = useState(false);
   const [sending, setSending] = useState(false);
   const [actionError, setActionError] = useState("");
@@ -183,6 +242,8 @@ export default function DockBibleTab({
   const lastVoiceEventTimestampRef = useRef(0);
   const pendingScrollVerseRef = useRef<number | null>(null);
   const prefsReadyRef = useRef(false);
+  const liveTranscriptWordCounterRef = useRef(0);
+  const lastTranscriptWordsRef = useRef<string[]>([]);
   const [openVersionDropdownIndex, setOpenVersionDropdownIndex] = useState<number | null>(null);
   const isProgramLive =
     staged?.type === "bible" &&
@@ -204,6 +265,42 @@ export default function DockBibleTab({
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, []);
+
+  useEffect(() => {
+    const transcript = voiceBible.transcript?.trim() ?? "";
+    if (!transcript) {
+      return;
+    }
+
+    const nextWords = splitTranscriptStackWords(transcript);
+    if (nextWords.length === 0) {
+      return;
+    }
+
+    const appendedWords = extractTranscriptWordTail(
+      lastTranscriptWordsRef.current,
+      nextWords,
+    );
+    lastTranscriptWordsRef.current = nextWords;
+
+    if (appendedWords.length === 0) {
+      return;
+    }
+
+    setLiveTranscriptWords((current) => {
+      const next = [...current];
+      for (const word of appendedWords) {
+        const absoluteIndex = liveTranscriptWordCounterRef.current;
+        next.push({
+          id: `voice-word-${absoluteIndex}-${word}`,
+          text: word,
+          lane: absoluteIndex % 2 === 0 ? "start" : "end",
+        });
+        liveTranscriptWordCounterRef.current += 1;
+      }
+      return next.slice(-28);
+    });
+  }, [voiceBible.transcript]);
 
   useEffect(() => {
     prefsReadyRef.current = false;
@@ -913,21 +1010,10 @@ export default function DockBibleTab({
     };
   }, [appConnected, applyVoiceResult, voiceBible.status]);
 
-  const voiceStatusLabel =
-    voiceBible.status === "listening"
-      ? "Listening"
-      : voiceBible.status === "transcribing"
-        ? "Transcribing"
-        : voiceBible.status === "matching"
-          ? "Matching"
-          : voiceBible.status === "no-match"
-            ? "No Match"
-            : voiceBible.status === "error"
-              ? "Error"
-              : "Idle";
   const voiceBusy =
     voiceBible.status === "transcribing" || voiceBible.status === "matching";
   const voiceListening = voiceHeld || voiceBible.status === "listening";
+  const voiceInputLevel = Math.max(0, Math.min(1, voiceBible.inputLevel ?? 0));
   const voiceActionIcon =
     voiceBible.status === "listening"
       ? "record_voice_over"
@@ -940,6 +1026,15 @@ export default function DockBibleTab({
       : voiceBusy
         ? "Processing voice search"
         : "Start voice search";
+  const voiceMeterStyle = useMemo(
+    () =>
+      ({
+        "--voice-meter-1": `${8 + voiceInputLevel * 8}px`,
+        "--voice-meter-2": `${10 + voiceInputLevel * 12}px`,
+        "--voice-meter-3": `${7 + voiceInputLevel * 9}px`,
+      }) as CSSProperties,
+    [voiceInputLevel],
+  );
 
   const sendVoiceCommand = useCallback(
     (
@@ -1284,17 +1379,17 @@ export default function DockBibleTab({
   const activeThemePickerProps =
     overlayMode === "fullscreen"
       ? {
-          selectedThemeId: selectedBibleTheme.id,
-          onSelect: handleSelectFullscreenTheme,
-          label: "Fullscreen Theme",
-          templateType: "fullscreen" as const,
-        }
+        selectedThemeId: selectedBibleTheme.id,
+        onSelect: handleSelectFullscreenTheme,
+        label: "Fullscreen Theme",
+        templateType: "fullscreen" as const,
+      }
       : {
-          selectedThemeId: selectedLowerThirdTheme.id,
-          onSelect: handleSelectLowerThirdTheme,
-          label: "Lower Third Theme",
-          templateType: "lower-third" as const,
-        };
+        selectedThemeId: selectedLowerThirdTheme.id,
+        onSelect: handleSelectLowerThirdTheme,
+        label: "Lower Third Theme",
+        templateType: "lower-third" as const,
+      };
 
   const navigateVerse = useCallback(
     async (delta: 1 | -1) => {
@@ -1373,7 +1468,9 @@ export default function DockBibleTab({
 
     const frame = window.requestAnimationFrame(() => {
       const target = container.querySelector<HTMLElement>(`[data-verse-row="${verseToReveal}"]`);
-      target?.scrollIntoView({ block: "center", behavior: "smooth" });
+      if (target && !isVerseRowVisibleWithinContainer(container, target)) {
+        target.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      }
       setHighlightVerse(verseToReveal);
       pendingScrollVerseRef.current = null;
     });
@@ -1472,8 +1569,16 @@ export default function DockBibleTab({
               aria-label={voiceActionLabel}
               aria-pressed={voiceListening}
               title={voiceActionLabel}
+              style={voiceListening ? voiceMeterStyle : undefined}
             >
               <Icon name={voiceActionIcon} size={15} />
+              {voiceListening && (
+                <span className="dock-search__voice-meter" aria-hidden="true">
+                  <span className="dock-search__voice-meter-bar" />
+                  <span className="dock-search__voice-meter-bar" />
+                  <span className="dock-search__voice-meter-bar" />
+                </span>
+              )}
             </button>
 
             {showDropdown && searchResults.length > 0 && (
@@ -1531,29 +1636,11 @@ export default function DockBibleTab({
         </div>
 
         <div className="dock-voice-bible__inline">
-          <div className="dock-voice-bible__row">
-            <div className="dock-voice-bible__meta">
-              {/* <span>{voiceBible.sourceLabel ?? "Configured source"}</span>
-              <span>{voiceBible.modelReady ? "Whisper ready" : "Whisper will download on first use"}</span>
-              <span>{voiceBible.semanticReady ? "Ollama rerank ready" : "Lexical match fallback"}</span> */}
-              <span className={`dock-voice-bible__status dock-voice-bible__status--${voiceBible.status}`}>
-                {voiceStatusLabel}
-              </span>
-            </div>
-          </div>
+
 
           {(voiceBible.transcript || voiceBible.detail || voiceBible.error || voiceBible.candidates.length > 0) && (
             <div className="dock-voice-bible__inline-details">
-              {(voiceBible.transcript || voiceBible.detail) && (
-                <div className="dock-voice-bible__detail">
-                  {voiceBible.transcript && (
-                    <div className="dock-voice-bible__transcript">Transcript: {voiceBible.transcript}</div>
-                  )}
-                  {voiceBible.detail && (
-                    <div className="dock-voice-bible__hint">{voiceBible.detail}</div>
-                  )}
-                </div>
-              )}
+
 
               {voiceBible.error && (
                 <div className="dock-voice-bible__error">{voiceBible.error}</div>
