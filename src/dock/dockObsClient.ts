@@ -2790,6 +2790,24 @@ class DockObsClient {
       await this.setBrowserSourceUrl(resources.worshipSource, url, modeChanged, themeCss || undefined);
     }
 
+    if (!live) {
+      if (mode === "fullscreen") {
+        await this.ensureSceneSourceInTarget(sceneName, resources.worshipScene, true);
+        await this.ensureFullscreenTargetBg(
+          sceneName,
+          resources.worshipScene,
+          effectiveThemeSettings,
+          true,
+          resources,
+        );
+      } else if (effectiveThemeSettings) {
+        await this.ensureSceneSourceInTarget(sceneName, resources.worshipScene, true);
+      } else {
+        await this.ensureOverlaySource(sceneName, resources.worshipSource, undefined, undefined, true);
+      }
+      await this.setCurrentPreviewScene(sceneName);
+    }
+
     console.log(`[DockOBS] Worship "${data.sectionLabel}" (${mode}) → scene "${sceneName}" (${live ? "Program" : "Preview"})`);
   }
 

@@ -860,6 +860,7 @@
   border: 1px solid color-mix(in srgb, var(--dock-border) 88%, transparent);
   font-size: 10px;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
   transition: background 0.15s, border-color 0.15s, color 0.15s;
 }
@@ -1735,7 +1736,11 @@
 
 .dock-lt-theme-picker,
 .dock-bible-theme-picker {
-  margin-top: 10px;
+  margin-top: 6px;
+}
+
+.dock-bible-theme-picker--label-less {
+  margin-top: 0;
 }
 
 .dock-theme-grid {
@@ -1844,7 +1849,7 @@
   align-items: center;
   gap: 6px;
   width: 100%;
-  padding: 5px 8px;
+  padding: 4px 7px;
   border-radius: 3px;
   border: 1px solid color-mix(in srgb, var(--dock-border) 88%, transparent);
   background: color-mix(in srgb, var(--dock-surface-alt) 72%, var(--dock-surface));
@@ -1874,10 +1879,10 @@
 }
 
 .dock-theme-dropdown-trigger__swatch--preview {
-  width: 54px;
-  height: 34px;
+  width: 48px;
+  height: 28px;
   overflow: hidden;
-  padding: 4px 5px;
+  padding: 3px 4px;
 }
 
 .dock-theme-dropdown-trigger__sample {
@@ -1885,8 +1890,18 @@
   width: 100%;
   flex-direction: column;
   justify-content: center;
-  gap: 2px;
+  gap: 1px;
   overflow: hidden;
+}
+
+.dock-bible-theme-picker--fullscreen .dock-theme-dropdown-trigger {
+  padding: 3px 6px;
+}
+
+.dock-bible-theme-picker--fullscreen .dock-theme-dropdown-trigger__swatch--preview {
+  width: 42px;
+  height: 24px;
+  padding: 2px 4px;
 }
 
 .dock-theme-dropdown-trigger__sample-main,
@@ -2716,6 +2731,12 @@
   margin-top: auto;
 }
 
+.dock-console-panel--deck-static {
+  position: static;
+  bottom: auto;
+  z-index: auto;
+}
+
 .dock-console-row {
   display: flex;
   align-items: center;
@@ -2801,6 +2822,22 @@
   gap: 6px;
 }
 
+.dock-console-action-row--worship {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: stretch;
+}
+
+.dock-console-action-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  min-width: 0;
+}
+
+.dock-console-action-row__clear {
+  min-width: 84px;
+}
+
 .dock-console-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -2826,6 +2863,15 @@
 
 .dock-console-segmented--compact {
   gap: 2px;
+}
+
+.dock-console-segmented--grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.dock-console-segmented--grid-3 .dock-console-segmented__item {
+  min-width: 0;
 }
 
 .dock-console-segmented__item {
@@ -3174,6 +3220,28 @@
   margin-top: 2px;
 }
 
+.dock-module--worship {
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.dock-worship-workspace {
+  overflow: hidden;
+}
+
+.dock-worship-workspace__list {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 2px;
+}
+
+.dock-worship-workspace__empty {
+  flex: 1 1 auto;
+}
+
 .dock-console-control--compact {
   min-width: 172px;
 }
@@ -3181,6 +3249,20 @@
 .dock-console-control--compact .dock-console-segmented__item {
   min-width: 32px;
   padding: 0 6px;
+}
+
+.dock-worship-deck__utility {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.dock-worship-deck__utility-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
 }
 
 .dock-bible-parallel-status {

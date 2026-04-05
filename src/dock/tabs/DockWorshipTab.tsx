@@ -466,6 +466,21 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
     setOverlayMode("lower-third");
   }, []);
 
+  const activeThemePickerProps =
+    overlayMode === "fullscreen"
+      ? {
+        selectedThemeId: selectedFSTheme.id,
+        onSelect: handleSelectFullscreenTheme,
+        label: "Fullscreen Theme",
+        templateType: "fullscreen" as const,
+      }
+      : {
+        selectedThemeId: selectedLTTheme.id,
+        onSelect: handleSelectLowerThirdTheme,
+        label: "Lower Third Theme",
+        templateType: "lower-third" as const,
+      };
+
   const restageCurrent = useCallback(
     async (live: boolean) => {
       if (activeSectionIndex === null || !selectedSong) return;
@@ -601,54 +616,14 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
                 </button>
               </div>
             </div>
-
-            <div className="dock-console-grid">
-              <div className="dock-console-control">
-                <div className="dock-section-label" style={{ marginTop: 0 }}>Mode</div>
-                <div className="dock-console-segmented">
-                  <button
-                    type="button"
-                    className={`dock-console-segmented__item${overlayMode === "fullscreen" ? " dock-console-segmented__item--active" : ""}`}
-                    onClick={() => setOverlayMode("fullscreen")}
-                  >
-                    <Icon name="fullscreen" size={14} />
-                    Full
-                  </button>
-                  <button
-                    type="button"
-                    className={`dock-console-segmented__item${overlayMode === "lower-third" ? " dock-console-segmented__item--active" : ""}`}
-                    onClick={() => setOverlayMode("lower-third")}
-                  >
-                    <Icon name="subtitles" size={14} />
-                    LT
-                  </button>
-                </div>
-              </div>
-
-              <div className="dock-console-control">
-                <div className="dock-section-label" style={{ marginTop: 0 }}>Lines per Slide</div>
-                <div className="dock-console-segmented dock-console-segmented--compact">
-                  {LINES_PER_SLIDE_OPTIONS.map((count) => (
-                    <button
-                      key={count}
-                      type="button"
-                      className={`dock-console-segmented__item${linesPerSlide === count ? " dock-console-segmented__item--active" : ""}`}
-                      onClick={() => setLinesPerSlide(count)}
-                    >
-                      {count}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
           </>
         )}
       </section>
 
-      <section className="dock-console-panel dock-console-panel--workspace">
+      <section className="dock-console-panel dock-console-panel--workspace dock-worship-workspace">
         {!selectedSong ? (
           filteredSongs.length === 0 ? (
-            <div className="dock-empty">
+            <div className="dock-empty dock-worship-workspace__empty">
               <Icon name={songs.length === 0 ? "music_off" : "search_off"} size={20} />
               <div className="dock-empty__title">
                 {songs.length === 0 ? "No Songs Yet" : "No Matches"}
@@ -667,7 +642,7 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
                   <div className="dock-console-header__title">{filteredSongs.length} Songs Ready</div>
                 </div>
               </div>
-              <div className="dock-console-list">
+              <div className="dock-console-list dock-worship-workspace__list">
                 {filteredSongs.map((song) => (
                   <button
                     key={song.id}
@@ -716,12 +691,12 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
             </div>
 
             {selectedSongSections.length === 0 ? (
-              <div className="dock-empty">
+              <div className="dock-empty dock-worship-workspace__empty">
                 <Icon name="lyrics" size={18} />
                 <div className="dock-empty__text">This song does not have any slideable lyrics yet.</div>
               </div>
             ) : (
-              <div className="dock-console-list">
+              <div className="dock-console-list dock-worship-workspace__list">
                 {selectedSongSections.map((section, idx) => {
                   const displayLabel = cleanWorshipSectionLabel(section.label);
                   const isLive = liveIdx === idx;
@@ -775,7 +750,7 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
       </section>
 
       {selectedSong && (
-        <section className={`dock-console-panel dock-console-panel--deck${deckCollapsed ? " dock-console-panel--deck-collapsed" : ""}`}>
+        <section className={`dock-console-panel dock-console-panel--deck dock-console-panel--deck-static${deckCollapsed ? " dock-console-panel--deck-collapsed" : ""}`}>
           <div className="dock-console-deck__header">
             <div>
               <div className="dock-console-header__eyebrow">Control Deck</div>
@@ -831,28 +806,30 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
 
           {!deckCollapsed && (
             <>
-              <div className="dock-console-action-row">
+              <div className="dock-console-action-row dock-console-action-row--worship">
+                <div className="dock-console-action-pair">
+                  <button
+                    type="button"
+                    className="dock-btn dock-btn--preview"
+                    onClick={() => void handlePreviewCurrent()}
+                    disabled={activeSectionIndex === null || sending}
+                  >
+                    <Icon name={sending ? "sync" : "preview"} size={16} />
+                    {sending ? "Sending..." : "Send to Preview"}
+                  </button>
+                  <button
+                    type="button"
+                    className="dock-btn dock-btn--live"
+                    onClick={() => void handleGoLiveCurrent()}
+                    disabled={activeSectionIndex === null || sending}
+                  >
+                    <Icon name={sending ? "sync" : "cast"} size={16} />
+                    {sending ? "Sending..." : "Go Live"}
+                  </button>
+                </div>
                 <button
                   type="button"
-                  className="dock-btn dock-btn--preview"
-                  onClick={() => void handlePreviewCurrent()}
-                  disabled={activeSectionIndex === null || sending}
-                >
-                  <Icon name={sending ? "sync" : "preview"} size={16} />
-                  {sending ? "Sending..." : "Send to Preview"}
-                </button>
-                <button
-                  type="button"
-                  className="dock-btn dock-btn--live"
-                  onClick={() => void handleGoLiveCurrent()}
-                  disabled={activeSectionIndex === null || sending}
-                >
-                  <Icon name={sending ? "sync" : "cast"} size={16} />
-                  {sending ? "Sending..." : "Go Live"}
-                </button>
-                <button
-                  type="button"
-                  className="dock-btn dock-btn--danger"
+                  className="dock-btn dock-btn--danger dock-console-action-row__clear"
                   onClick={handleClearLyrics}
                   disabled={activeSectionIndex === null}
                 >
@@ -861,87 +838,77 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
                 </button>
               </div>
 
-              <div className="dock-console-grid">
-                <div className="dock-console-control">
-                  <div className="dock-section-label" style={{ marginTop: 0 }}>Transport</div>
-                  <div className="dock-console-segmented">
-                    <button
-                      type="button"
-                      className="dock-console-segmented__item"
-                      onClick={() => void navigateSection(-1)}
-                      disabled={activeSectionIndex === null}
-                    >
-                      <Icon name="arrow_back" size={14} />
-                      Prev
-                    </button>
-                    <button
-                      type="button"
-                      className="dock-console-segmented__item"
-                      onClick={() => void navigateSection(1)}
-                      disabled={activeSectionIndex === null}
-                    >
-                      Next
-                      <Icon name="chevron_right" size={14} />
-                    </button>
-                  </div>
-                </div>
-
-                <div className="dock-console-control">
-                  <div className="dock-section-label" style={{ marginTop: 0 }}>Lines</div>
-                  <div className="dock-console-segmented dock-console-segmented--compact">
-                    {LINES_PER_SLIDE_OPTIONS.map((count) => (
+              <div className="dock-worship-deck__utility">
+                <div className="dock-worship-deck__utility-row">
+                  <div className="dock-console-control">
+                    <div className="dock-section-label" style={{ marginTop: 0 }}>Overlay Mode</div>
+                    <div className="dock-console-segmented">
                       <button
-                        key={count}
                         type="button"
-                        className={`dock-console-segmented__item${linesPerSlide === count ? " dock-console-segmented__item--active" : ""}`}
-                        onClick={() => setLinesPerSlide(count)}
+                        className={`dock-console-segmented__item${overlayMode === "fullscreen" ? " dock-console-segmented__item--active" : ""}`}
+                        onClick={() => setOverlayMode("fullscreen")}
                       >
-                        {count}
+                        <Icon name="fullscreen" size={14} />
+                        Full
                       </button>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {overlayMode === "fullscreen" && (
-                <div className="dock-console-control">
-                  <div className="dock-section-label" style={{ marginTop: 0 }}>Background</div>
-                  <div className="dock-background-presets">
-                    {DOCK_BACKGROUND_PRESETS.map((preset) => (
                       <button
-                        key={preset.id}
                         type="button"
-                        className={`dock-background-preset${backgroundPreset === preset.id ? " dock-background-preset--active" : ""}`}
-                        onClick={() => setBackgroundPreset(preset.id)}
+                        className={`dock-console-segmented__item${overlayMode === "lower-third" ? " dock-console-segmented__item--active" : ""}`}
+                        onClick={() => setOverlayMode("lower-third")}
                       >
-                        <span
-                          className="dock-background-preset__swatch"
-                          style={dockBackgroundPresetPreviewStyle(selectedFSTheme.settings, preset.id)}
-                        />
-                        <span>{preset.label}</span>
+                        <Icon name="subtitles" size={14} />
+                        LT
                       </button>
-                    ))}
+                    </div>
+                  </div>
+
+                  <div className="dock-console-control dock-console-control--compact">
+                    <div className="dock-section-label" style={{ marginTop: 0 }}>Lines</div>
+                    <div className="dock-console-segmented dock-console-segmented--compact dock-console-segmented--grid-3">
+                      {LINES_PER_SLIDE_OPTIONS.map((count) => (
+                        <button
+                          key={count}
+                          type="button"
+                          className={`dock-console-segmented__item${linesPerSlide === count ? " dock-console-segmented__item--active" : ""}`}
+                          onClick={() => setLinesPerSlide(count)}
+                        >
+                          {count}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              )}
 
-              <div className="dock-console-grid">
                 <div className="dock-console-control">
                   <DockBibleThemePicker
-                    selectedThemeId={selectedFSTheme.id}
-                    onSelect={handleSelectFullscreenTheme}
-                    label=""
-                    templateType="fullscreen"
+                    selectedThemeId={activeThemePickerProps.selectedThemeId}
+                    onSelect={activeThemePickerProps.onSelect}
+                    label={activeThemePickerProps.label}
+                    templateType={activeThemePickerProps.templateType}
                   />
                 </div>
-                <div className="dock-console-control">
-                  <DockBibleThemePicker
-                    selectedThemeId={selectedLTTheme.id}
-                    onSelect={handleSelectLowerThirdTheme}
-                    label=""
-                    templateType="lower-third"
-                  />
-                </div>
+
+                {overlayMode === "fullscreen" && (
+                  <div className="dock-console-control">
+                    <div className="dock-section-label" style={{ marginTop: 0 }}>Background</div>
+                    <div className="dock-background-presets">
+                      {DOCK_BACKGROUND_PRESETS.map((preset) => (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          className={`dock-background-preset${backgroundPreset === preset.id ? " dock-background-preset--active" : ""}`}
+                          onClick={() => setBackgroundPreset(preset.id)}
+                        >
+                          <span
+                            className="dock-background-preset__swatch"
+                            style={dockBackgroundPresetPreviewStyle(selectedFSTheme.settings, preset.id)}
+                          />
+                          <span>{preset.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}

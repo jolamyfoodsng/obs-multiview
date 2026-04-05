@@ -112,6 +112,27 @@
 .worship-sidebar-search input::placeholder {
   color: var(--b-text-3, #616161);
 }
+.worship-sidebar-section {
+  padding-top: 2px;
+}
+.worship-sidebar-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px 6px;
+}
+.worship-sidebar-section-label {
+  color: var(--b-text-2, #9E9E9E);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.worship-sidebar-section-note {
+  color: var(--b-text-4, #4f4f4f);
+  font-size: 10px;
+}
 
 /* Tabs */
 .worship-sidebar-tabs {
@@ -157,6 +178,82 @@
 .worship-song-item.active {
   background: var(--b-tile, #262626);
   border-left-color: var(--b-green, #00E676);
+}
+.worship-online-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.03);
+}
+.worship-online-item-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+.worship-online-item-info {
+  min-width: 0;
+}
+.worship-online-item-info h3 {
+  margin: 0;
+  color: var(--b-text-1, #E0E0E0);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+.worship-online-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 3px;
+  color: var(--b-text-3, #616161);
+  font-size: 10px;
+}
+.worship-online-source {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  border: 1px solid var(--b-border, #2C2C2C);
+  border-radius: 3px;
+  color: var(--b-text-2, #9E9E9E);
+  background: rgba(255, 255, 255, 0.02);
+}
+.worship-online-preview {
+  margin: 0;
+  color: var(--b-text-3, #616161);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.worship-online-action {
+  flex-shrink: 0;
+  min-width: 58px;
+  padding: 6px 8px;
+  border: 1px solid var(--b-border, #2C2C2C);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--b-text-2, #9E9E9E);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.worship-online-action:hover:not(:disabled) {
+  color: var(--b-text-1, #E0E0E0);
+  border-color: rgba(0, 230, 118, 0.45);
+  background: rgba(0, 230, 118, 0.08);
+}
+.worship-online-action:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.worship-online-status {
+  padding: 6px 12px 10px;
+  color: var(--b-text-3, #616161);
+  font-size: 11px;
+}
+.worship-online-status.error {
+  color: var(--b-red, #e74856);
 }
 .worship-song-item-info h3 {
   font-size: 13px;

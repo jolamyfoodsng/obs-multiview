@@ -14,12 +14,14 @@
 // https://tauri.localhost) is NOT reachable by OBS/CEF, so we need a real
 // localhost server.
 
-use serde::Serialize;
+use scraper::{Html, Selector};
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::{Cursor, Write};
 use std::path::{Component, Path};
 use std::sync::atomic::{AtomicU16, Ordering};
 use std::sync::{Arc, Mutex, OnceLock};
+use std::time::Duration;
 use tauri::Manager;
 use whisper_rs::{
     FullParams, SamplingStrategy, WhisperContext, WhisperContextParameters, WhisperState,
@@ -45,6 +47,9 @@ const COMMON_LIVE_HALLUCINATIONS: &[&str] = &[
     "thank you for watching",
     "thank you for watching.",
 ];
+const ONLINE_LYRICS_RESULT_LIMIT: usize = 18;
+const ONLINE_LYRICS_USER_AGENT: &str =
+    "OBSChurchStudio/1.0 (+https://localhost; worship-online-lyrics)";
 
 /// True if the directory contains the overlay HTML entrypoint(s).
 fn has_overlay_assets(dir: &std::path::Path) -> bool {
@@ -316,6 +321,688 @@ fn load_dock_data(name: String) -> Result<String, String> {
         );
     }
     Ok(contents)
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct OnlineLyricsSearchResult {
+    id: String,
+    source_id: String,
+    source_name: String,
+    title: String,
+    artist: String,
+    url: String,
+    preview: String,
+    lyrics: String,
+    thumbnail_url: Option<String>,
+    #[serde(skip_serializing)]
+    score: i32,
+}
+
+#[derive(Deserialize)]
+struct WpRenderedField {
+    rendered: String,
+}
+
+#[derive(Deserialize)]
+struct WpPost {
+    link: String,
+    title: WpRenderedField,
+    content: WpRenderedField,
+    #[serde(default)]
+    jetpack_featured_media_url: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct BloggerFeedResponse {
+    feed: BloggerFeed,
+}
+
+#[derive(Deserialize)]
+struct BloggerFeed {
+    #[serde(default)]
+    entry: Vec<BloggerEntry>,
+}
+
+#[derive(Deserialize)]
+struct BloggerTextValue {
+    #[serde(rename = "$t")]
+    value: String,
+}
+
+#[derive(Deserialize)]
+struct BloggerLink {
+    rel: String,
+    href: String,
+}
+
+#[derive(Deserialize)]
+struct BloggerThumbnail {
+    url: String,
+}
+
+#[derive(Deserialize)]
+struct BloggerEntry {
+    title: BloggerTextValue,
+    content: BloggerTextValue,
+    #[serde(default)]
+    link: Vec<BloggerLink>,
+    #[serde(rename = "media$thumbnail")]
+    thumbnail: Option<BloggerThumbnail>,
+}
+
+fn build_online_lyrics_client() -> Result<reqwest::blocking::Client, String> {
+    reqwest::blocking::Client::builder()
+        .connect_timeout(Duration::from_secs(10))
+        .timeout(Duration::from_secs(18))
+        .redirect(reqwest::redirect::Policy::limited(5))
+        .user_agent(ONLINE_LYRICS_USER_AGENT)
+        .build()
+        .map_err(|err| format!("Failed to create lyrics search client: {}", err))
+}
+
+fn parse_selector(selector: &str) -> Result<Selector, String> {
+    Selector::parse(selector).map_err(|err| format!("Invalid selector '{}': {:?}", selector, err))
+}
+
+fn clean_inline_text(text: &str) -> String {
+    text.replace('\u{00a0}', " ")
+        .replace('\u{2018}', "'")
+        .replace('\u{2019}', "'")
+        .replace('\u{201c}', "\"")
+        .replace('\u{201d}', "\"")
+        .replace('\u{2013}', "-")
+        .replace('\u{2014}', "-")
+        .split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .trim()
+        .to_string()
+}
+
+fn normalize_text_block(text: &str) -> String {
+    let mut lines = Vec::new();
+    let mut last_blank = false;
+
+    for raw_line in text.lines() {
+        let cleaned = clean_inline_text(raw_line);
+        if cleaned.is_empty() {
+            if !last_blank && !lines.is_empty() {
+                lines.push(String::new());
+            }
+            last_blank = true;
+            continue;
+        }
+
+        lines.push(cleaned);
+        last_blank = false;
+    }
+
+    lines.join("\n").trim().to_string()
+}
+
+fn html_fragment_to_text(fragment: &str) -> String {
+    let normalized_html = fragment
+        .replace("<br />", "\n")
+        .replace("<br/>", "\n")
+        .replace("<br>", "\n")
+        .replace("</p>", "\n\n")
+        .replace("</div>", "\n\n")
+        .replace("</li>", "\n")
+        .replace("</h1>", "\n")
+        .replace("</h2>", "\n")
+        .replace("</h3>", "\n")
+        .replace("</h4>", "\n")
+        .replace("</h5>", "\n")
+        .replace("</h6>", "\n");
+
+    let fragment = Html::parse_fragment(&normalized_html);
+    let text = fragment.root_element().text().collect::<Vec<_>>().join("");
+    normalize_text_block(&text)
+}
+
+fn strip_ascii_ci_prefix(text: &str, prefix: &str) -> String {
+    if text.len() >= prefix.len() && text[..prefix.len()].eq_ignore_ascii_case(prefix) {
+        text[prefix.len()..].trim().to_string()
+    } else {
+        text.trim().to_string()
+    }
+}
+
+fn strip_ascii_ci_suffix(text: &str, suffix: &str) -> String {
+    if text.len() >= suffix.len() && text[text.len() - suffix.len()..].eq_ignore_ascii_case(suffix) {
+        text[..text.len() - suffix.len()].trim().to_string()
+    } else {
+        text.trim().to_string()
+    }
+}
+
+fn split_ascii_ci_once<'a>(text: &'a str, separators: &[&str]) -> Option<(&'a str, &'a str)> {
+    let lower = text.to_ascii_lowercase();
+
+    for separator in separators {
+        let separator_lower = separator.to_ascii_lowercase();
+        if let Some(index) = lower.find(&separator_lower) {
+            let after_index = index + separator.len();
+            return Some((&text[..index], &text[after_index..]));
+        }
+    }
+
+    None
+}
+
+fn cleanup_song_title(raw_title: &str) -> String {
+    let mut title = clean_inline_text(raw_title);
+
+    for prefix in [
+        "[Download & Lyrics] ",
+        "[Download + Lyrics] ",
+        "Download & Lyrics ",
+        "Download + Lyrics ",
+    ] {
+        title = strip_ascii_ci_prefix(&title, prefix);
+    }
+
+    for suffix in [
+        "| Nigerian Gospel Lyrics",
+        "| African Gospel Lyrics",
+        "| New-age Gospel Lyrics",
+        "• New-age Gospel Lyrics",
+    ] {
+        title = strip_ascii_ci_suffix(&title, suffix);
+    }
+
+    for suffix in [
+        "Lyrics in-Full",
+        "Lyrics in Full",
+        "Full Lyrics and Video",
+        "Full Lyrics",
+        "Lyrics",
+    ] {
+        title = strip_ascii_ci_suffix(&title, suffix);
+    }
+
+    title
+        .trim_matches(|ch: char| matches!(ch, '-' | ':' | '|' | ' '))
+        .trim()
+        .to_string()
+}
+
+fn cleanup_artist_name(raw_artist: &str) -> String {
+    let mut artist = clean_inline_text(raw_artist);
+
+    for prefix in ["a song by ", "song by ", "by "] {
+        artist = strip_ascii_ci_prefix(&artist, prefix);
+    }
+
+    artist
+        .trim_matches(|ch: char| matches!(ch, '-' | ':' | '|' | ' '))
+        .trim()
+        .to_string()
+}
+
+fn extract_field_from_lines(text: &str, field_names: &[&str]) -> Option<String> {
+    for line in text.lines().take(10) {
+        let cleaned = clean_inline_text(line);
+        if cleaned.is_empty() {
+            continue;
+        }
+
+        let lower = cleaned.to_ascii_lowercase();
+        for field_name in field_names {
+            let normalized_field = field_name.to_ascii_lowercase();
+            if lower.starts_with(&normalized_field) {
+                if let Some((_, value)) = cleaned.split_once(':') {
+                    let value = clean_inline_text(value);
+                    if !value.is_empty() {
+                        return Some(value);
+                    }
+                }
+            }
+        }
+    }
+
+    None
+}
+
+fn extract_title_artist(raw_title: &str, raw_content_text: &str) -> (String, String) {
+    let content_title = extract_field_from_lines(raw_content_text, &["song title", "song tittle"]);
+    let content_artist = extract_field_from_lines(raw_content_text, &["artist"]);
+
+    let normalized_title = clean_inline_text(raw_title);
+    let (mut title, mut artist) = if let Some((before, after)) = split_ascii_ci_once(
+        &normalized_title,
+        &[
+            " Lyrics in-Full: a song by ",
+            " Lyrics in Full: a song by ",
+            " Lyrics by ",
+            " lyrics by ",
+            " - ",
+        ],
+    ) {
+        (cleanup_song_title(before), cleanup_artist_name(after))
+    } else {
+        (cleanup_song_title(&normalized_title), String::new())
+    };
+
+    if let Some(content_title) = content_title {
+        title = cleanup_song_title(&content_title);
+    }
+
+    if let Some(content_artist) = content_artist {
+        artist = cleanup_artist_name(&content_artist);
+    }
+
+    (title, artist)
+}
+
+fn should_break_lyrics(line: &str) -> bool {
+    let lower = line.to_ascii_lowercase();
+    matches!(
+        lower.as_str(),
+        "the video" | "video" | "watch the video" | "watch video"
+    ) || lower.contains("thanks for visiting")
+        || lower.contains("have a blessed week")
+        || lower.contains("property and copyright")
+        || lower.contains("personal and educational purpose only")
+        || lower.contains("contact us to dmca")
+}
+
+fn should_drop_lyrics_line(line: &str) -> bool {
+    let lower = line.to_ascii_lowercase();
+    lower.starts_with("song title:")
+        || lower.starts_with("song tittle:")
+        || lower.starts_with("artist:")
+        || lower.starts_with("album:")
+        || lower == "the full lyrics"
+        || lower == "full lyrics"
+        || lower == "contents:"
+        || lower == "toggle"
+        || lower.starts_with("read also")
+        || lower.starts_with("share this")
+        || lower.starts_with("download")
+}
+
+fn prune_lyrics_text(text: &str) -> String {
+    let normalized = normalize_text_block(text);
+    let mut lines = Vec::new();
+    let mut last_blank = false;
+
+    for line in normalized.lines() {
+        if should_break_lyrics(line) {
+            break;
+        }
+        if should_drop_lyrics_line(line) {
+            continue;
+        }
+
+        if line.trim().is_empty() {
+            if !last_blank && !lines.is_empty() {
+                lines.push(String::new());
+            }
+            last_blank = true;
+            continue;
+        }
+
+        lines.push(line.trim().to_string());
+        last_blank = false;
+    }
+
+    lines.join("\n").trim().to_string()
+}
+
+fn build_preview(text: &str) -> String {
+    let joined = text
+        .lines()
+        .map(clean_inline_text)
+        .filter(|line| !line.is_empty())
+        .take(3)
+        .collect::<Vec<_>>()
+        .join(" ");
+
+    let mut preview = joined.trim().to_string();
+    if preview.len() > 190 {
+        preview.truncate(187);
+        preview.push_str("...");
+    }
+    preview
+}
+
+fn tokenize_query(query: &str) -> Vec<String> {
+    let mut tokens = Vec::new();
+    let mut current = String::new();
+
+    for ch in query.chars() {
+        if ch.is_ascii_alphanumeric() {
+            current.push(ch.to_ascii_lowercase());
+        } else if !current.is_empty() {
+            tokens.push(current.clone());
+            current.clear();
+        }
+    }
+
+    if !current.is_empty() {
+        tokens.push(current);
+    }
+
+    tokens
+        .into_iter()
+        .filter(|token| {
+            token.len() > 1
+                && !matches!(
+                    token.as_str(),
+                    "lyrics"
+                        | "lyric"
+                        | "song"
+                        | "songs"
+                        | "full"
+                        | "video"
+                        | "download"
+                        | "the"
+                        | "and"
+                        | "feat"
+                        | "ft"
+                        | "with"
+                        | "for"
+                        | "from"
+                        | "by"
+                )
+        })
+        .collect()
+}
+
+fn compute_result_score(
+    query: &str,
+    title: &str,
+    artist: &str,
+    preview: &str,
+    lyrics: &str,
+) -> i32 {
+    let title_lower = title.to_ascii_lowercase();
+    let artist_lower = artist.to_ascii_lowercase();
+    let preview_lower = preview.to_ascii_lowercase();
+    let lyrics_lower = lyrics.to_ascii_lowercase();
+    let query_lower = query.trim().to_ascii_lowercase();
+    let mut score = 0;
+
+    if !query_lower.is_empty() && title_lower.contains(&query_lower) {
+        score += 220;
+    }
+    if !query_lower.is_empty() && artist_lower.contains(&query_lower) {
+        score += 70;
+    }
+
+    for token in tokenize_query(query) {
+        if title_lower.contains(&token) {
+            score += 34;
+        }
+        if artist_lower.contains(&token) {
+            score += 22;
+        }
+        if preview_lower.contains(&token) {
+            score += 12;
+        } else if lyrics_lower.contains(&token) {
+            score += 8;
+        }
+    }
+
+    if !artist.is_empty() {
+        score += 12;
+    }
+    if lyrics.len() > 140 {
+        score += 18;
+    }
+    if lyrics.len() > 480 {
+        score += 10;
+    }
+
+    for penalty in [
+        "biography",
+        "songs lyrics",
+        "songs and lyrics",
+        "lyricspedia",
+        "ultimate list",
+        "top 15",
+        "top 10",
+        "album",
+        "albums",
+        "artists",
+        "full biography",
+    ] {
+        if title_lower.contains(penalty) {
+            score -= 120;
+        }
+    }
+
+    score
+}
+
+fn build_result(
+    source_id: &str,
+    source_name: &str,
+    raw_title: &str,
+    raw_content: &str,
+    url: &str,
+    thumbnail_url: Option<String>,
+    query: &str,
+) -> Option<OnlineLyricsSearchResult> {
+    let content_text = html_fragment_to_text(raw_content);
+    let lyrics = prune_lyrics_text(&content_text);
+    let (title, artist) = extract_title_artist(raw_title, &content_text);
+    let preview_source = if !lyrics.is_empty() { &lyrics } else { &content_text };
+    let preview = build_preview(preview_source);
+    let score = compute_result_score(query, &title, &artist, &preview, &lyrics);
+
+    if title.is_empty() || url.trim().is_empty() || (lyrics.len() < 40 && preview.len() < 24) || score < 24 {
+        return None;
+    }
+
+    Some(OnlineLyricsSearchResult {
+        id: format!("{}:{}", source_id, url),
+        source_id: source_id.to_string(),
+        source_name: source_name.to_string(),
+        title,
+        artist,
+        url: url.to_string(),
+        preview,
+        lyrics,
+        thumbnail_url,
+        score,
+    })
+}
+
+fn search_wordpress_source(
+    client: &reqwest::blocking::Client,
+    source_id: &str,
+    source_name: &str,
+    api_url: &str,
+    query: &str,
+) -> Result<Vec<OnlineLyricsSearchResult>, String> {
+    let response = client
+        .get(api_url)
+        .query(&[
+            ("search", query),
+            ("per_page", "6"),
+            ("_fields", "link,title,content,jetpack_featured_media_url"),
+        ])
+        .send()
+        .map_err(|err| format!("{} search failed: {}", source_name, err))?
+        .error_for_status()
+        .map_err(|err| format!("{} search failed: {}", source_name, err))?;
+
+    let posts: Vec<WpPost> = response
+        .json()
+        .map_err(|err| format!("{} search decode failed: {}", source_name, err))?;
+
+    let mut results = posts
+        .into_iter()
+        .filter_map(|post| {
+            build_result(
+                source_id,
+                source_name,
+                &html_fragment_to_text(&post.title.rendered),
+                &post.content.rendered,
+                &post.link,
+                post.jetpack_featured_media_url,
+                query,
+            )
+        })
+        .collect::<Vec<_>>();
+
+    results.sort_by(|left, right| right.score.cmp(&left.score));
+    Ok(results)
+}
+
+fn search_african_gospel_lyrics(
+    client: &reqwest::blocking::Client,
+    query: &str,
+) -> Result<Vec<OnlineLyricsSearchResult>, String> {
+    let response = client
+        .get("https://africangospellyrics.com/")
+        .query(&[("s", query)])
+        .send()
+        .map_err(|err| format!("African Gospel Lyrics search failed: {}", err))?
+        .error_for_status()
+        .map_err(|err| format!("African Gospel Lyrics search failed: {}", err))?;
+
+    let search_html = response
+        .text()
+        .map_err(|err| format!("African Gospel Lyrics search decode failed: {}", err))?;
+    let search_doc = Html::parse_document(&search_html);
+    let post_selector = parse_selector("div.post")?;
+    let title_selector = parse_selector("h2.post-title a")?;
+    let content_selector = parse_selector("div.post-content")?;
+
+    let mut results = Vec::new();
+
+    for post in search_doc.select(&post_selector).take(4) {
+        let Some(link) = post.select(&title_selector).next() else {
+            continue;
+        };
+
+        let url = link.value().attr("href").unwrap_or("").trim().to_string();
+        if url.is_empty() {
+            continue;
+        }
+
+        let title = clean_inline_text(&link.text().collect::<Vec<_>>().join(" "));
+        let detail_html = client
+            .get(&url)
+            .send()
+            .and_then(|response| response.error_for_status())
+            .map_err(|err| format!("African Gospel Lyrics detail fetch failed: {}", err))?
+            .text()
+            .map_err(|err| format!("African Gospel Lyrics detail decode failed: {}", err))?;
+        let detail_doc = Html::parse_document(&detail_html);
+        let raw_content = detail_doc
+            .select(&content_selector)
+            .next()
+            .map(|node| node.inner_html())
+            .unwrap_or_default();
+
+        if let Some(result) = build_result(
+            "africangospellyrics",
+            "African Gospel Lyrics",
+            &title,
+            &raw_content,
+            &url,
+            None,
+            query,
+        ) {
+            results.push(result);
+        }
+    }
+
+    results.sort_by(|left, right| right.score.cmp(&left.score));
+    Ok(results)
+}
+
+fn search_godlyrics(
+    client: &reqwest::blocking::Client,
+    query: &str,
+) -> Result<Vec<OnlineLyricsSearchResult>, String> {
+    let response = client
+        .get("https://www.godlyrics.com.ng/feeds/posts/default")
+        .query(&[("q", query), ("alt", "json")])
+        .send()
+        .map_err(|err| format!("GodLyrics search failed: {}", err))?
+        .error_for_status()
+        .map_err(|err| format!("GodLyrics search failed: {}", err))?;
+
+    let payload: BloggerFeedResponse = response
+        .json()
+        .map_err(|err| format!("GodLyrics search decode failed: {}", err))?;
+
+    let mut results = payload
+        .feed
+        .entry
+        .into_iter()
+        .filter_map(|entry| {
+            let url = entry
+                .link
+                .iter()
+                .find(|link| link.rel == "alternate")
+                .map(|link| link.href.clone())?;
+
+            build_result(
+                "godlyrics",
+                "GodLyrics",
+                &entry.title.value,
+                &entry.content.value,
+                &url,
+                entry.thumbnail.map(|thumbnail| thumbnail.url),
+                query,
+            )
+        })
+        .collect::<Vec<_>>();
+
+    results.sort_by(|left, right| right.score.cmp(&left.score));
+    Ok(results)
+}
+
+fn search_online_song_lyrics_blocking(query: String) -> Result<Vec<OnlineLyricsSearchResult>, String> {
+    let trimmed_query = clean_inline_text(query.trim());
+    if trimmed_query.len() < 3 {
+        return Ok(Vec::new());
+    }
+
+    let client = build_online_lyrics_client()?;
+    let mut results = Vec::new();
+
+    for source_results in [
+        search_wordpress_source(
+            &client,
+            "gospellyricsng",
+            "GospellyricsNG",
+            "https://gospellyricsng.com/wp-json/wp/v2/posts",
+            &trimmed_query,
+        ),
+        search_wordpress_source(
+            &client,
+            "nglyrics",
+            "NgLyrics",
+            "https://www.nglyrics.net/wp-json/wp/v2/posts",
+            &trimmed_query,
+        ),
+        search_african_gospel_lyrics(&client, &trimmed_query),
+        search_godlyrics(&client, &trimmed_query),
+    ] {
+        match source_results {
+            Ok(mut items) => results.append(&mut items),
+            Err(err) => eprintln!("[OnlineLyrics] {}", err),
+        }
+    }
+
+    results.sort_by(|left, right| right.score.cmp(&left.score));
+    results.truncate(ONLINE_LYRICS_RESULT_LIMIT);
+    Ok(results)
+}
+
+#[tauri::command]
+async fn search_online_song_lyrics(query: String) -> Result<Vec<OnlineLyricsSearchResult>, String> {
+    tauri::async_runtime::spawn_blocking(move || search_online_song_lyrics_blocking(query))
+        .await
+        .map_err(|err| format!("Lyrics search task failed: {}", err))?
 }
 
 #[derive(Serialize)]
@@ -1206,6 +1893,7 @@ pub fn run() {
             get_overlay_port,
             save_dock_data,
             load_dock_data,
+            search_online_song_lyrics,
             get_voice_bible_runtime_status,
             prepare_voice_bible_model,
             transcribe_voice_audio

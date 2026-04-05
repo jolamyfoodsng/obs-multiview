@@ -30,6 +30,9 @@ function themePreviewStyle(settings: BibleThemeSettings) {
 export default function DockBibleThemePicker({ selectedThemeId, onSelect, label, templateType }: Props) {
   const [allThemes, setAllThemes] = useState<BibleTheme[]>([]);
   const [showBrowser, setShowBrowser] = useState(false);
+  const resolvedLabel = typeof label === "string" ? label.trim() : "Bible Theme";
+  const showLabel = typeof label === "string" ? resolvedLabel.length > 0 : true;
+  const previewRatio = templateType === "fullscreen" ? 0.15 : 0.18;
 
   const loadThemes = useCallback(async () => {
     const favorites = await loadDockFavoriteBibleThemes(templateType);
@@ -65,10 +68,20 @@ export default function DockBibleThemePicker({ selectedThemeId, onSelect, label,
 
   return (
     <>
-      <div className="dock-bible-theme-picker">
-        <div className="dock-section-label" style={{ marginBottom: 4 }}>
-          {label ?? "Bible Theme"}
-        </div>
+      <div
+        className={[
+          "dock-bible-theme-picker",
+          templateType === "fullscreen" ? "dock-bible-theme-picker--fullscreen" : "",
+          !showLabel ? "dock-bible-theme-picker--label-less" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        {showLabel && (
+          <div className="dock-section-label" style={{ marginBottom: 4 }}>
+            {resolvedLabel}
+          </div>
+        )}
 
         <button
           className="dock-theme-dropdown-trigger dock-theme-dropdown-trigger--preview"
@@ -84,7 +97,7 @@ export default function DockBibleThemePicker({ selectedThemeId, onSelect, label,
                 <span
                   className="dock-theme-dropdown-trigger__sample-main"
                   style={{
-                    fontSize: clampPreviewSize(selected.settings.fontSize, 10, 18),
+                    fontSize: clampPreviewSize(selected.settings.fontSize, 9, 16, previewRatio),
                     fontWeight: selected.settings.fontWeight === "light" ? 400 : selected.settings.fontWeight === "bold" ? 700 : 500,
                     textTransform: selected.settings.textTransform,
                     lineHeight: 1.05,
@@ -95,7 +108,7 @@ export default function DockBibleThemePicker({ selectedThemeId, onSelect, label,
                 <span
                   className="dock-theme-dropdown-trigger__sample-ref"
                   style={{
-                    fontSize: clampPreviewSize(selected.settings.refFontSize, 8, 12),
+                    fontSize: clampPreviewSize(selected.settings.refFontSize, 7, 11, previewRatio),
                     color: selected.settings.refFontColor || selected.settings.fontColor || "#fff",
                     fontWeight: selected.settings.refFontWeight === "light" ? 400 : selected.settings.refFontWeight === "bold" ? 700 : 500,
                   }}
@@ -112,12 +125,12 @@ export default function DockBibleThemePicker({ selectedThemeId, onSelect, label,
         </button>
       </div>
 
-      <DockThemeBrowserModal
+        <DockThemeBrowserModal
         open={showBrowser}
         selectedThemeId={selectedThemeId}
         onSelect={handleSelect}
         onClose={() => setShowBrowser(false)}
-        title={label ?? "Select Bible Theme"}
+        title={showLabel ? resolvedLabel : "Select Bible Theme"}
         templateType={templateType}
       />
     </>

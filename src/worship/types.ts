@@ -22,6 +22,9 @@ export interface Song {
   slides: Slide[];
   createdAt: string;
   updatedAt: string;
+  importSourceName?: string;
+  importSourceType?: "manual" | "online";
+  importSourceUrl?: string;
   archived?: boolean;
   archivedAt?: string | null;
 }

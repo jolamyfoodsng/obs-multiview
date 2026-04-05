@@ -18,6 +18,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { generateSlides } from "../../worship/slideEngine";
 import { archiveSong, getAllSongs, saveSong, syncSongsToDock } from "../../worship/worshipDb";
 import { worshipObsService } from "../../worship/worshipObsService";
+import { searchOnlineSongLyrics, type OnlineLyricsSearchResult } from "../../worship/onlineLyricsService";
 import { lowerThirdObsService } from "../../lowerthirds/lowerThirdObsService";
 import { dockObsClient } from "../../dock/dockObsClient";
 import { ensureDockObsClientConnected } from "../../services/dockObsInterop";
@@ -74,6 +75,29 @@ const DEFAULT_WORSHIP_THEME_ID = WORSHIP_THEME_OPTIONS[0]?.id ?? "";
 const WORSHIP_FULLSCREEN_THEME_FALLBACKS: BibleTheme[] = BUILTIN_THEMES.filter(
   (theme) => theme.templateType === "fullscreen",
 );
+const MIN_ONLINE_LYRICS_QUERY_LENGTH = 3;
+const ONLINE_LYRICS_SEARCH_DELAY_MS = 320;
+
+function normalizeSongLookupPart(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function buildSongLookupKeys(title: string, artist: string): string[] {
+  const normalizedTitle = normalizeSongLookupPart(title);
+  const normalizedArtist = normalizeSongLookupPart(artist);
+
+  if (!normalizedTitle) {
+    return [];
+  }
+
+  return normalizedArtist
+    ? [`${normalizedTitle}::${normalizedArtist}`, normalizedTitle]
+    : [normalizedTitle];
+}
 
 // ---------------------------------------------------------------------------
 // Default song seeded on first launch
@@ -126,6 +150,10 @@ export function WorshipModule({
   const [songSearch, setSongSearch] = useState("");
   const [songsLoaded, setSongsLoaded] = useState(false);
   const [confirmDeleteSong, setConfirmDeleteSong] = useState<Song | null>(null);
+  const [onlineSearchResults, setOnlineSearchResults] = useState<OnlineLyricsSearchResult[]>([]);
+  const [onlineSearchState, setOnlineSearchState] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [onlineSearchMessage, setOnlineSearchMessage] = useState("");
+  const [importingOnlineId, setImportingOnlineId] = useState<string | null>(null);
 
   // ── Theme state ──
   const [themes, setThemes] = useState<BibleTheme[]>(WORSHIP_FULLSCREEN_THEME_FALLBACKS);
@@ -214,6 +242,7 @@ export function WorshipModule({
 
   // ── Refs ──
   const slideListRef = useRef<HTMLDivElement>(null);
+  const onlineSearchRequestRef = useRef(0);
 
   // ── Service gate (no-op — service gate concept removed) ──
   const { checkServiceActive } = useServiceGate();
@@ -387,6 +416,77 @@ export function WorshipModule({
     );
   }, [songs, songSearch]);
 
+  const importedSongsLookup = useMemo(() => {
+    const lookup = new Map<string, Song>();
+
+    for (const song of songs) {
+      for (const key of buildSongLookupKeys(song.metadata.title, song.metadata.artist)) {
+        if (!lookup.has(key)) {
+          lookup.set(key, song);
+        }
+      }
+    }
+
+    return lookup;
+  }, [songs]);
+
+  const findImportedSong = useCallback((result: OnlineLyricsSearchResult): Song | undefined => {
+    for (const key of buildSongLookupKeys(result.title, result.artist)) {
+      const existing = importedSongsLookup.get(key);
+      if (existing) {
+        return existing;
+      }
+    }
+    return undefined;
+  }, [importedSongsLookup]);
+
+  useEffect(() => {
+    const trimmedSearch = songSearch.trim();
+
+    if (!trimmedSearch) {
+      onlineSearchRequestRef.current += 1;
+      setOnlineSearchResults([]);
+      setOnlineSearchState("idle");
+      setOnlineSearchMessage("");
+      return;
+    }
+
+    if (trimmedSearch.length < MIN_ONLINE_LYRICS_QUERY_LENGTH) {
+      onlineSearchRequestRef.current += 1;
+      setOnlineSearchResults([]);
+      setOnlineSearchState("idle");
+      setOnlineSearchMessage(`Type at least ${MIN_ONLINE_LYRICS_QUERY_LENGTH} letters to search online lyrics.`);
+      return;
+    }
+
+    const requestId = onlineSearchRequestRef.current + 1;
+    onlineSearchRequestRef.current = requestId;
+    setOnlineSearchState("loading");
+    setOnlineSearchMessage("");
+
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        const results = await searchOnlineSongLyrics(trimmedSearch);
+        if (onlineSearchRequestRef.current !== requestId) {
+          return;
+        }
+        setOnlineSearchResults(results);
+        setOnlineSearchState("ready");
+        setOnlineSearchMessage(results.length === 0 ? "No online lyrics found for this search yet." : "");
+      } catch (error) {
+        if (onlineSearchRequestRef.current !== requestId) {
+          return;
+        }
+        console.warn("[Worship] Online lyrics search failed:", error);
+        setOnlineSearchResults([]);
+        setOnlineSearchState("error");
+        setOnlineSearchMessage("Online lyrics search failed. Try again in a moment.");
+      }
+    }, ONLINE_LYRICS_SEARCH_DELAY_MS);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [songSearch]);
+
   const worshipCustomStyles = useMemo<LTCustomStyle>(() => ({
     bgColor: "",
     textColor: "",
@@ -402,6 +502,12 @@ export function WorshipModule({
     const dbSongs = await getAllSongs();
     setSongs(dbSongs);
     return dbSongs;
+  }, []);
+
+  const selectSongById = useCallback((songId: string) => {
+    setSelectedSongId(songId);
+    setLiveSlideIndex(0);
+    setEditingSlideIdx(null);
   }, []);
 
   // ── Push currently-selected slide with a specific theme ──
@@ -852,6 +958,7 @@ export function WorshipModule({
       slides: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      importSourceType: "manual",
     };
     await saveSong(newSong);
     await reloadSongs();
@@ -860,6 +967,44 @@ export function WorshipModule({
     setImportLyrics("");
     setImportMetadata({ title: "", artist: "" });
   }, [importMetadata, importLyrics, reloadSongs]);
+
+  const handleImportOnlineSong = useCallback(async (result: OnlineLyricsSearchResult) => {
+    const existingSong = findImportedSong(result);
+    if (existingSong) {
+      selectSongById(existingSong.id);
+      return;
+    }
+
+    const lyrics = result.lyrics.trim();
+    if (!lyrics) {
+      return;
+    }
+
+    const now = new Date().toISOString();
+    const newSong: Song = {
+      id: `song-online-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      metadata: {
+        title: result.title.trim() || songSearch.trim() || "Imported Song",
+        artist: result.artist.trim(),
+      },
+      lyrics,
+      slides: [],
+      createdAt: now,
+      updatedAt: now,
+      importSourceName: result.sourceName,
+      importSourceType: "online",
+      importSourceUrl: result.url,
+    };
+
+    setImportingOnlineId(result.id);
+    try {
+      await saveSong(newSong);
+      await reloadSongs();
+      selectSongById(newSong.id);
+    } finally {
+      setImportingOnlineId(null);
+    }
+  }, [findImportedSong, reloadSongs, selectSongById, songSearch]);
 
   // ── Keyboard shortcuts ──
   useEffect(() => {
@@ -1083,7 +1228,7 @@ export function WorshipModule({
               <Icon name="search" size={20} />
               <input
                 type="text"
-                placeholder="Search library…"
+                placeholder="Search library or online lyrics…"
                 value={songSearch}
                 onChange={(e) => setSongSearch(e.target.value)}
               />
@@ -1102,46 +1247,108 @@ export function WorshipModule({
             </div>
 
             <div className="worship-sidebar-list">
-              {filteredSongs.length === 0 && (
-                <div className="worship-sidebar-empty">
-                  <Icon name="library_music" size={20} />
-                  <p>No songs yet</p>
+              {songSearch.trim() && (
+                <div className="worship-sidebar-section">
+                  <div className="worship-sidebar-section-head">
+                    <span className="worship-sidebar-section-label">Library</span>
+                    <span className="worship-sidebar-section-note">
+                      {filteredSongs.length} result{filteredSongs.length === 1 ? "" : "s"}
+                    </span>
+                  </div>
                 </div>
               )}
-              {filteredSongs.map((song) => {
-                const isActive = song.id === selectedSongId;
-                return (
-                  <div
-                    key={song.id}
-                    className={`worship-song-item${isActive ? " active" : ""}`}
-                    onClick={() => {
-                      setSelectedSongId(song.id);
-                      setLiveSlideIndex(0);
-                      setEditingSlideIdx(null);
-                    }}
-                  >
-                    <div className="worship-song-item-info">
-                      <h3>{song.metadata.title}</h3>
-                      <span className="worship-song-item-artist">{song.metadata.artist}</span>
+
+              {filteredSongs.length === 0 ? (
+                <div className="worship-sidebar-empty">
+                  <Icon name="library_music" size={20} />
+                  <p>{songSearch.trim() ? "No library matches" : "No songs yet"}</p>
+                </div>
+              ) : (
+                filteredSongs.map((song) => {
+                  const isActive = song.id === selectedSongId;
+                  return (
+                    <div
+                      key={song.id}
+                      className={`worship-song-item${isActive ? " active" : ""}`}
+                      onClick={() => {
+                        selectSongById(song.id);
+                      }}
+                    >
+                      <div className="worship-song-item-info">
+                        <h3>{song.metadata.title}</h3>
+                        <span className="worship-song-item-artist">{song.metadata.artist}</span>
+                      </div>
+                      <div className="worship-song-item-actions">
+                        {isActive && (
+                          <Icon name="graphic_eq" size={20} className="worship-song-item-playing" />
+                        )}
+                        <button
+                          className="worship-song-delete-btn"
+                          title="Archive song"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setConfirmDeleteSong(song);
+                          }}
+                        >
+                          <Icon name="archive" size={20} />
+                        </button>
+                      </div>
                     </div>
-                    <div className="worship-song-item-actions">
-                      {isActive && (
-                        <Icon name="graphic_eq" size={20} className="worship-song-item-playing" />
-                      )}
-                      <button
-                        className="worship-song-delete-btn"
-                        title="Archive song"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setConfirmDeleteSong(song);
-                        }}
-                      >
-                        <Icon name="archive" size={20} />
-                      </button>
-                    </div>
+                  );
+                })
+              )}
+
+              {songSearch.trim() && (
+                <div className="worship-sidebar-section">
+                  <div className="worship-sidebar-section-head">
+                    <span className="worship-sidebar-section-label">Online Lyrics</span>
+                    <span className="worship-sidebar-section-note">Import straight into worship</span>
                   </div>
-                );
-              })}
+
+                  {onlineSearchState === "loading" && (
+                    <div className="worship-online-status">Searching online lyrics…</div>
+                  )}
+
+                  {onlineSearchState !== "loading" && onlineSearchMessage && (
+                    <div className={`worship-online-status${onlineSearchState === "error" ? " error" : ""}`}>
+                      {onlineSearchMessage}
+                    </div>
+                  )}
+
+                  {onlineSearchResults.map((result) => {
+                    const importedSong = findImportedSong(result);
+                    const actionLabel = importedSong ? "Open" : "Import";
+                    const isImporting = importingOnlineId === result.id;
+                    return (
+                      <div key={result.id} className="worship-online-item">
+                        <div className="worship-online-item-head">
+                          <div className="worship-online-item-info">
+                            <h3>{result.title}</h3>
+                            <div className="worship-online-item-meta">
+                              <span>{result.artist || "Unknown artist"}</span>
+                              <span className="worship-online-source">{result.sourceName}</span>
+                            </div>
+                          </div>
+                          <button
+                            className="worship-online-action"
+                            disabled={isImporting}
+                            onClick={() => {
+                              if (importedSong) {
+                                selectSongById(importedSong.id);
+                                return;
+                              }
+                              void handleImportOnlineSong(result);
+                            }}
+                          >
+                            {isImporting ? "Saving…" : actionLabel}
+                          </button>
+                        </div>
+                        <p className="worship-online-preview">{result.preview}</p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             <div className="worship-sidebar-footer">
