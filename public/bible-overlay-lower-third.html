@@ -30,10 +30,6 @@
     transition: opacity var(--anim-duration, 400ms) ease;
   }
 
-  #background.blank {
-    opacity: 0;
-  }
-
   #overlay {
     position: absolute;
     bottom: 0;
@@ -221,7 +217,7 @@
    * No external WebSocket / HTTP server required.
    */
 
-  const POLL_INTERVAL = 300;
+  const POLL_INTERVAL = 100;
   const FONT_SIZE_MIN = 12;
   const REF_FONT_SIZE_MIN = 10;
 
@@ -499,7 +495,6 @@
 
     if (!data.slide) {
       overlay.classList.add('hidden');
-      background.classList.remove('blank');
       currentSlideId = null;
       hasShownOnce = false;  // Reset so next appearance animates
       return;
@@ -513,11 +508,9 @@
 
     if (data.blanked) {
       overlay.classList.add('blank');
-      background.classList.add('blank');
       return;
     } else {
       overlay.classList.remove('blank');
-      background.classList.remove('blank');
     }
 
     // Always show the overlay when we have a slide — the dock/app controls

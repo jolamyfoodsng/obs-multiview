@@ -78,6 +78,7 @@ const DOCK_BIBLE_SCENE = "⛪ OCS Bible";
 const DOCK_WORSHIP_SCENE = "⛪ OCS Worship";
 const DOCK_PREVIEW_BIBLE_SCENE = "⛪ OCS Preview Bible";
 const DOCK_PREVIEW_WORSHIP_SCENE = "⛪ OCS Preview Worship";
+const FULLSCREEN_CLEAR_WAIT_MS = 240;
 
 interface DockResourceNames {
   ltSource: string;
@@ -2221,7 +2222,7 @@ class DockObsClient {
       });
       const overlayCss = this.buildCssOverlayDataCss(cssOverlayPacket, themeCss);
       if (modeChanged || this._lastFullscreenSourceSignature[resources.bibleSource] !== sourceSignature) {
-        await this.setBrowserSourceUrl(resources.bibleSource, url, modeChanged, overlayCss);
+        await this.setBrowserSourceUrl(resources.bibleSource, cssOverlayBaseUrl, modeChanged, overlayCss);
         this._lastFullscreenSourceSignature[resources.bibleSource] = sourceSignature;
       }
       this._lastCssOverlayPacketBySource[resources.bibleSource] = cssOverlayPacket;
@@ -2274,7 +2275,10 @@ class DockObsClient {
             blankedPacket,
             this._lastCssOverlayThemeCssBySource[resources.bibleSource] || "",
           );
-          await this.setBrowserSourceUrl(resources.bibleSource, `${cachedBaseUrl}#data=${encodeURIComponent(JSON.stringify(blankedPacket))}`, false, overlayCss);
+          await this.call("SetInputSettings", {
+            inputName: resources.bibleSource,
+            inputSettings: { css: overlayCss },
+          });
         } else {
           const fallbackUrl = lastMode === "lower-third"
             ? this.buildBibleUrl(null, false, true, null, "lower-third")
@@ -2286,7 +2290,7 @@ class DockObsClient {
     }
 
     // Wait for exit animation before hiding the source
-    await new Promise((r) => setTimeout(r, 800));
+    await new Promise((r) => setTimeout(r, FULLSCREEN_CLEAR_WAIT_MS));
 
     const scenes = new Set<string>();
     try {
@@ -2474,7 +2478,7 @@ class DockObsClient {
     }
 
     // Wait for exit animation before hiding the source
-    await new Promise((r) => setTimeout(r, 800));
+    await new Promise((r) => setTimeout(r, FULLSCREEN_CLEAR_WAIT_MS));
 
     const scenes = new Set<string>();
     try {
@@ -2776,7 +2780,7 @@ class DockObsClient {
       });
       const overlayCss = this.buildCssOverlayDataCss(cssOverlayPacket, themeCss);
       if (modeChanged || this._lastFullscreenSourceSignature[resources.worshipSource] !== sourceSignature) {
-        await this.setBrowserSourceUrl(resources.worshipSource, url, modeChanged, overlayCss);
+        await this.setBrowserSourceUrl(resources.worshipSource, cssOverlayBaseUrl, modeChanged, overlayCss);
         this._lastFullscreenSourceSignature[resources.worshipSource] = sourceSignature;
       }
       this._lastCssOverlayPacketBySource[resources.worshipSource] = cssOverlayPacket;
@@ -2812,7 +2816,10 @@ class DockObsClient {
             blankedPacket,
             this._lastCssOverlayThemeCssBySource[resources.worshipSource] || "",
           );
-          await this.setBrowserSourceUrl(resources.worshipSource, `${cachedBaseUrl}#data=${encodeURIComponent(JSON.stringify(blankedPacket))}`, false, overlayCss);
+          await this.call("SetInputSettings", {
+            inputName: resources.worshipSource,
+            inputSettings: { css: overlayCss },
+          });
         } else {
           const fallbackUrl = lastMode === "fullscreen"
             ? this.buildWorshipFullscreenUrl("", "", "", "", false, true)

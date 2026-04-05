@@ -28,6 +28,7 @@ const SLOT_INPUT = "worship-browser-source";
 const SLOT_BG_INPUT = "worship-bg-source";
 const SLOT_ITEM = `${SLOT_SCENE}:${SLOT_INPUT}`;
 const SLOT_BG_ITEM = `${SLOT_SCENE}:${SLOT_BG_INPUT}`;
+const FULLSCREEN_CLEAR_WAIT_MS = 240;
 
 class WorshipObsService {
   private sceneItemId: number | null = null;
@@ -121,7 +122,7 @@ class WorshipObsService {
   }
 
   private async resolveTrackedSourceNames(): Promise<Set<string>> {
-    const names = new Set<string>([WORSHIP_SOURCE_NAME, WORSHIP_BG_SOURCE_NAME]);
+    const names = new Set<string>([WORSHIP_SOURCE_NAME, WORSHIP_BG_SOURCE_NAME, WORSHIP_SCENE_NAME]);
     try {
       const inputs = await obsService.getInputList();
       const regMain = await getInputBySlot(SLOT_INPUT);
@@ -134,6 +135,8 @@ class WorshipObsService {
         const found = inputs.find((input) => input.inputUuid === regBg.inputUuid);
         if (found?.inputName) names.add(found.inputName);
       }
+      const regScene = await getSceneBySlot(SLOT_SCENE);
+      if (regScene?.sceneName) names.add(regScene.sceneName);
     } catch {
       // Fallback to default source names.
     }
@@ -325,8 +328,7 @@ class WorshipObsService {
       );
       if (existing) {
         browserItemId = existing.sceneItemId;
-        // Update URL
-        let ensureUrl = overlayUrl;
+        let overlayCss = "";
         if (this._isLive && this._liveText) {
           const slide: BibleSlide = {
             id: "worship-live",
@@ -338,17 +340,12 @@ class WorshipObsService {
           };
           const { themeForHash, customCss } = this.buildThemePayload(this._liveTheme);
           const packet = { slide, theme: themeForHash, live: true, blanked: this._isBlanked, timestamp: Date.now() };
-          ensureUrl = `${overlayUrl}#data=${encodeURIComponent(JSON.stringify(packet))}`;
-          await obsService.call("SetInputSettings", {
-            inputName: existing.sourceName,
-            inputSettings: { url: ensureUrl, width: canvas.width, height: canvas.height, css: customCss || "" },
-          });
-        } else {
-          await obsService.call("SetInputSettings", {
-            inputName: existing.sourceName,
-            inputSettings: { url: ensureUrl, width: canvas.width, height: canvas.height, css: "" },
-          });
+          overlayCss = this.buildOverlayDataCss(packet as unknown as Record<string, unknown>, customCss || "");
         }
+        await obsService.call("SetInputSettings", {
+          inputName: existing.sourceName,
+          inputSettings: { url: overlayUrl, width: canvas.width, height: canvas.height, css: overlayCss },
+        });
       }
     } catch { /* scene might be empty */ }
 
@@ -708,10 +705,8 @@ class WorshipObsService {
       const { themeForHash, customCss } = this.buildThemePayload(theme);
 
       const packet = { slide, theme: themeForHash, live, blanked, timestamp: Date.now() };
-      const encoded = encodeURIComponent(JSON.stringify(packet));
       const base = getOverlayBaseUrlSync();
       const baseUrl = `${base}/bible-overlay-fullscreen.html`;
-      const url = `${baseUrl}#data=${encoded}`;
       const overlayCss = this.buildOverlayDataCss(packet as unknown as Record<string, unknown>, customCss || "");
       const sourceSignature = JSON.stringify({
         baseUrl,
@@ -727,9 +722,12 @@ class WorshipObsService {
       }
 
       if (this._lastOverlayTransportSignature !== sourceSignature || blanked || !slide) {
+        const inputSettings = this._lastOverlayTransportSignature !== sourceSignature
+          ? { url: baseUrl, css: overlayCss }
+          : { css: overlayCss };
         await obsService.call("SetInputSettings", {
           inputName: resolvedInputName,
-          inputSettings: { url, css: overlayCss },
+          inputSettings,
         });
         this._lastOverlayTransportSignature = sourceSignature;
       }
@@ -812,12 +810,33 @@ class WorshipObsService {
   }
 
   async clearOverlay(sceneNames?: string[]): Promise<void> {
+    const liveText = this._liveText;
+    const liveRef = this._liveRef ?? "";
+    const liveTheme = this._liveTheme;
+
     this._liveText = null;
     this._liveRef = null;
     this._isLive = false;
     this._isBlanked = false;
 
     if (!obsService.isConnected) return;
+
+    if (this.sceneItemId !== null && liveText) {
+      try {
+        await this.pushSlide(liveText, liveRef, liveTheme, false, true);
+        await new Promise((resolve) => window.setTimeout(resolve, FULLSCREEN_CLEAR_WAIT_MS));
+      } catch {
+        // Best effort. Scene visibility shutdown below is still authoritative.
+      }
+    }
+
+    if (this.sceneItemId !== null) {
+      try {
+        await this.pushSlide(null, liveRef, liveTheme, false, false);
+      } catch {
+        // Visibility shutdown below still clears the OBS output.
+      }
+    }
 
     let targets = sceneNames?.filter(Boolean) ?? [];
     if (targets.length === 0) {
@@ -828,8 +847,19 @@ class WorshipObsService {
         targets = [];
       }
     }
-
-    await this.setOverlayVisibilityForScenes(targets, false);
+    let overlaySceneName = WORSHIP_SCENE_NAME;
+    try {
+      const regScene = await getSceneBySlot(SLOT_SCENE);
+      if (regScene?.sceneName) overlaySceneName = regScene.sceneName;
+    } catch {
+      // Registry lookup is best-effort.
+    }
+    const candidateTargets = Array.from(new Set([...targets, this.currentSceneName || ""].filter(Boolean)));
+    const visibilityTargets = candidateTargets.filter((sceneName) => sceneName !== overlaySceneName);
+    await this.setOverlayVisibilityForScenes(
+      visibilityTargets.length > 0 ? visibilityTargets : candidateTargets,
+      false,
+    );
   }
 
   async show(): Promise<void> {

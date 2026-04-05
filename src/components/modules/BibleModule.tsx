@@ -965,10 +965,24 @@ export function BibleModule({
 
   // Explicit clear: push null to OBS and clear live state
   // Also hides all OCS_BibleLT_* lower-third sources in every scene they were pushed to
-  const handleClear = useCallback(() => {
+  const handleClear = useCallback(async () => {
     goClear();
-    bibleObsService.pushSlide(null, null, false, false, activeTheme?.templateType);
     setHasSentToObs(false);
+
+    await Promise.all([
+      bibleObsService.clearOverlay(fullLiveScenes.length > 0 ? fullLiveScenes : undefined).catch((err) => {
+        console.warn("[BibleModule] Fullscreen clear failed:", err);
+      }),
+      (async () => {
+        try {
+          await ensureDockObsClientConnected();
+          await dockObsClient.clearBible();
+        } catch (err) {
+          console.warn("[BibleModule] Dock Bible clear failed:", err);
+        }
+      })(),
+    ]);
+    setFullLiveScenes([]);
 
     // Hide lower-third sources in all scenes they were sent to
     if (obsService.isConnected && ltLiveScenes.length > 0) {
@@ -993,7 +1007,7 @@ export function BibleModule({
         setLtLiveScenes([]);
       })();
     }
-  }, [goClear, activeTheme, ltLiveScenes]);
+  }, [goClear, fullLiveScenes, ltLiveScenes]);
 
   // Chapter navigation (Shift+Arrow)
   const handleNextChapter = useCallback(() => {

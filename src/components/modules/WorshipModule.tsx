@@ -731,9 +731,24 @@ export function WorshipModule({
     setIsLive(false);
     setIsBlanked(false);
 
-    const fullTargets = fullLiveScenes.length > 0 ? fullLiveScenes : getDefaultFullScenes();
-    await worshipObsService.clearOverlay(fullTargets.length > 0 ? fullTargets : undefined);
-    setFullLiveScenes([]);
+    if (layoutMode === "fullscreen") {
+      const fullTargets = fullLiveScenes.length > 0 ? fullLiveScenes : getDefaultFullScenes();
+      await Promise.all([
+        worshipObsService.clearOverlay(fullTargets.length > 0 ? fullTargets : undefined).catch((err) => {
+          console.warn("[WorshipModule] Fullscreen clear failed:", err);
+        }),
+        (async () => {
+          try {
+            await ensureDockObsClientConnected();
+            await dockObsClient.clearWorshipLyrics();
+          } catch (err) {
+            console.warn("[WorshipModule] Dock worship clear failed:", err);
+          }
+        })(),
+      ]);
+      setFullLiveScenes([]);
+      return;
+    }
 
     if (layoutMode === "lower-third") {
       const targetScenes = getDefaultLtScenes();

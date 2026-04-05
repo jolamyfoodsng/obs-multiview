@@ -30,24 +30,16 @@
     transition: opacity var(--anim-duration, 400ms) ease;
   }
 
-  #background.blank {
-    opacity: 0;
-  }
-
   /* Soft readability shade above BG and below text */
   #background-shade {
     position: absolute;
     inset: 0;
     background-image: var(--bg-shade-gradient, linear-gradient(180deg, rgba(0,0,0,0.28) 0%, rgba(0,0,0,0.42) 100%));
-    z-index: 0;
+    z-index: 1;
     pointer-events: none;
     display: var(--bg-shade-display, none);
     opacity: 1;
     transition: opacity var(--anim-duration, 400ms) ease;
-  }
-
-  #background-shade.blank {
-    opacity: 0;
   }
 
   /* Content layer — this is what transitions */
@@ -174,8 +166,8 @@
 </head>
 <body>
 <div id="background"></div>
+<div id="background-shade"></div>
 <div id="overlay" class="hidden">
-  <div id="background-shade"></div>
   <div id="content">
     <div id="verse-text"></div>
     <div id="reference"></div>
@@ -196,7 +188,7 @@
    * No external WebSocket / HTTP server required.
    */
 
-  const POLL_INTERVAL = 300;
+  const POLL_INTERVAL = 100;
   const FONT_SIZE_MIN = 14;
   const REF_FONT_SIZE_MIN = 10;
   const CONTENT_PADDING_MIN = 18;
@@ -453,8 +445,6 @@
 
     if (!data.slide) {
       overlay.classList.add('hidden');
-      background.classList.remove('blank');
-      if (backgroundShade) backgroundShade.classList.remove('blank');
       currentSlideId = null;
       hasShownOnce = false;  // Reset so next appearance animates
       return;
@@ -470,13 +460,9 @@
 
     if (data.blanked) {
       overlay.classList.add('blank');
-      background.classList.add('blank');
-      if (backgroundShade) backgroundShade.classList.add('blank');
       return;
     } else {
       overlay.classList.remove('blank');
-      background.classList.remove('blank');
-      if (backgroundShade) backgroundShade.classList.remove('blank');
     }
 
     // Always show the overlay when we have a slide — the dock/app controls

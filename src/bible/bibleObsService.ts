@@ -28,6 +28,7 @@ const SLOT_INPUT = "bible-browser-source";
 const SLOT_BG_INPUT = "bible-bg-source";
 const SLOT_ITEM = `${SLOT_SCENE}:${SLOT_INPUT}`;
 const SLOT_BG_ITEM = `${SLOT_SCENE}:${SLOT_BG_INPUT}`;
+const FULLSCREEN_CLEAR_WAIT_MS = 240;
 
 class BibleObsService {
   private sceneItemId: number | null = null;
@@ -94,6 +95,87 @@ class BibleObsService {
     const encodedPacket = encodeURIComponent(JSON.stringify(packet));
     const overlayCss = `:root { --overlay-data: "${encodedPacket}"; }`;
     return customCss ? `${overlayCss}\n${customCss}` : overlayCss;
+  }
+
+  private buildThemePayload(theme: BibleThemeSettings | null): {
+    themeForHash: BibleThemeSettings | null;
+    customCss: string;
+  } {
+    if (!theme) return { themeForHash: null, customCss: "" };
+
+    let themeForHash: BibleThemeSettings = { ...theme };
+    const cssRules: string[] = [];
+
+    if (themeForHash.backgroundImage && themeForHash.backgroundImage.startsWith("data:")) {
+      themeForHash = { ...themeForHash, backgroundImage: "__BG_SOURCE__" };
+    }
+
+    if (themeForHash.boxBackgroundImage && themeForHash.boxBackgroundImage.startsWith("data:")) {
+      cssRules.push(`--box-bg-image: url(${themeForHash.boxBackgroundImage});`);
+      themeForHash = { ...themeForHash, boxBackgroundImage: "__FROM_CSS__" };
+    }
+
+    if (themeForHash.logoUrl && themeForHash.logoUrl.startsWith("data:")) {
+      cssRules.push(`--logo-data-uri: url(${themeForHash.logoUrl});`);
+      themeForHash = { ...themeForHash, logoUrl: "__FROM_CSS__" };
+    }
+
+    return {
+      themeForHash,
+      customCss: cssRules.length ? `:root { ${cssRules.join(" ")} }` : "",
+    };
+  }
+
+  private stripOverlayDataCss(cssText: string | undefined): string {
+    return String(cssText || "").replace(/^\s*:root\s*\{\s*--overlay-data:\s*"[^"]*"\s*;\s*\}\s*/s, "");
+  }
+
+  private async resolveTrackedSourceNames(): Promise<Set<string>> {
+    const names = new Set<string>([BIBLE_SOURCE_NAME, BIBLE_BG_SOURCE_NAME, BIBLE_SCENE_NAME]);
+    try {
+      const inputs = await obsService.getInputList();
+      const regMain = await getInputBySlot(SLOT_INPUT);
+      if (regMain) {
+        const found = inputs.find((input) => input.inputUuid === regMain.inputUuid);
+        if (found?.inputName) names.add(found.inputName);
+      }
+      const regBg = await getInputBySlot(SLOT_BG_INPUT);
+      if (regBg) {
+        const found = inputs.find((input) => input.inputUuid === regBg.inputUuid);
+        if (found?.inputName) names.add(found.inputName);
+      }
+      const regScene = await getSceneBySlot(SLOT_SCENE);
+      if (regScene?.sceneName) names.add(regScene.sceneName);
+    } catch {
+      // Fallback to default source names.
+    }
+    return names;
+  }
+
+  private async setOverlayVisibilityForScenes(
+    sceneNames: string[],
+    enabled: boolean
+  ): Promise<void> {
+    if (!obsService.isConnected || sceneNames.length === 0) return;
+    const uniqueScenes = Array.from(new Set(sceneNames.filter(Boolean)));
+    if (uniqueScenes.length === 0) return;
+    const sourceNames = await this.resolveTrackedSourceNames();
+
+    await Promise.all(uniqueScenes.map(async (sceneName) => {
+      try {
+        const items = await obsService.getSceneItemList(sceneName);
+        const trackedItems = items.filter((item) => sourceNames.has(item.sourceName));
+        await Promise.all(trackedItems.map((item) =>
+          obsService.call("SetSceneItemEnabled", {
+            sceneName,
+            sceneItemId: item.sceneItemId,
+            sceneItemEnabled: enabled,
+          }).catch(() => {})
+        ));
+      } catch {
+        // Scene may have been deleted or be otherwise inaccessible.
+      }
+    }));
   }
 
   private async resolveMainSourceNames(): Promise<Set<string>> {
@@ -298,21 +380,21 @@ class BibleObsService {
       );
       if (existing) {
         browserItemId = existing.sceneItemId;
-        // Update URL in case template changed
-        let ensureUrl = overlayUrl;
+        let overlayCss = "";
         if (this._isLive && this._liveSlide) {
+          const { themeForHash, customCss } = this.buildThemePayload(this._liveTheme);
           const packet = {
             slide: this._liveSlide,
-            theme: this._liveTheme,
+            theme: themeForHash,
             live: true,
             blanked: this._isBlanked,
             timestamp: Date.now(),
           };
-          ensureUrl = `${overlayUrl}#data=${encodeURIComponent(JSON.stringify(packet))}`;
+          overlayCss = this.buildOverlayDataCss(packet as unknown as Record<string, unknown>, customCss);
         }
         await obsService.call("SetInputSettings", {
           inputName: existing.sourceName,
-          inputSettings: { url: ensureUrl, width: canvas.width, height: canvas.height },
+          inputSettings: { url: overlayUrl, width: canvas.width, height: canvas.height, css: overlayCss },
         });
         await this.enableSceneItemSafe(overlaySceneName, browserItemId);
       }
@@ -807,31 +889,7 @@ class BibleObsService {
         }
       }
       try {
-        // ── Build theme for the URL hash ──
-        // Background images are handled by a separate OBS image_source,
-        // so strip them from the theme sent to the overlay HTML.
-        let themeForHash = theme;
-
-        if (theme?.backgroundImage && theme.backgroundImage.startsWith("data:")) {
-          // Don't send the massive base64 to the overlay — the image_source
-          // behind the browser source handles the background image.
-          themeForHash = { ...theme, backgroundImage: "__BG_SOURCE__" };
-        }
-
-        // Also handle box background image for lower-third templates
-        const cssRules: string[] = [];
-        if (themeForHash?.boxBackgroundImage && themeForHash.boxBackgroundImage.startsWith("data:")) {
-          cssRules.push(`--box-bg-image: url(${themeForHash.boxBackgroundImage});`);
-          themeForHash = { ...themeForHash, boxBackgroundImage: "__FROM_CSS__" };
-        }
-
-        // Strip logo data URIs — they can be 50 KB+ and blow past URL limits
-        if (themeForHash?.logoUrl && themeForHash.logoUrl.startsWith("data:")) {
-          cssRules.push(`--logo-data-uri: url(${themeForHash.logoUrl});`);
-          themeForHash = { ...themeForHash, logoUrl: "__FROM_CSS__" };
-        }
-
-        const customCss = cssRules.length ? `:root { ${cssRules.join(" ")} }` : "";
+        const { themeForHash, customCss } = this.buildThemePayload(theme);
 
         const packet = {
           slide,
@@ -840,13 +898,11 @@ class BibleObsService {
           blanked,
           timestamp: Date.now(),
         };
-        const encoded = encodeURIComponent(JSON.stringify(packet));
         const base = getOverlayBaseUrlSync();
         const overlayFile = this.currentTemplateType === "fullscreen"
           ? "bible-overlay-fullscreen.html"
           : "bible-overlay-lower-third.html";
         const baseUrl = `${base}/${overlayFile}`;
-        const url = `${baseUrl}#data=${encoded}`;
         const overlayCss = this.buildOverlayDataCss(packet as unknown as Record<string, unknown>, customCss || "");
         const sourceSignature = JSON.stringify({
           baseUrl,
@@ -866,9 +922,12 @@ class BibleObsService {
         }
 
         if (this._lastOverlayTransportSignature !== sourceSignature || blanked || !slide) {
+          const inputSettings = this._lastOverlayTransportSignature !== sourceSignature
+            ? { url: baseUrl, css: overlayCss }
+            : { css: overlayCss };
           await obsService.call("SetInputSettings", {
             inputName: resolvedInputName,
-            inputSettings: { url, css: overlayCss },
+            inputSettings,
           });
           this._lastOverlayTransportSignature = sourceSignature;
         }
@@ -994,8 +1053,6 @@ class BibleObsService {
         blanked,
         timestamp: Date.now(),
       };
-      const encoded = encodeURIComponent(JSON.stringify(packet));
-
       for (const input of mvBibleInputs) {
         try {
           // Get current settings to find the base URL and preserve custom CSS
@@ -1008,13 +1065,15 @@ class BibleObsService {
           // Extract the base URL (everything before #)
           const baseUrl = currentUrl.split("#")[0] || currentUrl;
 
-          // Update only the hash fragment with new slide data
-          const newUrl = `${baseUrl}#data=${encoded}`;
+          const baseCss = this.stripOverlayDataCss(currentSettings.css || "");
+          const overlayCss = this.buildOverlayDataCss(packet as unknown as Record<string, unknown>, baseCss);
 
+          const inputSettings = currentUrl.split("#")[0] === baseUrl
+            ? { css: overlayCss }
+            : { url: baseUrl, css: overlayCss };
           await obsService.call("SetInputSettings", {
             inputName: input.inputName,
-            inputSettings: { url: newUrl },
-            // css is NOT set here — OBS preserves existing css when we only update url
+            inputSettings,
           });
           console.log(`[BibleOBS] Pushed verse to MV source "${input.inputName}"`);
         } catch (err) {
@@ -1042,6 +1101,59 @@ class BibleObsService {
     } catch (err) {
       console.error("[BibleOBS] Failed to show overlay:", err);
     }
+  }
+
+  async clearOverlay(sceneNames?: string[]): Promise<void> {
+    const liveSlide = this._liveSlide;
+    const liveTheme = this._liveTheme;
+    const liveTemplateType = this._liveTemplateType;
+
+    this._isLive = false;
+    this._isBlanked = false;
+
+    if (!obsService.isConnected) {
+      this._liveSlide = null;
+      this._liveTheme = null;
+      overlayBroadcaster.clear();
+      return;
+    }
+
+    if (this.sceneItemId !== null && liveSlide) {
+      try {
+        await this.pushSlide(liveSlide, liveTheme, false, true, liveTemplateType);
+        await new Promise((resolve) => window.setTimeout(resolve, FULLSCREEN_CLEAR_WAIT_MS));
+      } catch {
+        // Best effort. Visibility shutdown below still clears the output.
+      }
+    }
+
+    if (this.sceneItemId !== null) {
+      try {
+        await this.pushSlide(null, liveTheme, false, false, liveTemplateType);
+      } catch {
+        overlayBroadcaster.clear();
+      }
+    } else {
+      overlayBroadcaster.clear();
+    }
+
+    let targets = sceneNames?.filter(Boolean) ?? [];
+    let overlaySceneName = BIBLE_SCENE_NAME;
+    try {
+      const regScene = await getSceneBySlot(SLOT_SCENE);
+      if (regScene?.sceneName) overlaySceneName = regScene.sceneName;
+    } catch {
+      // Registry lookup is best-effort.
+    }
+    const candidateTargets = Array.from(new Set([...targets, this.currentSceneName || ""].filter(Boolean)));
+    const visibilityTargets = candidateTargets.filter((sceneName) => sceneName !== overlaySceneName);
+    await this.setOverlayVisibilityForScenes(
+      visibilityTargets.length > 0 ? visibilityTargets : candidateTargets,
+      false,
+    );
+
+    this._liveSlide = null;
+    this._liveTheme = null;
   }
 
   /**
