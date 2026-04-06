@@ -318,6 +318,9 @@ export default function PreServicePanel() {
   const [showStartConfirm, setShowStartConfirm] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [videoSearch, setVideoSearch] = useState("");
+  const [imageSearch, setImageSearch] = useState("");
+  const [audioSearch, setAudioSearch] = useState("");
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
   const [dragStepIndex, setDragStepIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
@@ -1941,7 +1944,25 @@ export default function PreServicePanel() {
                   <div className="cfg-media-picker__toolbar">
                     <div className="cfg-search-wrap">
                       <Icon name="search" size={20} className="cfg-search-icon" />
-                      <input type="text" className="cfg-search-input" placeholder="Search filenames..." />
+                      <input
+                        type="text"
+                        className="cfg-search-input"
+                        placeholder="Search filenames..."
+                        value={videoSearch}
+                        onChange={(event) => setVideoSearch(event.target.value)}
+                        aria-label="Search filenames"
+                      />
+                      {videoSearch && (
+                        <button
+                          type="button"
+                          className="cfg-search-clear"
+                          onClick={() => setVideoSearch("")}
+                          aria-label="Clear filename search"
+                          title="Clear filename search"
+                        >
+                          <Icon name="close" size={14} />
+                        </button>
+                      )}
                     </div>
                     <div className="cfg-filter-pills">
                       <button className="cfg-pill is-active">All Media</button>
@@ -2048,7 +2069,25 @@ export default function PreServicePanel() {
                   <div className="cfg-media-picker__toolbar">
                     <div className="cfg-search-wrap">
                       <Icon name="search" size={20} className="cfg-search-icon" />
-                      <input type="text" className="cfg-search-input" placeholder="Search assets..." />
+                      <input
+                        type="text"
+                        className="cfg-search-input"
+                        placeholder="Search assets..."
+                        value={imageSearch}
+                        onChange={(event) => setImageSearch(event.target.value)}
+                        aria-label="Search assets"
+                      />
+                      {imageSearch && (
+                        <button
+                          type="button"
+                          className="cfg-search-clear"
+                          onClick={() => setImageSearch("")}
+                          aria-label="Clear asset search"
+                          title="Clear asset search"
+                        >
+                          <Icon name="close" size={14} />
+                        </button>
+                      )}
                     </div>
                     <div className="cfg-filter-pills">
                       <button className="cfg-pill is-active">All Assets</button>
@@ -2286,7 +2325,25 @@ export default function PreServicePanel() {
                   <div className="cfg-media-picker__toolbar">
                     <div className="cfg-search-wrap">
                       <Icon name="search" size={20} className="cfg-search-icon" />
-                      <input type="text" className="cfg-search-input" placeholder="Search tracks, tags, or artists..." />
+                      <input
+                        type="text"
+                        className="cfg-search-input"
+                        placeholder="Search tracks, tags, or artists..."
+                        value={audioSearch}
+                        onChange={(event) => setAudioSearch(event.target.value)}
+                        aria-label="Search tracks, tags, or artists"
+                      />
+                      {audioSearch && (
+                        <button
+                          type="button"
+                          className="cfg-search-clear"
+                          onClick={() => setAudioSearch("")}
+                          aria-label="Clear audio search"
+                          title="Clear audio search"
+                        >
+                          <Icon name="close" size={14} />
+                        </button>
+                      )}
                     </div>
                     <div className="cfg-filter-pills">
                       <button className="cfg-pill is-active">Audio Library</button>

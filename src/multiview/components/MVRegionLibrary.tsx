@@ -989,9 +989,16 @@ export function MVRegionLibrary() {
               placeholder="Search templates, layouts…"
               value={tplSearch}
               onChange={(e) => setTplSearch(e.target.value)}
+              aria-label="Search templates and layouts"
             />
             {tplSearch && (
-              <button className="mv-tpl-search-clear" onClick={() => setTplSearch("")}>
+              <button
+                type="button"
+                className="mv-tpl-search-clear"
+                onClick={() => setTplSearch("")}
+                aria-label="Clear template search"
+                title="Clear template search"
+              >
                 <Icon name="close" size={16} />
               </button>
             )}
@@ -1227,9 +1234,16 @@ export function MVRegionLibrary() {
               placeholder="Search media…"
               value={mediaSearch}
               onChange={(e) => setMediaSearch(e.target.value)}
+              aria-label="Search media"
             />
             {mediaSearch && (
-              <button className="mv-tpl-search-clear" onClick={() => setMediaSearch("")}>
+              <button
+                type="button"
+                className="mv-tpl-search-clear"
+                onClick={() => setMediaSearch("")}
+                aria-label="Clear media search"
+                title="Clear media search"
+              >
                 <Icon name="close" size={16} />
               </button>
             )}

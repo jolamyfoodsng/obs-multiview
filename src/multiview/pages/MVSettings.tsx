@@ -1165,17 +1165,31 @@ export function MVSettings() {
 
             return (
               <>
-                <div style={{ marginBottom: 12 }}>
+                <div style={{ marginBottom: 12, display: "flex", alignItems: "center", gap: 8 }}>
+                  <div className="mv-inline-search">
                   <input
                     className="mv-input"
                     type="text"
                     placeholder="Search shortcuts… e.g. Bible, Undo, ⌘Z"
                     value={shortcutSearch}
                     onChange={(e) => setShortcutSearch(e.target.value)}
-                    style={{ maxWidth: 340 }}
+                    aria-label="Search keyboard shortcuts"
+                    style={{ maxWidth: 340, paddingRight: 32 }}
                   />
+                  {shortcutSearch && (
+                    <button
+                      type="button"
+                      className="mv-inline-search-clear"
+                      onClick={() => setShortcutSearch("")}
+                      aria-label="Clear shortcut search"
+                      title="Clear shortcut search"
+                    >
+                      <Icon name="close" size={14} />
+                    </button>
+                  )}
+                  </div>
                   {q && (
-                    <span style={{ marginLeft: 8, fontSize: 12, color: "var(--text-muted)" }}>
+                    <span style={{ fontSize: 12, color: "var(--text-muted)" }}>
                       {matchCount} {matchCount === 1 ? "match" : "matches"}
                     </span>
                   )}

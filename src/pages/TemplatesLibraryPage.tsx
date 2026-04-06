@@ -78,9 +78,9 @@ const FALLBACK_LOGO_DATA_URI =
   "data:image/svg+xml;utf8," +
   encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" width="220" height="220" viewBox="0 0 220 220">
-      <rect width="220" height="220" rx="36" fill="#003F7A"/>
+      <rect width="220" height="220" rx="36" fill="#2563eb"/>
       <path d="M110 42l46 26v52c0 33-20 56-46 64-26-8-46-31-46-64V68l46-26z" fill="#fff"/>
-      <path d="M110 70c17 0 30 13 30 30s-13 30-30 30-30-13-30-30 13-30 30-30z" fill="#003F7A"/>
+      <path d="M110 70c17 0 30 13 30 30s-13 30-30 30-30-13-30-30 13-30 30-30z" fill="#2563eb"/>
     </svg>`
   );
 
@@ -599,9 +599,16 @@ export default function TemplatesLibraryPage() {
               placeholder="Search themes..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search themes"
             />
             {searchQuery && (
-              <button className="tlib-search-clear" onClick={() => setSearchQuery("")}>
+              <button
+                type="button"
+                className="tlib-search-clear"
+                onClick={() => setSearchQuery("")}
+                aria-label="Clear theme search"
+                title="Clear theme search"
+              >
                 <Icon name="close" size={20} />
               </button>
             )}
@@ -763,7 +770,12 @@ export default function TemplatesLibraryPage() {
                 {searchQuery && (
                   <span className="tlib-active-pill">
                     "{searchQuery}"
-                    <button onClick={() => setSearchQuery("")}>
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery("")}
+                      aria-label="Clear theme search filter"
+                      title="Clear theme search filter"
+                    >
                       <Icon name="close" size={20} />
                     </button>
                   </span>

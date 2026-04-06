@@ -52,11 +52,15 @@ export function ContentLibraryPanel({ items }: Props) {
                     placeholder="Search content..."
                     value={state.librarySearch}
                     onChange={(e) => setLibrarySearch(e.target.value)}
+                    aria-label="Search content library"
                 />
                 {state.librarySearch && (
                     <button
+                        type="button"
                         className="library-search-clear"
                         onClick={() => setLibrarySearch("")}
+                        aria-label="Clear content search"
+                        title="Clear content search"
                     >
                         <Icon name="close" size={14} />
                     </button>

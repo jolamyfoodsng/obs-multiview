@@ -1890,12 +1890,15 @@ export function BibleModule({
                   placeholder="Search Bible… (e.g. &quot;jhn316&quot;, &quot;grace&quot;, &quot;love your neighbor&quot;)"
                   value={searchQuery}
                   onChange={(e) => handleSearchInput(e.target.value)}
+                  aria-label="Search Bible"
                   autoFocus
                 />
                 {searchQuery && (
                   <button
+                    type="button"
                     className="bible-search-clear-btn"
                     onClick={() => { setSearchQuery(""); setSearchResults([]); setRefMatches([]); searchInputRef.current?.focus(); }}
+                    aria-label="Clear Bible search"
                     title="Clear search"
                   >
                     <Icon name="close" size={16} />

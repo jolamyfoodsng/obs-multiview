@@ -10,6 +10,7 @@ interface Props {
   onClose: () => void;
   title?: string;
   templateType?: BibleTheme["templateType"];
+  allowedCategories?: Array<NonNullable<BibleTheme["category"]>>;
 }
 
 function clampPreviewSize(size: number, min: number, max: number, ratio = 0.2): number {
@@ -23,6 +24,7 @@ export default function DockThemeBrowserModal({
   onClose,
   title = "Select Theme",
   templateType,
+  allowedCategories,
 }: Props) {
   const [allThemes, setAllThemes] = useState<BibleTheme[]>([]);
   const [search, setSearch] = useState("");
@@ -34,13 +36,21 @@ export default function DockThemeBrowserModal({
     (async () => {
       const favoriteThemes = await loadDockFavoriteBibleThemes(templateType);
       if (cancelled) return;
-      setAllThemes(favoriteThemes);
+      const allowed = new Set((allowedCategories ?? []).map((category) => category.toLowerCase()));
+      const filtered = allowed.size === 0
+        ? favoriteThemes
+        : favoriteThemes.filter((theme) => {
+          const categories = theme.categories?.length ? theme.categories : theme.category ? [theme.category] : [];
+          if (categories.length === 0) return false;
+          return categories.some((category) => allowed.has(category.toLowerCase()));
+        });
+      setAllThemes(filtered);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [open, templateType]);
+  }, [allowedCategories, open, templateType]);
 
   const favorites = useMemo(() => {
     const q = search.toLowerCase().trim();
@@ -172,10 +182,11 @@ export default function DockThemeBrowserModal({
             placeholder="Search themes..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search themes"
             autoFocus
           />
           {search && (
-            <button className="dtb-search__clear" onClick={() => setSearch("")} aria-label="Clear search">
+            <button type="button" className="dtb-search__clear" onClick={() => setSearch("")} aria-label="Clear search">
               <X size={12} />
             </button>
           )}

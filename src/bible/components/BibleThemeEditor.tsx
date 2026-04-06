@@ -266,8 +266,34 @@ export default function BibleThemeEditor({ editTheme, onSave, onCancel }: Props)
             <input
               type="text" placeholder="Filter themes..." value={themeFilter}
               onChange={(e) => setThemeFilter(e.target.value)}
-              style={{ ...inputStyle, paddingLeft: 30, fontSize: 11 }}
+              aria-label="Filter themes"
+              style={{ ...inputStyle, paddingLeft: 30, paddingRight: 30, fontSize: 11 }}
             />
+            {themeFilter && (
+              <button
+                type="button"
+                onClick={() => setThemeFilter("")}
+                aria-label="Clear theme filter"
+                title="Clear theme filter"
+                style={{
+                  position: "absolute",
+                  right: 15,
+                  top: 13,
+                  width: 18,
+                  height: 18,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  border: "none",
+                  background: "transparent",
+                  color: "var(--text-muted)",
+                  cursor: "pointer",
+                  padding: 0,
+                }}
+              >
+                <Icon name="close" size={14} />
+              </button>
+            )}
           </div>
           <div className="b-scroll" style={{ flex: 1, overflowY: "auto", padding: "4px 8px", display: "flex", flexDirection: "column", gap: 6 }}>
             {filteredThemes.map((theme) => {

@@ -212,7 +212,19 @@ export function MediaTab() {
               placeholder="Search media..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
+              aria-label="Search media"
             />
+            {search && (
+              <button
+                type="button"
+                className="lib-search-clear"
+                onClick={() => setSearch("")}
+                aria-label="Clear media search"
+                title="Clear media search"
+              >
+                <Icon name="close" size={14} />
+              </button>
+            )}
           </div>
 
           {/* Filter dropdown */}

@@ -11,14 +11,20 @@ import { BUILTIN_THEMES } from "../../bible/themes/builtinThemes";
 import type { BibleTheme } from "../../bible/types";
 import { dockClient } from "../../services/dockBridge";
 import type { DockProductionModuleSettings } from "../../services/productionSettings";
-import { generateSlides } from "../../worship/slideEngine";
-import DockBibleThemePicker from "../components/DockBibleThemePicker";
 import {
-  DOCK_BACKGROUND_PRESETS,
-  type DockBackgroundPreset,
-  buildDockBackgroundPresetOverrides,
-  dockBackgroundPresetPreviewStyle,
-} from "../dockConsoleTheme";
+  createWorshipDockSongSaveCommand,
+  loadWorshipDockSongSaveResult,
+  postWorshipDockSongSaveCommand,
+  type WorshipDockSongSavePayload,
+} from "../../services/worshipDockInterop";
+import { generateSlides } from "../../worship/slideEngine";
+import type { Song } from "../../worship/types";
+import {
+  formatOnlineLyricsSearchError,
+  searchOnlineSongLyrics,
+  type OnlineLyricsSearchResult,
+} from "../../worship/onlineLyricsService";
+import DockBibleThemePicker from "../components/DockBibleThemePicker";
 import { loadDockFavoriteBibleThemes } from "../dockThemeData";
 import Icon from "../DockIcon";
 
@@ -35,19 +41,119 @@ interface DockSong {
   title: string;
   artist: string;
   lyrics: string;
+  importSourceName?: string;
+  importSourceType?: "manual" | "online";
+  importSourceUrl?: string;
 }
 
 interface DockWorshipPreferences {
   overlayMode?: OverlayMode;
   fullscreenThemeId?: string;
   lowerThirdThemeId?: string;
-  backgroundPreset?: DockBackgroundPreset;
   linesPerSlide?: number;
-  deckCollapsed?: boolean;
 }
 
 const DOCK_WORSHIP_PREFS_KEY = "ocs-dock-worship-preferences";
+const DOCK_WORSHIP_SONG_DEFAULTS_KEY = "ocs-dock-worship-song-defaults-v1";
 const LINES_PER_SLIDE_OPTIONS = [1, 2, 3, 4, 5, 6] as const;
+const DOCK_WORSHIP_SAVE_TIMEOUT_MS = 3500;
+const DOCK_WORSHIP_SAVE_FALLBACK_DELAY_MS = 350;
+const DOCK_WORSHIP_SAVE_RESULT_POLL_MS = 250;
+
+interface DockSongDraft {
+  title: string;
+  artist: string;
+  lyrics: string;
+}
+
+interface DockSongDefault extends DockSongDraft {
+  importSourceName?: string;
+  importSourceType?: "manual" | "online";
+  importSourceUrl?: string;
+}
+
+type DockSongDefaults = Record<string, DockSongDefault>;
+type DockToastTone = "info" | "success" | "error";
+
+interface DockToast {
+  id: string;
+  message: string;
+  tone: DockToastTone;
+}
+
+function createDockSongId(): string {
+  return crypto.randomUUID?.() ?? `dock-song-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function readDockSongDefaults(): DockSongDefaults {
+  try {
+    const raw = localStorage.getItem(DOCK_WORSHIP_SONG_DEFAULTS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw) as DockSongDefaults;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeDockSongDefaults(next: DockSongDefaults): void {
+  try {
+    localStorage.setItem(DOCK_WORSHIP_SONG_DEFAULTS_KEY, JSON.stringify(next));
+  } catch {
+    // ignore OBS CEF storage failures
+  }
+}
+
+function rememberDockSongDefault(song: DockSong): void {
+  const defaults = readDockSongDefaults();
+  if (defaults[song.id]) return;
+  defaults[song.id] = {
+    title: song.title,
+    artist: song.artist,
+    lyrics: song.lyrics,
+    importSourceName: song.importSourceName,
+    importSourceType: song.importSourceType,
+    importSourceUrl: song.importSourceUrl,
+  };
+  writeDockSongDefaults(defaults);
+}
+
+function rememberDockSongDefaults(songs: DockSong[]): void {
+  const defaults = readDockSongDefaults();
+  let changed = false;
+  for (const song of songs) {
+    if (defaults[song.id]) continue;
+    defaults[song.id] = {
+      title: song.title,
+      artist: song.artist,
+      lyrics: song.lyrics,
+      importSourceName: song.importSourceName,
+      importSourceType: song.importSourceType,
+      importSourceUrl: song.importSourceUrl,
+    };
+    changed = true;
+  }
+  if (changed) writeDockSongDefaults(defaults);
+}
+
+function mapAppSongToDockSong(song: {
+  id: string;
+  metadata: { title: string; artist?: string };
+  lyrics?: string;
+  importSourceName?: string;
+  importSourceType?: "manual" | "online";
+  importSourceUrl?: string;
+}): DockSong {
+  return {
+    id: song.id,
+    title: song.metadata.title,
+    artist: song.metadata.artist || "",
+    lyrics: song.lyrics || "",
+    importSourceName: song.importSourceName,
+    importSourceType: song.importSourceType,
+    importSourceUrl: song.importSourceUrl,
+  };
+}
 
 function loadDockWorshipPreferences(): DockWorshipPreferences {
   try {
@@ -105,12 +211,25 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
     productionDefaults.lowerThirdTheme ?? BUILTIN_THEMES[0],
   );
   const [overlayMode, setOverlayMode] = useState<OverlayMode>(productionDefaults.defaultMode);
-  const [backgroundPreset, setBackgroundPreset] = useState<DockBackgroundPreset>("theme");
   const [linesPerSlide, setLinesPerSlide] = useState<number>(2);
-  const [deckCollapsed, setDeckCollapsed] = useState(false);
   const [sending, setSending] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [songEditor, setSongEditor] = useState<DockSong | null>(null);
+  const [songDraft, setSongDraft] = useState<DockSongDraft>({ title: "", artist: "", lyrics: "" });
+  const [newSongDraft, setNewSongDraft] = useState<DockSongDraft>({ title: "", artist: "", lyrics: "" });
+  const [newSongSource, setNewSongSource] = useState<Pick<DockSong, "importSourceName" | "importSourceType" | "importSourceUrl"> | null>(null);
+  const [isNewSongModalOpen, setIsNewSongModalOpen] = useState(false);
+  const [slideEditor, setSlideEditor] = useState<{ index: number; label: string; text: string } | null>(null);
+  const [onlineSearchOpen, setOnlineSearchOpen] = useState(false);
+  const [onlineSearchQuery, setOnlineSearchQuery] = useState("");
+  const [onlineResults, setOnlineResults] = useState<OnlineLyricsSearchResult[]>([]);
+  const [onlineSearchLoading, setOnlineSearchLoading] = useState(false);
+  const [onlineSearchError, setOnlineSearchError] = useState("");
+  const [hiddenSectionIndexes, setHiddenSectionIndexes] = useState<Set<number>>(() => new Set());
+  const [savingSong, setSavingSong] = useState(false);
+  const [toasts, setToasts] = useState<DockToast[]>([]);
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const toastTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const prefsReadyRef = useRef(false);
   const isProgramLive =
     staged?.type === "worship" &&
@@ -120,6 +239,24 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
     () => (selectedSong ? parseLyricSections(selectedSong.lyrics, linesPerSlide) : []),
     [linesPerSlide, selectedSong],
   );
+  const visibleSectionIndexes = useMemo(
+    () => selectedSongSections.map((_, index) => index).filter((index) => !hiddenSectionIndexes.has(index)),
+    [hiddenSectionIndexes, selectedSongSections],
+  );
+
+  const showToast = useCallback((message: string, tone: DockToastTone = "info") => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setToasts((current) => [...current.slice(-2), { id, message, tone }]);
+    const timer = setTimeout(() => {
+      setToasts((current) => current.filter((toast) => toast.id !== id));
+    }, 1500);
+    toastTimersRef.current.push(timer);
+  }, []);
+
+  useEffect(() => () => {
+    toastTimersRef.current.forEach((timer) => clearTimeout(timer));
+    toastTimersRef.current = [];
+  }, []);
 
   useEffect(() => {
     prefsReadyRef.current = false;
@@ -127,13 +264,11 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
     setSelectedFSTheme(productionDefaults.fullscreenTheme ?? BUILTIN_THEMES[0]);
     setSelectedLTTheme(productionDefaults.lowerThirdTheme ?? BUILTIN_THEMES[0]);
     setOverlayMode(prefs.overlayMode ?? productionDefaults.defaultMode);
-    setBackgroundPreset(prefs.backgroundPreset ?? "theme");
     setLinesPerSlide(
       typeof prefs.linesPerSlide === "number" && LINES_PER_SLIDE_OPTIONS.includes(prefs.linesPerSlide as 1)
         ? prefs.linesPerSlide
         : 2,
     );
-    setDeckCollapsed(Boolean(prefs.deckCollapsed));
 
     let cancelled = false;
     const applyStoredThemes = async () => {
@@ -171,41 +306,35 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
       overlayMode,
       fullscreenThemeId: selectedFSTheme.id,
       lowerThirdThemeId: selectedLTTheme.id,
-      backgroundPreset,
       linesPerSlide,
-      deckCollapsed,
     });
-  }, [backgroundPreset, deckCollapsed, linesPerSlide, overlayMode, selectedFSTheme.id, selectedLTTheme.id]);
+  }, [linesPerSlide, overlayMode, selectedFSTheme.id, selectedLTTheme.id]);
 
   const mapSongs = useCallback(
-    (all: Array<{ id: string; metadata: { title: string; artist?: string }; lyrics?: string }>): DockSong[] =>
-      all.map((song) => ({
-        id: song.id,
-        title: song.metadata.title,
-        artist: song.metadata.artist || "",
-        lyrics: song.lyrics || "",
-      })),
+    (all: Array<{
+      id: string;
+      metadata: { title: string; artist?: string };
+      lyrics?: string;
+      importSourceName?: string;
+      importSourceType?: "manual" | "online";
+      importSourceUrl?: string;
+    }>): DockSong[] => all.map(mapAppSongToDockSong),
     [],
   );
 
-  const loadSongs = useCallback(async () => {
-    try {
-      const { getAllSongs } = await import("../../worship/worshipDb");
-      const all = await getAllSongs();
-      if (all.length > 0) {
-        setSongs(mapSongs(all));
-        return;
-      }
-    } catch (err) {
-      console.log("[DockWorshipTab] IndexedDB not available:", err);
-    }
+  const loadSongs = useCallback(async (allowJsonFallback = true) => {
+    dockClient.sendCommand({ type: "request-library-data", timestamp: Date.now() });
+
+    if (!allowJsonFallback) return;
 
     try {
       const res = await fetch("/uploads/dock-worship-songs.json");
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const all = await res.json();
       if (Array.isArray(all) && all.length > 0) {
-        setSongs(mapSongs(all));
+        const nextSongs = mapSongs(all);
+        rememberDockSongDefaults(nextSongs);
+        setSongs(nextSongs);
         return;
       }
     } catch (err) {
@@ -221,7 +350,13 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
 
   useEffect(() => {
     const unsub = dockClient.onState((msg) => {
-      if (msg.type === "state:library-updated" || msg.type === "state:songs-data") {
+      if (msg.type === "state:songs-data" && Array.isArray(msg.payload)) {
+        const nextSongs = mapSongs(msg.payload as Parameters<typeof mapSongs>[0]);
+        rememberDockSongDefaults(nextSongs);
+        setSongs(nextSongs);
+        return;
+      }
+      if (msg.type === "state:library-updated") {
         void loadSongs();
       }
     });
@@ -234,14 +369,10 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
     return songs.filter(
       (song) =>
         song.title.toLowerCase().includes(needle) ||
-        song.artist.toLowerCase().includes(needle),
+        song.artist.toLowerCase().includes(needle) ||
+        song.lyrics.toLowerCase().includes(needle),
     );
   }, [searchQuery, songs]);
-
-  const fullscreenLiveOverrides = useMemo(
-    () => buildDockBackgroundPresetOverrides(selectedFSTheme.settings, backgroundPreset),
-    [backgroundPreset, selectedFSTheme.settings],
-  );
 
   const buildSectionPayload = useCallback(
     (idx: number, live: boolean) => {
@@ -251,10 +382,6 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
 
       const displayLabel = cleanWorshipSectionLabel(section.label);
       const theme = overlayMode === "fullscreen" ? selectedFSTheme : selectedLTTheme;
-      const liveOverrides =
-        overlayMode === "fullscreen"
-          ? (fullscreenLiveOverrides as Record<string, unknown> | null)
-          : null;
 
       const stageData = {
         song: selectedSong,
@@ -266,7 +393,7 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
         linesPerSlide,
         theme: theme.id,
         bibleThemeSettings: theme.settings as unknown as Record<string, unknown>,
-        liveOverrides,
+        liveOverrides: null,
         _dockLive: live,
       };
 
@@ -285,12 +412,11 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
           artist: selectedSong.artist,
           overlayMode,
           bibleThemeSettings: theme.settings as unknown as Record<string, unknown>,
-          liveOverrides,
+          liveOverrides: null,
         },
       };
     },
     [
-      fullscreenLiveOverrides,
       linesPerSlide,
       overlayMode,
       selectedFSTheme,
@@ -332,17 +458,207 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
     [buildSectionPayload, onStage],
   );
 
+  const saveSongInMainApp = useCallback(
+    (payload: WorshipDockSongSavePayload): Promise<DockSong> =>
+      new Promise((resolve, reject) => {
+        const command = createWorshipDockSongSaveCommand(payload);
+        let fallbackPosted = false;
+        let fallbackError: Error | null = null;
+        let fallbackTimer: number | null = null;
+        let resultPollTimer: number | null = null;
+        let timeoutTimer: number | null = null;
+        let unsubscribe = () => { };
+        let settled = false;
+
+        const cleanup = () => {
+          if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
+          if (resultPollTimer !== null) window.clearInterval(resultPollTimer);
+          if (timeoutTimer !== null) window.clearTimeout(timeoutTimer);
+          unsubscribe();
+        };
+
+        const complete = (result: {
+          ok?: boolean;
+          song?: Song;
+          error?: string;
+        }) => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          if (!result.ok || !result.song) {
+            reject(new Error(result.error || "Song save failed."));
+            return;
+          }
+          resolve(mapAppSongToDockSong(result.song));
+        };
+
+        unsubscribe = dockClient.onState((msg) => {
+          if (msg.type !== "state:worship-song-save-result") return;
+          const result = msg.payload as {
+            commandId?: string;
+            ok?: boolean;
+            song?: Song;
+            error?: string;
+          };
+          if (result.commandId !== command.commandId) return;
+          complete(result);
+        });
+
+        const postFallback = () => {
+          fallbackPosted = true;
+          void postWorshipDockSongSaveCommand(command).catch((err) => {
+            fallbackError = err instanceof Error ? err : new Error(String(err));
+            console.warn("[DockWorshipTab] Fallback song save command failed:", err);
+          });
+        };
+
+        fallbackTimer = window.setTimeout(postFallback, DOCK_WORSHIP_SAVE_FALLBACK_DELAY_MS);
+        resultPollTimer = window.setInterval(() => {
+          if (!fallbackPosted || settled) return;
+          void loadWorshipDockSongSaveResult(command.commandId).then((result) => {
+            if (!result) return;
+            complete(result);
+          }).catch(() => { });
+        }, DOCK_WORSHIP_SAVE_RESULT_POLL_MS);
+
+        timeoutTimer = window.setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          cleanup();
+          reject(fallbackError ?? new Error("Main app did not confirm the song save."));
+        }, DOCK_WORSHIP_SAVE_TIMEOUT_MS);
+
+        dockClient.sendCommand({
+          type: "worship:song-save",
+          payload,
+          commandId: command.commandId,
+          timestamp: command.timestamp,
+        });
+      }),
+    [],
+  );
+
+  const persistSong = useCallback(
+    async (
+      songId: string,
+      draft: DockSongDraft,
+      source?: Pick<DockSong, "importSourceName" | "importSourceType" | "importSourceUrl">,
+    ) => {
+      const title = draft.title.trim();
+      const lyrics = draft.lyrics.trim();
+      if (!title || !lyrics) return null;
+
+      const dockSong = await saveSongInMainApp({
+        id: songId,
+        title,
+        artist: draft.artist.trim(),
+        lyrics,
+        importSourceName: source?.importSourceName,
+        importSourceType: source?.importSourceType ?? "manual",
+        importSourceUrl: source?.importSourceUrl,
+      });
+
+      setSongs((current) => {
+        const withoutSong = current.filter((song) => song.id !== dockSong.id);
+        return [dockSong, ...withoutSong];
+      });
+      setSelectedSong((current) => (current?.id === dockSong.id ? dockSong : current));
+      return dockSong;
+    },
+    [saveSongInMainApp],
+  );
+
+  const openSongEditor = useCallback((song: DockSong) => {
+    rememberDockSongDefault(song);
+    setSongEditor(song);
+    setSongDraft({
+      title: song.title,
+      artist: song.artist,
+      lyrics: song.lyrics,
+    });
+    setActionError("");
+  }, []);
+
+  const handleSaveSongEditor = useCallback(async () => {
+    if (!songEditor) return;
+    setSavingSong(true);
+    setActionError("");
+    try {
+      await persistSong(songEditor.id, songDraft, songEditor);
+      showToast("Song saved", "success");
+      setSongEditor(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn("[DockWorshipTab] save song edit failed:", err);
+      setActionError(message);
+    } finally {
+      setSavingSong(false);
+    }
+  }, [persistSong, showToast, songDraft, songEditor]);
+
+  const handleResetSongEditor = useCallback(() => {
+    if (!songEditor) return;
+    const defaults = readDockSongDefaults();
+    const fallback = defaults[songEditor.id] ?? songEditor;
+    setSongDraft({
+      title: fallback.title,
+      artist: fallback.artist,
+      lyrics: fallback.lyrics,
+    });
+    showToast("Default restored in editor");
+  }, [showToast, songEditor]);
+
+  const openNewSongModal = useCallback((draft?: Partial<DockSongDraft>) => {
+    setNewSongDraft({
+      title: draft?.title ?? "",
+      artist: draft?.artist ?? "",
+      lyrics: draft?.lyrics ?? "",
+    });
+    setNewSongSource({ importSourceType: "manual" });
+    setIsNewSongModalOpen(true);
+    setActionError("");
+  }, []);
+
+  const handleSaveNewSong = useCallback(async () => {
+    setSavingSong(true);
+    setActionError("");
+    try {
+      const newSong = await persistSong(createDockSongId(), newSongDraft, newSongSource ?? { importSourceType: "manual" });
+      if (newSong) {
+        rememberDockSongDefault(newSong);
+        setIsNewSongModalOpen(false);
+        setNewSongSource(null);
+        setSelectedSong(newSong);
+        setSelectedIdx(0);
+        setLiveIdx(null);
+        setPreviewIdx(null);
+        setHiddenSectionIndexes(new Set());
+        showToast(newSong.importSourceType === "online" ? "Import saved" : "Song added", "success");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn("[DockWorshipTab] add song failed:", err);
+      setActionError(message);
+    } finally {
+      setSavingSong(false);
+    }
+  }, [newSongDraft, newSongSource, persistSong, showToast]);
+
   useEffect(() => {
     if (!selectedSong) return;
-    const maxIndex = selectedSongSections.length - 1;
+    const maxIndex = visibleSectionIndexes.length - 1;
+    const fallbackIndex = visibleSectionIndexes[0] ?? null;
+    const clampToVisible = (current: number | null) => {
+      if (current === null) return fallbackIndex;
+      if (visibleSectionIndexes.includes(current)) return current;
+      if (maxIndex < 0) return null;
+      return visibleSectionIndexes.find((index) => index > current) ?? visibleSectionIndexes[maxIndex] ?? null;
+    };
 
-    setSelectedIdx((current) => {
-      if (current === null) return selectedSongSections.length > 0 ? 0 : null;
-      return Math.min(current, Math.max(maxIndex, 0));
-    });
-    setPreviewIdx((current) => (current === null ? null : Math.min(current, Math.max(maxIndex, 0))));
-    setLiveIdx((current) => (current === null ? null : Math.min(current, Math.max(maxIndex, 0))));
-  }, [selectedSong, selectedSongSections.length]);
+    setSelectedIdx((current) => clampToVisible(current));
+    setPreviewIdx((current) => (current === null ? null : clampToVisible(current)));
+    setLiveIdx((current) => (current === null ? null : clampToVisible(current)));
+  }, [selectedSong, visibleSectionIndexes]);
 
   useEffect(() => {
     if (!staged || staged.type !== "worship") return;
@@ -371,12 +687,12 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
   }, [songs, staged]);
 
   const activeSectionIndex = useMemo(() => {
-    if (!selectedSong || selectedSongSections.length === 0) return null;
-    if (selectedIdx !== null && selectedIdx < selectedSongSections.length) return selectedIdx;
-    if (previewIdx !== null && previewIdx < selectedSongSections.length) return previewIdx;
-    if (liveIdx !== null && liveIdx < selectedSongSections.length) return liveIdx;
-    return 0;
-  }, [liveIdx, previewIdx, selectedIdx, selectedSong, selectedSongSections.length]);
+    if (!selectedSong || visibleSectionIndexes.length === 0) return null;
+    if (selectedIdx !== null && visibleSectionIndexes.includes(selectedIdx)) return selectedIdx;
+    if (previewIdx !== null && visibleSectionIndexes.includes(previewIdx)) return previewIdx;
+    if (liveIdx !== null && visibleSectionIndexes.includes(liveIdx)) return liveIdx;
+    return visibleSectionIndexes[0] ?? null;
+  }, [liveIdx, previewIdx, selectedIdx, selectedSong, visibleSectionIndexes]);
 
   const activeSection = activeSectionIndex !== null ? selectedSongSections[activeSectionIndex] ?? null : null;
 
@@ -385,6 +701,7 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
     setSelectedIdx(0);
     setLiveIdx(null);
     setPreviewIdx(null);
+    setHiddenSectionIndexes(new Set());
     setActionError("");
   }, []);
 
@@ -418,19 +735,161 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
     [pushSection],
   );
 
+  const handleHideSection = useCallback(
+    (idx: number) => {
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+        clickTimerRef.current = null;
+      }
+      setHiddenSectionIndexes((current) => {
+        const next = new Set(current);
+        next.add(idx);
+        return next;
+      });
+      showToast(`Slide ${idx + 1} hidden`);
+      if (activeSectionIndex === idx) {
+        const nextIdx = visibleSectionIndexes.find((index) => index > idx) ?? visibleSectionIndexes.find((index) => index < idx) ?? null;
+        setSelectedIdx(nextIdx);
+        setPreviewIdx((current) => (current === idx ? null : current));
+        setLiveIdx((current) => (current === idx ? null : current));
+      }
+    },
+    [activeSectionIndex, showToast, visibleSectionIndexes],
+  );
+
+  const openSlideEditor = useCallback(
+    (idx: number) => {
+      const section = selectedSongSections[idx];
+      if (!section) return;
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+        clickTimerRef.current = null;
+      }
+      setSlideEditor({
+        index: idx,
+        label: cleanWorshipSectionLabel(section.label) || `Slide ${idx + 1}`,
+        text: section.text,
+      });
+    },
+    [selectedSongSections],
+  );
+
+  const handleSaveSlideEditor = useCallback(async () => {
+    if (!selectedSong || !slideEditor) return;
+    const nextSections = selectedSongSections.map((section, index) =>
+      index === slideEditor.index ? { ...section, text: slideEditor.text.trim() } : section,
+    );
+    const nextLyrics = nextSections
+      .map((section) => section.text.trim())
+      .filter(Boolean)
+      .join("\n\n");
+
+    if (!nextLyrics.trim()) return;
+
+    setSavingSong(true);
+    setActionError("");
+    try {
+      const updatedSong = await persistSong(selectedSong.id, {
+        title: selectedSong.title,
+        artist: selectedSong.artist,
+        lyrics: nextLyrics,
+      }, selectedSong);
+      if (updatedSong) {
+        setSelectedSong(updatedSong);
+        setSelectedIdx(slideEditor.index);
+      }
+      showToast("Slide updated", "success");
+      setSlideEditor(null);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn("[DockWorshipTab] save slide edit failed:", err);
+      setActionError(message);
+    } finally {
+      setSavingSong(false);
+    }
+  }, [persistSong, selectedSong, selectedSongSections, showToast, slideEditor]);
+
+  const handleLinesPerSlideChange = useCallback((nextLinesPerSlide: number) => {
+    setLinesPerSlide(nextLinesPerSlide);
+    setHiddenSectionIndexes(new Set());
+    setSelectedIdx(0);
+    setPreviewIdx(null);
+  }, []);
+
+  const handleImportOnlineResult = useCallback(
+    (result: OnlineLyricsSearchResult) => {
+      setOnlineSearchOpen(false);
+      setOnlineSearchError("");
+      setOnlineResults([]);
+      setOnlineSearchQuery("");
+      setNewSongDraft({
+        title: result.title,
+        artist: result.artist,
+        lyrics: result.lyrics,
+      });
+      setNewSongSource({
+        importSourceName: result.sourceName,
+        importSourceType: "online",
+        importSourceUrl: result.url,
+      });
+      setIsNewSongModalOpen(true);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (!onlineSearchOpen) return;
+
+    const query = onlineSearchQuery.trim();
+    if (query.length < 3) {
+      setOnlineResults([]);
+      setOnlineSearchError("");
+      setOnlineSearchLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      setOnlineSearchLoading(true);
+      setOnlineSearchError("");
+      searchOnlineSongLyrics(query)
+        .then((results) => {
+          if (cancelled) return;
+          setOnlineResults(results);
+          if (results.length === 0) setOnlineSearchError("No online lyric matches found.");
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          setOnlineSearchError(formatOnlineLyricsSearchError(err));
+          setOnlineResults([]);
+        })
+        .finally(() => {
+          if (!cancelled) setOnlineSearchLoading(false);
+        });
+    }, 220);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [onlineSearchOpen, onlineSearchQuery]);
+
   useEffect(() => () => {
     if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
   }, []);
 
   const navigateSection = useCallback(
     async (delta: 1 | -1) => {
-      if (!selectedSong || selectedSongSections.length === 0) return;
+      if (!selectedSong || visibleSectionIndexes.length === 0) return;
       const currentIdx = activeSectionIndex ?? 0;
-      const nextIdx = Math.max(0, Math.min(selectedSongSections.length - 1, currentIdx + delta));
+      const currentVisibleIndex = visibleSectionIndexes.indexOf(currentIdx);
+      const currentPosition = currentVisibleIndex >= 0 ? currentVisibleIndex : 0;
+      const nextPosition = Math.max(0, Math.min(visibleSectionIndexes.length - 1, currentPosition + delta));
+      const nextIdx = visibleSectionIndexes[nextPosition] ?? currentIdx;
       if (nextIdx === currentIdx) return;
       await pushSection(nextIdx, isProgramLive);
     },
-    [activeSectionIndex, isProgramLive, pushSection, selectedSong, selectedSongSections.length],
+    [activeSectionIndex, isProgramLive, pushSection, selectedSong, visibleSectionIndexes],
   );
 
   const handlePreviewCurrent = useCallback(async () => {
@@ -449,12 +908,13 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
     setSelectedIdx(null);
     setActionError("");
     onStage(null);
+    showToast("Worship cleared");
     if (dockObsClient.isConnected) {
       dockObsClient.clearWorshipLyrics().catch((err) =>
         console.warn("[DockWorshipTab] clearWorshipLyrics failed:", err),
       );
     }
-  }, [onStage]);
+  }, [onStage, showToast]);
 
   const handleSelectFullscreenTheme = useCallback((theme: BibleTheme) => {
     setSelectedFSTheme(theme);
@@ -508,16 +968,6 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
     }
   }, [activeSectionIndex, isProgramLive, restageCurrent, selectedFSTheme.id, selectedLTTheme.id, selectedSong]);
 
-  const prevBackgroundPreset = useRef(backgroundPreset);
-  useEffect(() => {
-    if (prevBackgroundPreset.current === backgroundPreset) return;
-    prevBackgroundPreset.current = backgroundPreset;
-    if (overlayMode !== "fullscreen") return;
-    if (selectedSong && activeSectionIndex !== null) {
-      void restageCurrent(isProgramLive);
-    }
-  }, [activeSectionIndex, backgroundPreset, isProgramLive, overlayMode, restageCurrent, selectedSong]);
-
   const prevLinesPerSlide = useRef(linesPerSlide);
   useEffect(() => {
     if (prevLinesPerSlide.current === linesPerSlide) return;
@@ -534,7 +984,16 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
       if (event.ctrlKey || event.metaKey || event.altKey) return;
 
       if (event.key === "Escape") {
-        if (targetElement?.closest(".dtb-modal")) return;
+        if (songEditor || slideEditor || isNewSongModalOpen || onlineSearchOpen) {
+          event.preventDefault();
+          setSongEditor(null);
+          setSlideEditor(null);
+          setIsNewSongModalOpen(false);
+          setOnlineSearchOpen(false);
+          setNewSongSource(null);
+          return;
+        }
+        if (targetElement?.closest(".dtb-modal, .dock-dialog")) return;
         event.preventDefault();
         handleClearLyrics();
         return;
@@ -547,7 +1006,7 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
       ) {
         return;
       }
-      if (!selectedSong || selectedSongSections.length === 0) return;
+      if (!selectedSong || visibleSectionIndexes.length === 0) return;
 
       if (event.key === "ArrowDown" || event.key === "ArrowRight") {
         event.preventDefault();
@@ -565,7 +1024,18 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
     return () => {
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [activeSectionIndex, handleClearLyrics, handleGoLiveCurrent, navigateSection, selectedSong, selectedSongSections.length]);
+  }, [
+    activeSectionIndex,
+    handleClearLyrics,
+    handleGoLiveCurrent,
+    isNewSongModalOpen,
+    navigateSection,
+    onlineSearchOpen,
+    selectedSong,
+    slideEditor,
+    songEditor,
+    visibleSectionIndexes.length,
+  ]);
 
   return (
     <div className="dock-module dock-module--worship">
@@ -577,18 +1047,42 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
                 <div className="dock-console-header__eyebrow">Song Browser</div>
                 <div className="dock-console-header__title">Find a Song</div>
               </div>
-              <button
-                type="button"
-                className="dock-shell-icon-btn"
-                onClick={() => void loadSongs()}
-                aria-label="Refresh song library"
-                title="Refresh song library"
-              >
-                <Icon name="refresh" size={14} />
-              </button>
+              <div className="dock-console-actions dock-console-actions--song-browser">
+                <button
+                  type="button"
+                  className="dock-console-toggle"
+                  onClick={() => {
+                    setOnlineSearchQuery(searchQuery.trim());
+                    setOnlineSearchOpen(true);
+                    setOnlineSearchError("");
+                  }}
+                >
+                  <Icon name="travel_explore" size={13} />
+                  Search Online
+                </button>
+                <button
+                  type="button"
+                  className="dock-console-toggle"
+                  onClick={() => openNewSongModal()}
+                >
+                  <Icon name="add" size={13} />
+                  Add Song
+                </button>
+                <button
+                  type="button"
+                  className="dock-shell-icon-btn"
+                  onClick={() => {
+                    void loadSongs(true).then(() => showToast("Songs refreshed", "success"));
+                  }}
+                  aria-label="Refresh song library"
+                  title="Refresh song library"
+                >
+                  <Icon name="refresh" size={14} />
+                </button>
+              </div>
             </div>
             <div className="dock-search dock-search--console" style={{ marginBottom: 0 }}>
-              <Icon name="search" size={14} />
+              <Icon name="search" size={14} className="dock-search__icon" />
               <input
                 className="dock-input"
                 placeholder="Search title or artist..."
@@ -596,6 +1090,17 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
                 onChange={(event) => setSearchQuery(event.target.value)}
                 aria-label="Search songs"
               />
+              {searchQuery && (
+                <button
+                  type="button"
+                  className="dock-search__clear"
+                  onClick={() => setSearchQuery("")}
+                  aria-label="Clear song search"
+                  title="Clear song search"
+                >
+                  <Icon name="close" size={13} />
+                </button>
+              )}
             </div>
           </>
         ) : (
@@ -603,10 +1108,10 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
             <div className="dock-console-header">
               <div>
                 <div className="dock-console-header__eyebrow">Selected Song</div>
-                <div className="dock-console-header__title">{selectedSong.title}</div>
+                <div className="dock-console-header__title">{selectedSong.title}/{selectedSong.artist.substring(0, 30)}{selectedSong.artist.length > 30 ? "..." : ""}</div>
               </div>
               <div className="dock-console-actions">
-                {selectedSong.artist && <span className="dock-shell-chip">{selectedSong.artist}</span>}
+                {/* {selectedSong.artist && <span className="dock-shell-chip">{selectedSong.artist}</span>} */}
                 <button
                   type="button"
                   className="dock-console-toggle"
@@ -639,22 +1144,38 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
               <div className="dock-console-header">
                 <div>
                   <div className="dock-console-header__eyebrow">Library</div>
-                  <div className="dock-console-header__title">{filteredSongs.length} Songs Ready</div>
+                  {/* <div className="dock-console-header__title">{filteredSongs.length} Songs Ready</div> */}
                 </div>
               </div>
               <div className="dock-console-list dock-worship-workspace__list">
                 {filteredSongs.map((song) => (
-                  <button
+                  <div
                     key={song.id}
-                    type="button"
-                    className="dock-card dock-card--console"
-                    onClick={() => handleSelectSong(song)}
+                    className="dock-card dock-card--console dock-song-card"
                   >
-                    <span className="dock-card__title">{song.title}</span>
-                    <span className="dock-card__subtitle">
-                      {song.artist || "Unknown artist"}
-                    </span>
-                  </button>
+                    <button
+                      type="button"
+                      className="dock-song-card__main"
+                      onClick={() => handleSelectSong(song)}
+                    >
+                      <span className="dock-card__title">{song.title}</span>
+                      <span className="dock-card__subtitle">
+                        {song.artist || "Unknown artist"}
+                      </span>
+                    </button>
+                    <button
+                      type="button"
+                      className="dock-song-card__edit"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        openSongEditor(song);
+                      }}
+                      aria-label={`Edit ${song.title}`}
+                      title="Edit song"
+                    >
+                      <Icon name="edit" size={13} />
+                    </button>
+                  </div>
                 ))}
               </div>
             </>
@@ -665,10 +1186,19 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
               <div>
                 <div className="dock-console-header__eyebrow">Cue List</div>
                 <div className="dock-console-header__title">
-                  {selectedSongSections.length} Slides ready
+                  {visibleSectionIndexes.length} of {selectedSongSections.length} slides visible
                 </div>
               </div>
               <div className="dock-console-actions">
+                {hiddenSectionIndexes.size > 0 && (
+                  <button
+                    type="button"
+                    className="dock-console-toggle"
+                    onClick={() => setHiddenSectionIndexes(new Set())}
+                  >
+                    Show All
+                  </button>
+                )}
                 <button
                   type="button"
                   className="dock-btn dock-btn--ghost"
@@ -690,22 +1220,30 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
               </div>
             </div>
 
-            {selectedSongSections.length === 0 ? (
+            {selectedSongSections.length === 0 || visibleSectionIndexes.length === 0 ? (
               <div className="dock-empty dock-worship-workspace__empty">
                 <Icon name="lyrics" size={18} />
-                <div className="dock-empty__text">This song does not have any slideable lyrics yet.</div>
+                <div className="dock-empty__text">
+                  {selectedSongSections.length === 0
+                    ? "This song does not have any slideable lyrics yet."
+                    : "All slides are hidden for this line setting."}
+                </div>
               </div>
             ) : (
               <div className="dock-console-list dock-worship-workspace__list">
-                {selectedSongSections.map((section, idx) => {
+                <div className="dock-cue-hint">
+                  Click previews • Double-click sends Program • Hover for Edit/Hide • Arrows navigate • Esc clears
+                </div>
+                {visibleSectionIndexes.map((idx) => {
+                  const section = selectedSongSections[idx];
+                  if (!section) return null;
                   const displayLabel = cleanWorshipSectionLabel(section.label);
                   const isLive = liveIdx === idx;
                   const isPreview = previewIdx === idx && liveIdx !== idx;
                   const isSelected = selectedIdx === idx;
                   return (
-                    <button
+                    <div
                       key={section.id}
-                      type="button"
                       className={`dock-lyric-card dock-lyric-card--console${isLive
                         ? " dock-lyric-card--live"
                         : isPreview
@@ -714,33 +1252,58 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
                             ? " dock-lyric-card--selected"
                             : ""
                         }`}
-                      onClick={() => handleSectionClick(idx)}
-                      onDoubleClick={() => handleGoLiveSection(idx)}
                       title="Click to preview. Double-click to send live."
                     >
-                      <div className="dock-lyric-card__header">
-                        {displayLabel ? (
-                          <span className="dock-lyric-card__label">{displayLabel}</span>
-                        ) : (
-                          <span className="dock-lyric-card__label dock-lyric-card__label--muted">
-                            Slide {idx + 1}
-                          </span>
-                        )}
-                        <div className="dock-lyric-card__meta">
-                          {isLive && (
-                            <span className="dock-lyric-badge dock-lyric-badge--live">
-                              <Icon name="fiber_manual_record" size={8} />
-                              Live
+                      <button
+                        type="button"
+                        className="dock-lyric-card__main"
+                        onClick={() => handleSectionClick(idx)}
+                        onDoubleClick={() => handleGoLiveSection(idx)}
+                      >
+                        <div className="dock-lyric-card__header">
+                          {displayLabel ? (
+                            <span className="dock-lyric-card__label">{displayLabel}</span>
+                          ) : (
+                            <span className="dock-lyric-card__label dock-lyric-card__label--muted">
+                              Slide {idx + 1}
                             </span>
                           )}
-                          {isPreview && <span className="dock-lyric-badge dock-lyric-badge--preview">Preview</span>}
-                          {!isLive && !isPreview && isSelected && (
-                            <span className="dock-lyric-badge">Selected</span>
-                          )}
+                          <div className="dock-lyric-card__meta">
+                            {isLive && (
+                              <span className="dock-lyric-badge dock-lyric-badge--live">
+                                <Icon name="fiber_manual_record" size={8} />
+                                Live
+                              </span>
+                            )}
+                            {isPreview && <span className="dock-lyric-badge dock-lyric-badge--preview">Preview</span>}
+                            {!isLive && !isPreview && isSelected && (
+                              <span className="dock-lyric-badge">Selected</span>
+                            )}
+                          </div>
                         </div>
+                        <div className="dock-lyric-card__text">{section.text}</div>
+                      </button>
+                      <div className="dock-lyric-card__actions" aria-label={`Actions for slide ${idx + 1}`}>
+                        <button
+                          type="button"
+                          className="dock-lyric-card__action"
+                          onClick={() => openSlideEditor(idx)}
+                          aria-label={`Edit slide ${idx + 1}`}
+                          title="Edit slide"
+                        >
+                          <Icon name="edit" size={12} />
+                        </button>
+                        <button
+                          type="button"
+                          className="dock-lyric-card__action"
+                          onClick={() => handleHideSection(idx)}
+                          aria-label={`Hide slide ${idx + 1}`}
+                          title="Hide slide"
+                        >
+                          <Icon name="visibility_off" size={12} />
+                        </button>
                       </div>
-                      <div className="dock-lyric-card__text">{section.text}</div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
@@ -750,41 +1313,8 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
       </section>
 
       {selectedSong && (
-        <section className={`dock-console-panel dock-console-panel--deck dock-console-panel--deck-static${deckCollapsed ? " dock-console-panel--deck-collapsed" : ""}`}>
-          <div className="dock-console-deck__header">
-            <div>
-              <div className="dock-console-header__eyebrow">Control Deck</div>
-              <div className="dock-console-deck__title">
-                {activeSection ? stageItemLabel(selectedSong, activeSection, Boolean(isProgramLive && liveIdx === activeSectionIndex)) : "Select a lyric slide"}
-              </div>
-            </div>
-            <button
-              type="button"
-              className="dock-console-toggle"
-              onClick={() => setDeckCollapsed((value) => !value)}
-            >
-              {deckCollapsed ? "Expand" : "Collapse"}
-            </button>
-          </div>
-
-          {activeSection ? (
-            <div className="dock-staged dock-staged--console">
-              <div className="dock-staged__header">
-                <span className="dock-staged__badge">
-                  <Icon name="fiber_manual_record" size={10} />
-                  {liveIdx === activeSectionIndex ? "Live" : previewIdx === activeSectionIndex ? "Preview" : "Cue"}
-                </span>
-                <div className="dock-console-actions">
-                  <span className="dock-shell-chip">{selectedSong.title}</span>
-                  {selectedSong.artist && <span className="dock-shell-chip">{selectedSong.artist}</span>}
-                </div>
-              </div>
-              <div className="dock-staged__label">
-                {cleanWorshipSectionLabel(activeSection.label) || `Slide ${activeSectionIndex !== null ? activeSectionIndex + 1 : ""}`}
-              </div>
-              <div className="dock-staged__sub">{activeSection.text}</div>
-            </div>
-          ) : (
+        <section className="dock-console-panel dock-console-panel--deck dock-console-panel--deck-static dock-console-panel--deck-worship">
+          {!activeSection && (
             <div className="dock-console-placeholder">
               Choose a lyric slide to preview it here. Double-click any slide to take it live instantly.
             </div>
@@ -804,115 +1334,349 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
             </div>
           )}
 
-          {!deckCollapsed && (
-            <>
-              <div className="dock-console-action-row dock-console-action-row--worship">
-                <div className="dock-console-action-pair">
+          <div className="dock-console-action-row dock-console-action-row--worship">
+            <div className="dock-console-action-pair">
+              <button
+                type="button"
+                className="dock-btn dock-btn--toolbar dock-btn--preview"
+                onClick={() => void handlePreviewCurrent()}
+                disabled={activeSectionIndex === null || sending}
+              >
+                <Icon name={sending ? "sync" : "preview"} size={16} />
+                {sending ? "Sending..." : "Send to Preview"}
+              </button>
+              <button
+                type="button"
+                className="dock-btn dock-btn--toolbar dock-btn--live"
+                onClick={() => void handleGoLiveCurrent()}
+                disabled={activeSectionIndex === null || sending}
+              >
+                <Icon name={sending ? "sync" : "cast"} size={16} />
+                {sending ? "Sending..." : "Go Live"}
+              </button>
+            </div>
+            <button
+              type="button"
+              className="dock-btn dock-btn--toolbar dock-btn--danger dock-console-action-row__clear"
+              onClick={handleClearLyrics}
+              disabled={activeSectionIndex === null}
+            >
+              <Icon name="clear" size={16} />
+              Clear
+            </button>
+          </div>
+
+          <div className="dock-worship-toolbar">
+            <div className="dock-worship-toolbar__row">
+              <div className="dock-worship-inline-control dock-worship-inline-control--mode-theme">
+                <span className="dock-worship-inline-control__label">Mode</span>
+                <div className="dock-console-segmented">
                   <button
                     type="button"
-                    className="dock-btn dock-btn--preview"
-                    onClick={() => void handlePreviewCurrent()}
-                    disabled={activeSectionIndex === null || sending}
+                    className={`dock-console-segmented__item${overlayMode === "fullscreen" ? " dock-console-segmented__item--active" : ""}`}
+                    onClick={() => setOverlayMode("fullscreen")}
                   >
-                    <Icon name={sending ? "sync" : "preview"} size={16} />
-                    {sending ? "Sending..." : "Send to Preview"}
+                    <Icon name="fullscreen" size={14} />
+                    Full
                   </button>
                   <button
                     type="button"
-                    className="dock-btn dock-btn--live"
-                    onClick={() => void handleGoLiveCurrent()}
-                    disabled={activeSectionIndex === null || sending}
+                    className={`dock-console-segmented__item${overlayMode === "lower-third" ? " dock-console-segmented__item--active" : ""}`}
+                    onClick={() => setOverlayMode("lower-third")}
                   >
-                    <Icon name={sending ? "sync" : "cast"} size={16} />
-                    {sending ? "Sending..." : "Go Live"}
+                    <Icon name="subtitles" size={14} />
+                    LT
                   </button>
                 </div>
-                <button
-                  type="button"
-                  className="dock-btn dock-btn--danger dock-console-action-row__clear"
-                  onClick={handleClearLyrics}
-                  disabled={activeSectionIndex === null}
-                >
-                  <Icon name="clear" size={16} />
-                  Clear
-                </button>
+                <DockBibleThemePicker
+                  selectedThemeId={activeThemePickerProps.selectedThemeId}
+                  onSelect={activeThemePickerProps.onSelect}
+                  label=""
+                  templateType={activeThemePickerProps.templateType}
+                  allowedCategories={["worship", "general"]}
+                />
               </div>
 
-              <div className="dock-worship-deck__utility">
-                <div className="dock-worship-deck__utility-row">
-                  <div className="dock-console-control">
-                    <div className="dock-section-label" style={{ marginTop: 0 }}>Overlay Mode</div>
-                    <div className="dock-console-segmented">
-                      <button
-                        type="button"
-                        className={`dock-console-segmented__item${overlayMode === "fullscreen" ? " dock-console-segmented__item--active" : ""}`}
-                        onClick={() => setOverlayMode("fullscreen")}
-                      >
-                        <Icon name="fullscreen" size={14} />
-                        Full
-                      </button>
-                      <button
-                        type="button"
-                        className={`dock-console-segmented__item${overlayMode === "lower-third" ? " dock-console-segmented__item--active" : ""}`}
-                        onClick={() => setOverlayMode("lower-third")}
-                      >
-                        <Icon name="subtitles" size={14} />
-                        LT
-                      </button>
-                    </div>
-                  </div>
+              <div className="dock-worship-inline-control dock-worship-inline-control--lines">
+                <span className="dock-worship-inline-control__label">Lines</span>
+                <select
+                  className="dock-select dock-select--worship-lines"
+                  value={linesPerSlide}
+                  onChange={(event) => handleLinesPerSlideChange(Number(event.target.value))}
+                  aria-label="Lines per worship slide"
+                  title="Lines per worship slide"
+                >
+                  {LINES_PER_SLIDE_OPTIONS.map((count) => (
+                    <option key={count} value={count}>
+                      {count} line{count > 1 ? "s" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
-                  <div className="dock-console-control dock-console-control--compact">
-                    <div className="dock-section-label" style={{ marginTop: 0 }}>Lines</div>
-                    <div className="dock-console-segmented dock-console-segmented--compact dock-console-segmented--grid-3">
-                      {LINES_PER_SLIDE_OPTIONS.map((count) => (
-                        <button
-                          key={count}
-                          type="button"
-                          className={`dock-console-segmented__item${linesPerSlide === count ? " dock-console-segmented__item--active" : ""}`}
-                          onClick={() => setLinesPerSlide(count)}
-                        >
-                          {count}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+      {songEditor && (
+        <div className="dock-dialog-backdrop" role="presentation">
+          <div className="dock-dialog" role="dialog" aria-modal="true" aria-labelledby="dock-song-editor-title">
+            <div className="dock-dialog__header">
+              <div>
+                <div className="dock-dialog__eyebrow">Edit Song</div>
+                <h2 id="dock-song-editor-title" className="dock-dialog__title">Song details</h2>
+              </div>
+              <button
+                type="button"
+                className="dock-dialog__close"
+                onClick={() => setSongEditor(null)}
+                aria-label="Close song editor"
+              >
+                <Icon name="close" size={14} />
+              </button>
+            </div>
+            <div className="dock-dialog__body">
+              <label className="dock-dialog-field">
+                <span>Title</span>
+                <input
+                  className="dock-input"
+                  value={songDraft.title}
+                  onChange={(event) => setSongDraft((draft) => ({ ...draft, title: event.target.value }))}
+                />
+              </label>
+              <label className="dock-dialog-field">
+                <span>Artist</span>
+                <input
+                  className="dock-input"
+                  value={songDraft.artist}
+                  onChange={(event) => setSongDraft((draft) => ({ ...draft, artist: event.target.value }))}
+                />
+              </label>
+              <label className="dock-dialog-field">
+                <span>Lyrics</span>
+                <textarea
+                  className="dock-input dock-dialog-textarea"
+                  value={songDraft.lyrics}
+                  onChange={(event) => setSongDraft((draft) => ({ ...draft, lyrics: event.target.value }))}
+                />
+              </label>
+            </div>
+            <div className="dock-dialog__footer">
+              <button type="button" className="dock-btn dock-btn--ghost" onClick={handleResetSongEditor}>
+                Reset to Default
+              </button>
+              <button
+                type="button"
+                className="dock-btn dock-btn--primary"
+                onClick={() => void handleSaveSongEditor()}
+                disabled={savingSong || !songDraft.title.trim() || !songDraft.lyrics.trim()}
+              >
+                {savingSong ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-                <div className="dock-console-control">
-                  <DockBibleThemePicker
-                    selectedThemeId={activeThemePickerProps.selectedThemeId}
-                    onSelect={activeThemePickerProps.onSelect}
-                    label={activeThemePickerProps.label}
-                    templateType={activeThemePickerProps.templateType}
-                  />
-                </div>
+      {slideEditor && (
+        <div className="dock-dialog-backdrop" role="presentation">
+          <div className="dock-dialog dock-dialog--compact" role="dialog" aria-modal="true" aria-labelledby="dock-slide-editor-title">
+            <div className="dock-dialog__header">
+              <div>
+                <div className="dock-dialog__eyebrow">Quick Edit</div>
+                <h2 id="dock-slide-editor-title" className="dock-dialog__title">{slideEditor.label}</h2>
+              </div>
+              <button
+                type="button"
+                className="dock-dialog__close"
+                onClick={() => setSlideEditor(null)}
+                aria-label="Close slide editor"
+              >
+                <Icon name="close" size={14} />
+              </button>
+            </div>
+            <div className="dock-dialog__body">
+              <label className="dock-dialog-field">
+                <span>Slide text</span>
+                <textarea
+                  className="dock-input dock-dialog-textarea dock-dialog-textarea--short"
+                  value={slideEditor.text}
+                  onChange={(event) => setSlideEditor((draft) => draft ? { ...draft, text: event.target.value } : draft)}
+                />
+              </label>
+            </div>
+            <div className="dock-dialog__footer">
+              <button type="button" className="dock-btn dock-btn--ghost" onClick={() => setSlideEditor(null)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="dock-btn dock-btn--primary"
+                onClick={() => void handleSaveSlideEditor()}
+                disabled={savingSong || !slideEditor.text.trim()}
+              >
+                {savingSong ? "Saving..." : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-                {overlayMode === "fullscreen" && (
-                  <div className="dock-console-control">
-                    <div className="dock-section-label" style={{ marginTop: 0 }}>Background</div>
-                    <div className="dock-background-presets">
-                      {DOCK_BACKGROUND_PRESETS.map((preset) => (
-                        <button
-                          key={preset.id}
-                          type="button"
-                          className={`dock-background-preset${backgroundPreset === preset.id ? " dock-background-preset--active" : ""}`}
-                          onClick={() => setBackgroundPreset(preset.id)}
-                        >
-                          <span
-                            className="dock-background-preset__swatch"
-                            style={dockBackgroundPresetPreviewStyle(selectedFSTheme.settings, preset.id)}
-                          />
-                          <span>{preset.label}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
+      {isNewSongModalOpen && (
+        <div className="dock-dialog-backdrop" role="presentation">
+          <div className="dock-dialog" role="dialog" aria-modal="true" aria-labelledby="dock-new-song-title">
+            <div className="dock-dialog__header">
+              <div>
+                <div className="dock-dialog__eyebrow">{newSongSource?.importSourceType === "online" ? "Review Import" : "Add Song"}</div>
+                <h2 id="dock-new-song-title" className="dock-dialog__title">
+                  {newSongSource?.importSourceType === "online" ? "Review lyrics before saving" : "New worship song"}
+                </h2>
+              </div>
+              <button
+                type="button"
+                className="dock-dialog__close"
+                onClick={() => {
+                  setIsNewSongModalOpen(false);
+                  setNewSongSource(null);
+                }}
+                aria-label="Close add song dialog"
+              >
+                <Icon name="close" size={14} />
+              </button>
+            </div>
+            <div className="dock-dialog__body">
+              <label className="dock-dialog-field">
+                <span>Title</span>
+                <input
+                  className="dock-input"
+                  value={newSongDraft.title}
+                  onChange={(event) => setNewSongDraft((draft) => ({ ...draft, title: event.target.value }))}
+                />
+              </label>
+              <label className="dock-dialog-field">
+                <span>Artist</span>
+                <input
+                  className="dock-input"
+                  value={newSongDraft.artist}
+                  onChange={(event) => setNewSongDraft((draft) => ({ ...draft, artist: event.target.value }))}
+                />
+              </label>
+              <label className="dock-dialog-field">
+                <span>Lyrics</span>
+                <textarea
+                  className="dock-input dock-dialog-textarea"
+                  value={newSongDraft.lyrics}
+                  onChange={(event) => setNewSongDraft((draft) => ({ ...draft, lyrics: event.target.value }))}
+                />
+              </label>
+            </div>
+            <div className="dock-dialog__footer">
+              <button
+                type="button"
+                className="dock-btn dock-btn--ghost"
+                onClick={() => {
+                  setIsNewSongModalOpen(false);
+                  setNewSongSource(null);
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="dock-btn dock-btn--primary"
+                onClick={() => void handleSaveNewSong()}
+                disabled={savingSong || !newSongDraft.title.trim() || !newSongDraft.lyrics.trim()}
+              >
+                {savingSong ? "Saving..." : "Save Song"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {onlineSearchOpen && (
+        <div className="dock-dialog-backdrop" role="presentation">
+          <div className="dock-dialog" role="dialog" aria-modal="true" aria-labelledby="dock-online-song-title">
+            <div className="dock-dialog__header">
+              <div>
+                <div className="dock-dialog__eyebrow">Search Online</div>
+                <h2 id="dock-online-song-title" className="dock-dialog__title">Import lyrics</h2>
+              </div>
+              <button
+                type="button"
+                className="dock-dialog__close"
+                onClick={() => setOnlineSearchOpen(false)}
+                aria-label="Close online search"
+              >
+                <Icon name="close" size={14} />
+              </button>
+            </div>
+            <div className="dock-dialog__body">
+              <div className="dock-search dock-search--console">
+                <Icon name="search" size={14} className="dock-search__icon" />
+                <input
+                  className="dock-input"
+                  placeholder="Type to start searching..."
+                  value={onlineSearchQuery}
+                  onChange={(event) => setOnlineSearchQuery(event.target.value)}
+                  aria-label="Search online lyrics"
+                  autoFocus
+                />
+                {onlineSearchQuery && (
+                  <button
+                    type="button"
+                    className="dock-search__clear"
+                    onClick={() => setOnlineSearchQuery("")}
+                    aria-label="Clear online lyrics search"
+                    title="Clear online lyrics search"
+                  >
+                    <Icon name="close" size={13} />
+                  </button>
                 )}
               </div>
-            </>
-          )}
-        </section>
+              {onlineSearchLoading && (
+                <div className="dock-dialog__status">
+                  <Icon name="sync" size={13} />
+                  Searching online sources...
+                </div>
+              )}
+              {onlineSearchError && <div className="dock-dialog__error">{onlineSearchError}</div>}
+              <div className="dock-dialog-results">
+                {onlineResults.map((result) => (
+                  <div className="dock-dialog-result" key={result.id}>
+                    <div className="dock-dialog-result__body">
+                      <span className="dock-dialog-result__title">{result.title}</span>
+                      <span className="dock-dialog-result__meta">
+                        {[result.artist, result.sourceName].filter(Boolean).join(" · ") || "Online lyrics"}
+                      </span>
+                      {result.preview && <span className="dock-dialog-result__preview">{result.preview}</span>}
+                    </div>
+                    <button
+                      type="button"
+                      className="dock-btn dock-btn--ghost dock-dialog-result__action"
+                      onClick={() => handleImportOnlineResult(result)}
+                    >
+                      Import
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {toasts.length > 0 && (
+        <div className="dock-toast-stack" role="status" aria-live="polite">
+          {toasts.map((toast) => (
+            <div key={toast.id} className={`dock-toast dock-toast--${toast.tone}`}>
+              {toast.tone === "success" && <Icon name="check" size={13} />}
+              {toast.tone === "error" && <Icon name="warning" size={13} />}
+              {toast.tone === "info" && <Icon name="check_circle" size={13} />}
+              <span>{toast.message}</span>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

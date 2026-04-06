@@ -1695,7 +1695,7 @@
 
 .cfg-search-input {
   width: 100%;
-  padding: 8px 12px 8px 34px;
+  padding: 8px 34px 8px 34px;
   border-radius: 8px;
   border: 1px solid var(--border);
   background: var(--bg-dark);
@@ -1712,6 +1712,31 @@
 
 .cfg-search-input::placeholder {
   color: var(--text-muted);
+}
+
+.cfg-search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.cfg-search-clear:hover,
+.cfg-search-clear:focus-visible {
+  color: var(--text-primary);
+  background: var(--surface-hover);
+  border-color: var(--border);
 }
 
 .cfg-filter-pills {

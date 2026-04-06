@@ -453,7 +453,7 @@ export const DEFAULT_SETTINGS: MVSettings = {
   streamingPlatform: "custom",
 
   lowerThirdDefaultDurationSec: 10,
-  brandColor: "#00E676",
+  brandColor: "#2563eb",
   churchName: "",
   pastorNames: "",
   pastorSpeakers: [],

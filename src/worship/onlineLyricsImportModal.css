@@ -1,0 +1,224 @@
+.online-lyrics-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(6, 10, 18, 0.72);
+}
+
+.online-lyrics-modal {
+  width: min(760px, calc(100vw - 32px));
+  max-height: min(760px, calc(100vh - 32px));
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-dark);
+  color: var(--text-primary);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+}
+
+.online-lyrics-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.online-lyrics-modal__eyebrow {
+  margin: 0 0 4px;
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.online-lyrics-modal h2 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.online-lyrics-modal p {
+  margin: 6px 0 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.online-lyrics-modal__close {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.online-lyrics-modal__close:hover,
+.online-lyrics-modal__close:focus-visible {
+  border-color: rgba(var(--primary-rgb), 0.52);
+  color: var(--text-primary);
+  outline: none;
+}
+
+.online-lyrics-modal__source-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.online-lyrics-modal__source,
+.online-lyrics-modal__tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-secondary);
+  background: var(--surface-raised);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.online-lyrics-modal__tag {
+  border-color: rgba(34, 197, 94, 0.34);
+  color: #86efac;
+}
+
+.online-lyrics-modal__fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.5fr);
+  gap: 12px;
+}
+
+.online-lyrics-modal__field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.online-lyrics-modal__field input,
+.online-lyrics-modal__field textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  font: inherit;
+  font-weight: 500;
+}
+
+.online-lyrics-modal__field input {
+  height: 38px;
+  padding: 0 10px;
+}
+
+.online-lyrics-modal__field textarea {
+  min-height: 300px;
+  max-height: 42vh;
+  resize: vertical;
+  padding: 10px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.online-lyrics-modal__field input:focus,
+.online-lyrics-modal__field textarea:focus {
+  border-color: var(--primary);
+  outline: 2px solid rgba(var(--primary-rgb), 0.22);
+  outline-offset: 0;
+}
+
+.online-lyrics-modal__field input[aria-invalid="true"],
+.online-lyrics-modal__field textarea[aria-invalid="true"] {
+  border-color: rgba(248, 113, 113, 0.72);
+}
+
+.online-lyrics-modal__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.online-lyrics-modal__secondary,
+.online-lyrics-modal__primary {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.online-lyrics-modal__secondary {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text-secondary);
+}
+
+.online-lyrics-modal__primary {
+  border: 1px solid var(--primary);
+  background: var(--primary);
+  color: #ffffff;
+}
+
+.online-lyrics-modal__secondary:hover:not(:disabled),
+.online-lyrics-modal__secondary:focus-visible {
+  border-color: rgba(var(--primary-rgb), 0.42);
+  color: var(--text-primary);
+  background: var(--surface-hover);
+  outline: none;
+}
+
+.online-lyrics-modal__primary:hover:not(:disabled),
+.online-lyrics-modal__primary:focus-visible {
+  background: var(--primary-hover);
+  outline: 2px solid rgba(var(--primary-rgb), 0.28);
+  outline-offset: 2px;
+}
+
+.online-lyrics-modal__secondary:disabled,
+.online-lyrics-modal__primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+@media (max-width: 720px) {
+  .online-lyrics-modal-backdrop {
+    align-items: stretch;
+    padding: 12px;
+  }
+
+  .online-lyrics-modal {
+    width: 100%;
+    max-height: calc(100vh - 24px);
+    padding: 14px;
+  }
+
+  .online-lyrics-modal__fields {
+    grid-template-columns: 1fr;
+  }
+
+  .online-lyrics-modal__field textarea {
+    min-height: 240px;
+  }
+}

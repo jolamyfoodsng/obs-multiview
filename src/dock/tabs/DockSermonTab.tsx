@@ -328,7 +328,7 @@ export default function DockSermonTab({ staged, onStage }: Props) {
                 onClick={handleSave}
                 title="Save to local storage"
               >
-                <Icon name={saved ? "check" : "save"} size={12} />
+                {/* <Icon name={saved ? "check" : "save"} size={12} /> */}
                 {saved ? " Saved!" : " Save"}
               </button>
             </div>

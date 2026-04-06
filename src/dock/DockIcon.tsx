@@ -16,6 +16,7 @@ import {
   Circle,
   Clapperboard,
   Eraser,
+  EyeOff,
   File,
   FilePenLine,
   FileText,
@@ -135,7 +136,9 @@ const ICONS: Record<string, IconDef> = {
   sync: { component: RefreshCcw },
   sun: { component: SunMedium },
   text_fields: { component: Type },
+  travel_explore: { component: Globe },
   videocam: { component: Video },
+  visibility_off: { component: EyeOff },
   warning: { component: AlertTriangle },
   widgets: { component: Sparkles },
 };

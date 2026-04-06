@@ -84,8 +84,20 @@ function ThemePickerModal({
             placeholder="Search themes..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search lower third themes"
             autoFocus
           />
+          {search && (
+            <button
+              type="button"
+              className="lt-picker-search-clear"
+              onClick={() => setSearch("")}
+              aria-label="Clear lower third theme search"
+              title="Clear lower third theme search"
+            >
+              <Icon name="close" size={14} />
+            </button>
+          )}
         </div>
 
         {filtered ? (

@@ -18,7 +18,16 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { generateSlides } from "../../worship/slideEngine";
 import { archiveSong, getAllSongs, saveSong, syncSongsToDock } from "../../worship/worshipDb";
 import { worshipObsService } from "../../worship/worshipObsService";
-import { searchOnlineSongLyrics, type OnlineLyricsSearchResult } from "../../worship/onlineLyricsService";
+import {
+  formatOnlineLyricsSearchError,
+  isSpotifyTrackLyricsQuery,
+  searchOnlineSongLyrics,
+  type OnlineLyricsSearchResult,
+} from "../../worship/onlineLyricsService";
+import {
+  OnlineLyricsImportModal,
+  type OnlineLyricsImportDraft,
+} from "../../worship/OnlineLyricsImportModal";
 import { lowerThirdObsService } from "../../lowerthirds/lowerThirdObsService";
 import { dockObsClient } from "../../dock/dockObsClient";
 import { ensureDockObsClientConnected } from "../../services/dockObsInterop";
@@ -154,6 +163,7 @@ export function WorshipModule({
   const [onlineSearchState, setOnlineSearchState] = useState<"idle" | "loading" | "ready" | "error">("idle");
   const [onlineSearchMessage, setOnlineSearchMessage] = useState("");
   const [importingOnlineId, setImportingOnlineId] = useState<string | null>(null);
+  const [pendingOnlineImport, setPendingOnlineImport] = useState<OnlineLyricsSearchResult | null>(null);
 
   // ── Theme state ──
   const [themes, setThemes] = useState<BibleTheme[]>(WORSHIP_FULLSCREEN_THEME_FALLBACKS);
@@ -243,6 +253,7 @@ export function WorshipModule({
   // ── Refs ──
   const slideListRef = useRef<HTMLDivElement>(null);
   const onlineSearchRequestRef = useRef(0);
+  const spotifyAutoImportRef = useRef<string | null>(null);
 
   // ── Service gate (no-op — service gate concept removed) ──
   const { checkServiceActive } = useServiceGate();
@@ -412,7 +423,10 @@ export function WorshipModule({
     if (!songSearch.trim()) return songs;
     const q = songSearch.toLowerCase();
     return songs.filter(
-      (s) => s.metadata.title.toLowerCase().includes(q) || s.metadata.artist.toLowerCase().includes(q)
+      (s) =>
+        s.metadata.title.toLowerCase().includes(q) ||
+        s.metadata.artist.toLowerCase().includes(q) ||
+        s.lyrics.toLowerCase().includes(q)
     );
   }, [songs, songSearch]);
 
@@ -480,7 +494,7 @@ export function WorshipModule({
         console.warn("[Worship] Online lyrics search failed:", error);
         setOnlineSearchResults([]);
         setOnlineSearchState("error");
-        setOnlineSearchMessage("Online lyrics search failed. Try again in a moment.");
+        setOnlineSearchMessage(formatOnlineLyricsSearchError(error));
       }
     }, ONLINE_LYRICS_SEARCH_DELAY_MS);
 
@@ -968,14 +982,27 @@ export function WorshipModule({
     setImportMetadata({ title: "", artist: "" });
   }, [importMetadata, importLyrics, reloadSongs]);
 
-  const handleImportOnlineSong = useCallback(async (result: OnlineLyricsSearchResult) => {
+  const handleOpenOnlineImport = useCallback((result: OnlineLyricsSearchResult) => {
     const existingSong = findImportedSong(result);
     if (existingSong) {
       selectSongById(existingSong.id);
       return;
     }
+    setPendingOnlineImport(result);
+  }, [findImportedSong, selectSongById]);
 
-    const lyrics = result.lyrics.trim();
+  const handleConfirmOnlineImport = useCallback(async (
+    result: OnlineLyricsSearchResult,
+    draft: OnlineLyricsImportDraft,
+  ) => {
+    const existingSong = findImportedSong(result);
+    if (existingSong) {
+      selectSongById(existingSong.id);
+      setPendingOnlineImport(null);
+      return;
+    }
+
+    const lyrics = draft.lyrics.trim();
     if (!lyrics) {
       return;
     }
@@ -984,8 +1011,8 @@ export function WorshipModule({
     const newSong: Song = {
       id: `song-online-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       metadata: {
-        title: result.title.trim() || songSearch.trim() || "Imported Song",
-        artist: result.artist.trim(),
+        title: draft.title.trim() || songSearch.trim() || "Imported Song",
+        artist: draft.artist.trim(),
       },
       lyrics,
       slides: [],
@@ -1001,10 +1028,33 @@ export function WorshipModule({
       await saveSong(newSong);
       await reloadSongs();
       selectSongById(newSong.id);
+      setPendingOnlineImport(null);
     } finally {
       setImportingOnlineId(null);
     }
   }, [findImportedSong, reloadSongs, selectSongById, songSearch]);
+
+  useEffect(() => {
+    const trimmedSearch = songSearch.trim();
+    const firstResult = onlineSearchResults[0];
+
+    if (
+      !isSpotifyTrackLyricsQuery(trimmedSearch)
+      || onlineSearchState !== "ready"
+      || !firstResult
+      || findImportedSong(firstResult)
+    ) {
+      return;
+    }
+
+    const importKey = `${trimmedSearch}::${firstResult.id}`;
+    if (spotifyAutoImportRef.current === importKey) {
+      return;
+    }
+
+    spotifyAutoImportRef.current = importKey;
+    setPendingOnlineImport(firstResult);
+  }, [findImportedSong, onlineSearchResults, onlineSearchState, songSearch]);
 
   // ── Keyboard shortcuts ──
   useEffect(() => {
@@ -1231,7 +1281,19 @@ export function WorshipModule({
                 placeholder="Search library or online lyrics…"
                 value={songSearch}
                 onChange={(e) => setSongSearch(e.target.value)}
+                aria-label="Search worship library or online lyrics"
               />
+              {songSearch && (
+                <button
+                  type="button"
+                  className="worship-sidebar-search-clear"
+                  onClick={() => setSongSearch("")}
+                  aria-label="Clear worship search"
+                  title="Clear worship search"
+                >
+                  <Icon name="close" size={14} />
+                </button>
+              )}
             </div>
 
             <div className="worship-sidebar-tabs">
@@ -1276,7 +1338,14 @@ export function WorshipModule({
                     >
                       <div className="worship-song-item-info">
                         <h3>{song.metadata.title}</h3>
-                        <span className="worship-song-item-artist">{song.metadata.artist}</span>
+                        <div className="worship-song-item-meta-row">
+                          <span className="worship-song-item-artist">{song.metadata.artist}</span>
+                          {song.importSourceType === "online" && (
+                            <span className="worship-imported-badge">
+                              Imported{song.importSourceName ? ` from ${song.importSourceName}` : ""}
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <div className="worship-song-item-actions">
                         {isActive && (
@@ -1325,10 +1394,11 @@ export function WorshipModule({
                           <div className="worship-online-item-info">
                             <h3>{result.title}</h3>
                             <div className="worship-online-item-meta">
-                              <span>{result.artist || "Unknown artist"}</span>
-                              <span className="worship-online-source">{result.sourceName}</span>
-                            </div>
-                          </div>
+	                              <span>{result.artist || "Unknown artist"}</span>
+	                              <span className="worship-online-source">{result.sourceName}</span>
+                              {importedSong && <span className="worship-imported-badge">Imported</span>}
+	                            </div>
+	                          </div>
                           <button
                             className="worship-online-action"
                             disabled={isImporting}
@@ -1337,9 +1407,9 @@ export function WorshipModule({
                                 selectSongById(importedSong.id);
                                 return;
                               }
-                              void handleImportOnlineSong(result);
-                            }}
-                          >
+	                              handleOpenOnlineImport(result);
+	                            }}
+	                          >
                             {isImporting ? "Saving…" : actionLabel}
                           </button>
                         </div>
@@ -1681,8 +1751,8 @@ export function WorshipModule({
           </aside>
         </div>
 
-        {showLiveSlideStrip && (
-          <div className="worship-live-strip" role="region" aria-label="Live worship slides">
+	      {showLiveSlideStrip && (
+	        <div className="worship-live-strip" role="region" aria-label="Live worship slides">
             <div className="worship-live-strip-head">
               <span className="worship-live-strip-title">
                 <Icon name="slideshow" size={20} />
@@ -1717,11 +1787,20 @@ export function WorshipModule({
               })}
             </div>
           </div>
-        )}
-      </div>
+	        )}
+	      </div>
 
-      {confirmDeleteSong && (
-        <div className="end-confirm-backdrop" onClick={() => setConfirmDeleteSong(null)}>
+      {pendingOnlineImport && (
+        <OnlineLyricsImportModal
+          result={pendingOnlineImport}
+          saving={importingOnlineId === pendingOnlineImport.id}
+          onClose={() => setPendingOnlineImport(null)}
+          onImport={(draft) => handleConfirmOnlineImport(pendingOnlineImport, draft)}
+        />
+      )}
+
+	      {confirmDeleteSong && (
+	        <div className="end-confirm-backdrop" onClick={() => setConfirmDeleteSong(null)}>
           <div className="end-confirm-modal" onClick={(e) => e.stopPropagation()}>
             <h2>Archive the song?</h2>
             <p>

@@ -6,7 +6,6 @@ import ThemeCreatorModal from "./ThemeCreatorModal";
 import { dockBridge } from "../services/dockBridge";
 import {
   type DockProductionSettingsPayload,
-  type ProductionOverlayMode,
   type ProductionSettings,
   getDefaultProductionSettings,
   getProductionSettings,
@@ -16,7 +15,6 @@ import {
   syncProductionSettingsToDock,
 } from "../services/productionSettings";
 
-type ModuleKey = "bible" | "worship";
 type StatusTone = "success" | "error";
 
 interface StatusMessage {
@@ -50,42 +48,6 @@ function alignSettingsToThemes(
 function themeCategories(theme: BibleTheme): string {
   const categories = theme.categories?.length ? theme.categories : theme.category ? [theme.category] : [];
   return categories.length > 0 ? categories.join(", ") : "uncategorized";
-}
-
-interface ThemeSelectProps {
-  label: string;
-  value: string;
-  themes: BibleTheme[];
-  onChange: (themeId: string) => void;
-}
-
-function ThemeSelect({ label, value, themes, onChange }: ThemeSelectProps) {
-  const builtinThemes = themes.filter((theme) => theme.source === "builtin");
-  const customThemes = themes.filter((theme) => theme.source === "custom");
-
-  return (
-    <label className="production-field">
-      <span>{label}</span>
-      <select className="production-input" value={value} onChange={(event) => onChange(event.target.value)}>
-        <optgroup label="Built in">
-          {builtinThemes.map((theme) => (
-            <option key={theme.id} value={theme.id}>
-              {theme.name}
-            </option>
-          ))}
-        </optgroup>
-        {customThemes.length > 0 && (
-          <optgroup label="Custom">
-            {customThemes.map((theme) => (
-              <option key={theme.id} value={theme.id}>
-                {theme.name}
-              </option>
-            ))}
-          </optgroup>
-        )}
-      </select>
-    </label>
-  );
 }
 
 export default function ProductionThemeSettingsPage() {
@@ -128,35 +90,9 @@ export default function ProductionThemeSettingsPage() {
     return () => window.clearTimeout(timer);
   }, [status]);
 
-  const resolvedSettings = useMemo(
-    () => resolveProductionSettings(settings, themes),
-    [settings, themes],
-  );
-
-  const fullscreenThemes = useMemo(
-    () => themes.filter((theme) => theme.templateType === "fullscreen"),
-    [themes],
-  );
-  const lowerThirdThemes = useMemo(
-    () => themes.filter((theme) => theme.templateType === "lower-third"),
-    [themes],
-  );
   const customThemes = useMemo(
     () => themes.filter((theme) => theme.source === "custom"),
     [themes],
-  );
-
-  const updateModuleSetting = useCallback(
-    (module: ModuleKey, patch: Partial<ProductionSettings[ModuleKey]>) => {
-      setSettings((current) => ({
-        ...current,
-        [module]: {
-          ...current[module],
-          ...patch,
-        },
-      }));
-    },
-    [],
   );
 
   const persistSettings = useCallback(
@@ -248,82 +184,15 @@ export default function ProductionThemeSettingsPage() {
       <div className="app-page production-page">
         <div className="app-page__inner">
           <section className="production-panel">
-          <div className="production-loading">
-            <Icon name="hourglass_empty" size={18} />
-            Loading production theme settings...
-          </div>
+            <div className="production-loading">
+              <Icon name="hourglass_empty" size={18} />
+              Loading production theme settings...
+            </div>
           </section>
         </div>
       </div>
     );
   }
-
-  const renderModuleCard = (
-    module: ModuleKey,
-    title: string,
-    description: string,
-    activeMode: ProductionOverlayMode,
-    fullscreenTheme: BibleTheme,
-    lowerThirdTheme: BibleTheme,
-  ) => (
-    <section className="production-panel production-module-card">
-      <div className="production-card-head">
-        <div>
-          <h2>{title}</h2>
-          <p>{description}</p>
-        </div>
-        <Icon name={module === "bible" ? "menu_book" : "music_note"} size={20} />
-      </div>
-
-      <div className="production-field">
-        <span>Default live mode</span>
-        <div className="production-pill-row">
-          <button
-            className={`production-pill${activeMode === "fullscreen" ? " is-active" : ""}`}
-            onClick={() => updateModuleSetting(module, { defaultMode: "fullscreen" })}
-          >
-            <Icon name="fullscreen" size={14} />
-            Fullscreen
-          </button>
-          <button
-            className={`production-pill${activeMode === "lower-third" ? " is-active" : ""}`}
-            onClick={() => updateModuleSetting(module, { defaultMode: "lower-third" })}
-          >
-            <Icon name="subtitles" size={14} />
-            Lower Third
-          </button>
-        </div>
-      </div>
-
-      <div className="production-form-grid">
-        <ThemeSelect
-          label="Fullscreen theme"
-          value={settings[module].fullscreenThemeId}
-          themes={fullscreenThemes}
-          onChange={(themeId) => updateModuleSetting(module, { fullscreenThemeId: themeId })}
-        />
-        <ThemeSelect
-          label="Lower-third theme"
-          value={settings[module].lowerThirdThemeId}
-          themes={lowerThirdThemes}
-          onChange={(themeId) => updateModuleSetting(module, { lowerThirdThemeId: themeId })}
-        />
-      </div>
-
-      <div className="production-theme-summary">
-        <div className="production-theme-summary__item">
-          <span className="production-theme-summary__label">Fullscreen</span>
-          <strong>{fullscreenTheme.name}</strong>
-          <small>{themeCategories(fullscreenTheme)}</small>
-        </div>
-        <div className="production-theme-summary__item">
-          <span className="production-theme-summary__label">Lower third</span>
-          <strong>{lowerThirdTheme.name}</strong>
-          <small>{themeCategories(lowerThirdTheme)}</small>
-        </div>
-      </div>
-    </section>
-  );
 
   return (
     <div className="app-page production-page">
@@ -366,23 +235,8 @@ export default function ProductionThemeSettingsPage() {
           </div>
         )}
 
-        <section className="production-panel">
-          <div className="production-card-head">
-            <div>
-              <h2>Dock behavior</h2>
-              <p>These defaults are pushed to the OBS Dock and applied whenever an operator stages Bible or Worship.</p>
-            </div>
-            <Icon name="tune" size={20} />
-          </div>
 
-          <ul className="production-checklist">
-            <li>The dock can still switch between fullscreen and lower-third live.</li>
-            <li>Theme selection now happens here in the app, not inside OBS.</li>
-            <li>Changes take effect after you save without rebuilding OBS sources.</li>
-          </ul>
-        </section>
-
-        <div className="production-module-grid">
+        {/* <div className="production-module-grid">
           {renderModuleCard(
             "bible",
             "Bible Defaults",
@@ -399,7 +253,7 @@ export default function ProductionThemeSettingsPage() {
             resolvedSettings.worship.fullscreenTheme,
             resolvedSettings.worship.lowerThirdTheme,
           )}
-        </div>
+        </div> */}
 
         <section className="production-panel">
           <div className="production-card-head">

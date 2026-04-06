@@ -70,35 +70,44 @@ export default function ResourcesPage() {
   return (
     <div className="app-page resources-page">
       <div className="app-page__inner resources-page__inner">
-        <header className="app-page__header">
-          <div className="app-page__header-copy">
+        <header className="app-page__header resources-page__header">
+          <div className="app-page__header-copy resources-page__header-copy">
             <p className="app-page__eyebrow">Resources</p>
             <h1 className="app-page__title">{copy.title}</h1>
             <p className="app-page__subtitle">{copy.subtitle}</p>
-          </div>
 
-          <div className="lib-tab-switcher" role="tablist" aria-label="Resource sections">
-            <button
-              className={`lib-tab-btn${tab === "bible" ? " is-active" : ""}`}
-              onClick={() => handleTab("bible")}
-            >
-              <Icon name="menu_book" size={18} />
-              Bible
-            </button>
-            <button
-              className={`lib-tab-btn${tab === "worship" ? " is-active" : ""}`}
-              onClick={() => handleTab("worship")}
-            >
-              <Icon name="music_note" size={18} />
-              Worship
-            </button>
-            <button
-              className={`lib-tab-btn${tab === "media" ? " is-active" : ""}`}
-              onClick={() => handleTab("media")}
-            >
-              <Icon name="perm_media" size={18} />
-              Media
-            </button>
+            <div className="resources-tab-switcher" role="tablist" aria-label="Resource sections">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab === "bible"}
+                className={`resources-tab-btn${tab === "bible" ? " is-active" : ""}`}
+                onClick={() => handleTab("bible")}
+              >
+                <Icon name="menu_book" size={20} />
+                Bible
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab === "worship"}
+                className={`resources-tab-btn${tab === "worship" ? " is-active" : ""}`}
+                onClick={() => handleTab("worship")}
+              >
+                <Icon name="music_note" size={20} />
+                Worship
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={tab === "media"}
+                className={`resources-tab-btn${tab === "media" ? " is-active" : ""}`}
+                onClick={() => handleTab("media")}
+              >
+                <Icon name="perm_media" size={20} />
+                Media
+              </button>
+            </div>
           </div>
         </header>
 

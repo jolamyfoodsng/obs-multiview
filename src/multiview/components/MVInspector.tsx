@@ -762,15 +762,27 @@ function LTInspectorPanel({ region, update }: { region: Region; update: (changes
                   <Icon name="close" size={18} />
                 </button>
               </div>
-              <div style={{ padding: "0 12px 8px" }}>
+              <div className="mv-inline-search" style={{ margin: "0 12px 8px" }}>
                 <input
                   type="text"
                   className="mv-field-input"
                   placeholder="Search themes..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  aria-label="Search lower third themes"
                   autoFocus
                 />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    className="mv-inline-search-clear"
+                    onClick={() => setSearchTerm("")}
+                    aria-label="Clear lower third theme search"
+                    title="Clear lower third theme search"
+                  >
+                    <Icon name="close" size={14} />
+                  </button>
+                )}
               </div>
               {filteredThemes ? (
                 <div className="mv-theme-picker-section">

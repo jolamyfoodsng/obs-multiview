@@ -293,6 +293,9 @@ const SEARCH_STOP_WORDS = new Set([
   "be",
   "but",
   "by",
+  "did",
+  "do",
+  "does",
   "for",
   "from",
   "he",
@@ -380,6 +383,9 @@ function normalizeSearchToken(token: string): string {
     return token.slice(0, -2);
   }
   if (token.endsWith("s") && token.length > 4) {
+    return token.slice(0, -1);
+  }
+  if (token.endsWith("e") && token.length > 6) {
     return token.slice(0, -1);
   }
 

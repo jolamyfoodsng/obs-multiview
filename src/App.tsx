@@ -31,7 +31,9 @@ import { dockBridge } from "./services/dockBridge";
 import { initDockCommandHandler } from "./services/dockCommandHandler";
 import { obsService } from "./services/obsService";
 import { serviceStore as svcStore } from "./services/serviceStore";
-import { syncSongsToDock } from "./worship/worshipDb";
+import { getAllSongs, getSong, saveSong, syncSongsToDock } from "./worship/worshipDb";
+import { generateSlides } from "./worship/slideEngine";
+import type { Song } from "./worship/types";
 import { syncInstalledTranslationsToDock } from "./bible/bibleDb";
 import ResourcesPage from "./pages/ResourcesPage";
 import ProductionHomePage from "./pages/ProductionHomePage";
@@ -39,12 +41,53 @@ import ProductionThemeSettingsPage from "./pages/ProductionThemeSettingsPage";
 import SpeechToScripturePage from "./pages/SpeechToScripturePage";
 import { buildDockProductionSettingsPayload, syncProductionSettingsToDock } from "./services/productionSettings";
 import { voiceBibleService } from "./services/voiceBibleService";
+import {
+  loadWorshipDockSongSaveCommand,
+  saveWorshipDockSongSaveResult,
+  type WorshipDockSongSavePayload,
+} from "./services/worshipDockInterop";
 import "./App.css";
 import "./multiview/mv.css";
 import "./bible/bible.css";
 import "./lowerthirds/lowerthirds.css";
 
 const UPDATE_POLL_INTERVAL_MS = 30_000;
+const WORSHIP_DOCK_SAVE_POLL_INTERVAL_MS = 500;
+
+async function saveWorshipSongFromDockPayload(payload: WorshipDockSongSavePayload): Promise<{
+  song: Song;
+  songs: Song[];
+}> {
+  const id = payload.id?.trim();
+  const title = payload.title?.trim();
+  const lyrics = payload.lyrics?.trim();
+  if (!id || !title || !lyrics) {
+    throw new Error("Song title and lyrics are required.");
+  }
+
+  const existing = await getSong(id);
+  const now = new Date().toISOString();
+  const song: Song = {
+    id,
+    metadata: {
+      title,
+      artist: payload.artist?.trim() ?? "",
+    },
+    lyrics,
+    slides: generateSlides(lyrics, 2, true),
+    createdAt: existing?.createdAt ?? now,
+    updatedAt: now,
+    importSourceName: payload.importSourceName ?? existing?.importSourceName,
+    importSourceType: payload.importSourceType ?? existing?.importSourceType ?? "manual",
+    importSourceUrl: payload.importSourceUrl ?? existing?.importSourceUrl,
+    archived: existing?.archived,
+    archivedAt: existing?.archivedAt,
+  };
+
+  await saveSong(song);
+  const songs = await getAllSongs();
+  return { song, songs };
+}
 
 function App() {
   // ── Global theme (dark/light) ──
@@ -87,7 +130,6 @@ function App() {
       // Dock is requesting library data (songs) via BroadcastChannel
       if (cmd.type === "request-library-data") {
         try {
-          const { getAllSongs } = await import("./worship/worshipDb");
           const songs = await getAllSongs();
           dockBridge.sendState({
             type: "state:songs-data",
@@ -98,9 +140,92 @@ function App() {
           console.warn("[App] Failed to send songs to dock:", err);
         }
       }
+
+      if (cmd.type === "worship:song-save") {
+        try {
+          const { song, songs } = await saveWorshipSongFromDockPayload(cmd.payload as WorshipDockSongSavePayload);
+          dockBridge.sendState({
+            type: "state:worship-song-save-result",
+            payload: { commandId: cmd.commandId, ok: true, song },
+            timestamp: Date.now(),
+          });
+          dockBridge.sendState({
+            type: "state:songs-data",
+            payload: songs,
+            timestamp: Date.now(),
+          });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          dockBridge.sendState({
+            type: "state:worship-song-save-result",
+            payload: { commandId: cmd.commandId, ok: false, error: message },
+            timestamp: Date.now(),
+          });
+          console.warn("[App] Failed to save dock Worship song:", err);
+        }
+      }
     });
 
+    let lastProcessedWorshipSaveCommandId = "";
+    const worshipSaveFallbackStartedAt = Date.now();
+    let worshipSaveFallbackInFlight = false;
+    const pollWorshipSaveFallback = async () => {
+      if (worshipSaveFallbackInFlight) return;
+      worshipSaveFallbackInFlight = true;
+      try {
+        const command = await loadWorshipDockSongSaveCommand().catch(() => null);
+        if (!command || command.commandId === lastProcessedWorshipSaveCommandId) return;
+        if (command.timestamp < worshipSaveFallbackStartedAt - 1_000) {
+          lastProcessedWorshipSaveCommandId = command.commandId;
+          return;
+        }
+
+        lastProcessedWorshipSaveCommandId = command.commandId;
+        try {
+          const { song, songs } = await saveWorshipSongFromDockPayload(command.payload);
+          await saveWorshipDockSongSaveResult({
+            commandId: command.commandId,
+            timestamp: Date.now(),
+            ok: true,
+            song,
+          });
+          dockBridge.sendState({
+            type: "state:worship-song-save-result",
+            payload: { commandId: command.commandId, ok: true, song },
+            timestamp: Date.now(),
+          });
+          dockBridge.sendState({
+            type: "state:songs-data",
+            payload: songs,
+            timestamp: Date.now(),
+          });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          await saveWorshipDockSongSaveResult({
+            commandId: command.commandId,
+            timestamp: Date.now(),
+            ok: false,
+            error: message,
+          });
+          dockBridge.sendState({
+            type: "state:worship-song-save-result",
+            payload: { commandId: command.commandId, ok: false, error: message },
+            timestamp: Date.now(),
+          });
+          console.warn("[App] Failed to save fallback dock Worship song:", err);
+        }
+      } finally {
+        worshipSaveFallbackInFlight = false;
+      }
+    };
+    void pollWorshipSaveFallback();
+    const worshipSaveFallbackTimer = window.setInterval(
+      () => void pollWorshipSaveFallback(),
+      WORSHIP_DOCK_SAVE_POLL_INTERVAL_MS,
+    );
+
     return () => {
+      window.clearInterval(worshipSaveFallbackTimer);
       unsubObs();
       unsubSvc();
       unsubCmd();

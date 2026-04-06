@@ -287,7 +287,19 @@ export default function BibleSearch({ translation, onSelectPassage }: Props) {
               : "Search word or phrase…"
           }
           className="bible-search-input"
+          aria-label={mode === "browse" ? "Search Bible reference" : "Search Bible word or phrase"}
         />
+        {query && (
+          <button
+            type="button"
+            className="bible-search-clear-btn"
+            onClick={() => handleQueryChange("")}
+            aria-label="Clear Bible search"
+            title="Clear Bible search"
+          >
+            ×
+          </button>
+        )}
         <button
           className="bible-search-go"
           onClick={mode === "search" ? () => handleKeywordSearch(query) : handleQuickSearch}

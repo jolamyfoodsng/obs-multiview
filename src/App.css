@@ -1,15 +1,17 @@
 :root {
   color-scheme: dark;
   /* Brand */
-  --primary: #003F7A;
-  --primary-hover: #00539E;
-  --primary-rgb: 0, 63, 122;
-  --primary-soft: rgba(0, 63, 122, 0.12);
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-rgb: 37, 99, 235;
+  --primary-soft: rgba(37, 99, 235, 0.12);
+  --font-body: "Open Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-heading: "Google Sans", "Open Sans", -apple-system, BlinkMacSystemFont, sans-serif;
 
   /* Accent blue — slightly warmer */
-  --accent-blue: #3B82F6;
-  --accent-blue-hover: #2563EB;
-  --accent-blue-rgb: 59, 130, 246;
+  --accent-blue: #2563eb;
+  --accent-blue-hover: #1d4ed8;
+  --accent-blue-rgb: 37, 99, 235;
 
   /* Backgrounds */
   --bg-dark: #212121;
@@ -21,12 +23,12 @@
   /* Text — softer whites, less harsh */
   --text-primary: #E2E4E9;
   --text-secondary: #9DA3AE;
-  --text-muted: #5C6370;
+  --text-muted: #818B99;
 
   /* Borders — warmer grays */
   --border: #2A2E36;
   --border-subtle: #22262E;
-  --border-primary: rgba(0, 63, 122, 0.25);
+  --border-primary: rgba(37, 99, 235, 0.25);
 
   /* Status */
   --error: #F87171;
@@ -60,13 +62,13 @@
 /* ── Light Mode ── */
 :root.light {
   color-scheme: light;
-  --primary: #003F7A;
-  --primary-hover: #00539E;
-  --primary-rgb: 0, 63, 122;
-  --primary-soft: rgba(0, 63, 122, 0.08);
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --primary-rgb: 37, 99, 235;
+  --primary-soft: rgba(37, 99, 235, 0.08);
 
-  --accent-blue: #2563EB;
-  --accent-blue-hover: #1D4ED8;
+  --accent-blue: #2563eb;
+  --accent-blue-hover: #1d4ed8;
   --accent-blue-rgb: 37, 99, 235;
 
   --bg-dark: #F4F5F7;
@@ -77,11 +79,11 @@
 
   --text-primary: #1A1D23;
   --text-secondary: #5C6370;
-  --text-muted: #9DA3AE;
+  --text-muted: #4B5563;
 
   --border: #E2E4E9;
   --border-subtle: #EBEDF0;
-  --border-primary: rgba(0, 63, 122, 0.3);
+  --border-primary: rgba(37, 99, 235, 0.3);
 
   --error: #DC2626;
   --error-bg: rgba(220, 38, 38, 0.06);
@@ -114,7 +116,7 @@ body,
 }
 
 body {
-  font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-body);
   background: var(--bg-dark);
   color: var(--text-primary);
   min-height: 100dvh;
@@ -124,9 +126,90 @@ body {
   line-height: 1.5;
 }
 
-::selection {
+:where(h1, h2, h3, h4, h5, h6),
+:where(
+  .app-page__title,
+  .app-surface__title,
+  .dash-hero-title,
+  .dash-section-heading h3,
+  .dash-mod-info h2,
+  .dash-action-copy h4,
+  .dash-dock-copy h3,
+  .tpldash-title,
+  .tpldash-obs-theme-head h3,
+  .tpldash-settings-head h3,
+  .ssm-title,
+  .sc-title,
+  .shortcuts-modal-head h2,
+  .shortcuts-modal-section h4,
+  .service-hub-title,
+  .header-title,
+  .connect-heading,
+  .connection-title,
+  .wizard-title,
+  .step-title,
+  .ls-section-title,
+  .overlay-title,
+  .overlay-section-title,
+  .obs-gate-title,
+  .obs-gate-instructions-title,
+  .update-modal-header h2,
+  .update-modal-notes h4,
+  .tlib-title,
+  .tlib-sidebar-heading,
+  .tlib-empty h3,
+  .tlib-preview-title,
+  .tc-header-title,
+  .tc-section-title,
+  .tc-pvs-title,
+  .production-card-head h2,
+  .bible-header-title,
+  .bible-lt-sidebar-scenes-title,
+  .bible-utility-dropdown-title,
+  .live-preview-header-info h3,
+  .bible-modal-header h3,
+  .bible-setup-step-content h4,
+  .queue-panel-header h3,
+  .bible-templates-header h1,
+  .bible-templates-section h2,
+  .bible-template-info h3,
+  .bible-live-header h1,
+  .theme-editor-header h2,
+  .bible-settings-section-title,
+  .bible-library-header h2,
+  .bible-library-confirm-header h3,
+  .bible-library-import-info h3
+) {
+  font-family: var(--font-heading);
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
+}
+
+::selection,
+input::selection,
+textarea::selection,
+[contenteditable="true"]::selection,
+.app-shell ::selection,
+.app-page ::selection {
   background: var(--primary);
-  color: #ffffff;
+  color: #ffffff !important;
+  text-shadow: none;
+}
+
+::-moz-selection,
+input::-moz-selection,
+textarea::-moz-selection,
+[contenteditable="true"]::-moz-selection,
+.app-shell ::-moz-selection,
+.app-page ::-moz-selection {
+  background: var(--primary);
+  color: #ffffff !important;
+  text-shadow: none;
 }
 
 ::-webkit-scrollbar {
@@ -6601,7 +6684,7 @@ input[type="radio"] {
   position: absolute;
   inset: 0;
   width: 40%;
-  background: var(--primary, #00E676);
+  background: var(--primary, #2563eb);
   border-radius: 3px;
   animation: splashSlide 1.2s ease-in-out infinite;
 }
@@ -6670,7 +6753,7 @@ input[type="radio"] {
 
 .update-modal-icon {
   font-size: 28px;
-  color: var(--primary, #00E676);
+  color: var(--primary, #2563eb);
 }
 
 .update-modal-header h2 {
@@ -6732,7 +6815,7 @@ input[type="radio"] {
 }
 
 .update-modal-version-new {
-  color: var(--primary, #00E676);
+  color: var(--primary, #2563eb);
 }
 
 .update-modal-arrow {
@@ -6780,7 +6863,7 @@ input[type="radio"] {
   justify-content: center;
   gap: 6px;
   padding: 10px 16px;
-  background: var(--primary, #00E676);
+  background: var(--primary, #2563eb);
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -6867,7 +6950,7 @@ input[type="radio"] {
 
 .update-modal-progress-bar-fill {
   height: 100%;
-  background: var(--primary, #00E676);
+  background: var(--primary, #2563eb);
   border-radius: 4px;
   transition: width 0.2s ease;
 }
@@ -8375,6 +8458,70 @@ input[type="radio"] {
   width: min(1320px, 100%);
 }
 
+.resources-page__header {
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.resources-page__header-copy {
+  width: 100%;
+}
+
+.resources-tab-switcher {
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  gap: 4px;
+  margin-top: 14px;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+}
+
+.resources-tab-btn {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 22px;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-bottom: 0;
+  border-radius: var(--radius) var(--radius) 0 0;
+  background: var(--surface-dark);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.resources-tab-btn:hover {
+  background: var(--surface-hover);
+  border-color: rgba(var(--primary-rgb), 0.38);
+  color: var(--text-primary);
+}
+
+.resources-tab-btn:focus-visible {
+  outline: 2px solid rgba(var(--primary-rgb), 0.72);
+  outline-offset: 2px;
+}
+
+.resources-tab-btn.is-active {
+  background: var(--surface-raised);
+  border-color: rgba(var(--primary-rgb), 0.62);
+  box-shadow: inset 0 3px 0 var(--primary);
+  color: var(--text-primary);
+}
+
+.resources-tab-btn.is-active svg {
+  color: var(--primary);
+}
+
 .resources-content {
   flex: 1;
   min-height: 0;
@@ -8406,6 +8553,12 @@ input[type="radio"] {
   min-height: 0;
   display: flex;
   overflow: hidden;
+}
+
+.resources-embedded-panel[data-resource-tab="bible"] {
+  --b-green: var(--primary);
+  --b-accent: var(--primary);
+  --b-blue: var(--primary);
 }
 
 /* ════════════════════════════════════════════════════════
@@ -8549,18 +8702,29 @@ input[type="radio"] {
   border-color: var(--border);
 }
 
+:root.light .resources-tab-switcher {
+  border-color: var(--border);
+}
+
+:root.light .resources-tab-btn {
+  background: var(--surface-raised);
+  border-color: var(--border);
+}
+
 :root.light .resources-tab-btn {
   color: var(--text-muted);
 }
 
 :root.light .resources-tab-btn:hover {
+  border-color: rgba(var(--primary-rgb), 0.35);
   color: var(--text-primary);
 }
 
 :root.light .resources-tab-btn.is-active {
-  background: var(--surface-overlay);
+  background: var(--surface-dark);
+  border-color: rgba(var(--primary-rgb), 0.5);
   color: var(--text-primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  box-shadow: inset 0 3px 0 var(--primary);
 }
 
 /* ── Templates Dashboard ── */

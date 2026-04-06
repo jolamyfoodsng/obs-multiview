@@ -36,6 +36,7 @@ export type DockCommandType =
   | "worship:send-preview"
   | "worship:go-live"
   | "worship:clear-lyrics"
+  | "worship:song-save"
   // Voice Bible
   | "voice-bible:start"
   | "voice-bible:stop"
@@ -59,6 +60,7 @@ export type DockStateType =
   | "state:speakers"
   | "state:library-updated"
   | "state:songs-data"
+  | "state:worship-song-save-result"
   | "state:media-data"
   | "state:voice-bible-status"
   | "state:voice-bible-result"

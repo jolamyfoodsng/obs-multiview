@@ -85,6 +85,7 @@
 
   /* Functional — aliased from brand */
   --b-green: var(--primary);
+  --b-accent: var(--primary);
   --b-red: var(--error);
   --b-blue: var(--accent-blue);
   --b-radius: var(--radius);
@@ -2038,6 +2039,28 @@
   color: var(--b-text-1);
 }
 
+.bible-search-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bible-search-bar .bible-search-input {
+  min-width: 0;
+}
+
+.bible-search-bar .bible-search-clear-btn {
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--b-border);
+  border-radius: 3px;
+  background: var(--b-tile);
+  font-size: 18px;
+}
+
 .bible-search-status {
   display: flex;
   align-items: center;
@@ -3763,9 +3786,10 @@
   --b-text-2: #5C6370;
   --b-text-3: #7A8190;
   --b-text-4: #9DA3AE;
-  --b-green: #16A34A;
+  --b-green: var(--primary);
+  --b-accent: var(--primary);
   --b-red: #DC2626;
-  --b-blue: #2563EB;
+  --b-blue: var(--primary);
 }
 
 /* Scroll-bar tweaks for light mode */
@@ -4204,6 +4228,28 @@
 }
 .bible-library-lang-search-wrap input::placeholder {
   color: var(--b-text-3, #666);
+}
+
+.bible-library-search-clear {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--b-text-3, #666);
+  cursor: pointer;
+  padding: 0;
+}
+
+.bible-library-search-clear:hover,
+.bible-library-search-clear:focus-visible {
+  color: var(--b-text-1, #e0e0e0);
+  background: color-mix(in srgb, var(--b-border, #333) 45%, transparent);
+  border-color: var(--b-border, #333);
 }
 .bible-library-lang-pills {
   display: flex;

@@ -565,10 +565,25 @@ export default function BibleLibrary({
                   placeholder="Search bibles… (3+ letters to auto-search)"
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
+                  aria-label="Search Bible catalog"
                   onKeyDown={(e) => {
                     if (e.key === "Enter") doSearch(1);
                   }}
                 />
+                {query && (
+                  <button
+                    type="button"
+                    className="bible-library-search-clear"
+                    onClick={() => {
+                      setQuery("");
+                      searchRef.current?.focus();
+                    }}
+                    aria-label="Clear Bible catalog search"
+                    title="Clear Bible catalog search"
+                  >
+                    <Icon name="close" size={14} />
+                  </button>
+                )}
               </div>
             </div>
 
@@ -581,7 +596,19 @@ export default function BibleLibrary({
                   placeholder="Search languages…"
                   value={languageSearch}
                   onChange={(e) => setLanguageSearch(e.target.value)}
+                  aria-label="Search languages"
                 />
+                {languageSearch && (
+                  <button
+                    type="button"
+                    className="bible-library-search-clear"
+                    onClick={() => setLanguageSearch("")}
+                    aria-label="Clear language search"
+                    title="Clear language search"
+                  >
+                    <Icon name="close" size={14} />
+                  </button>
+                )}
               </div>
               <div className="bible-library-lang-pills">
                 <button

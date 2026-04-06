@@ -35,7 +35,7 @@ body {
   --dock-border: #d3dae3;
   --dock-text: #1a1d23;
   --dock-text-dim: #5c6370;
-  --dock-accent: #2f6fed;
+  --dock-accent: #2563eb;
   --dock-accent-soft: rgba(37, 99, 235, 0.09);
   --dock-green: #258554;
   --dock-green-soft: rgba(22, 163, 74, 0.1);
@@ -120,8 +120,8 @@ body {
 }
 
 :root.light .dock-bottom-nav__item--active {
-  background: #2f6fed;
-  border-color: #2f6fed;
+  background: #2563eb;
+  border-color: #2563eb;
 }
 
 :root.light .dock-search-dropdown,
@@ -148,8 +148,8 @@ body {
 }
 
 :root.light .dock-select--translation {
-  background: rgba(47, 111, 237, 0.08);
-  border-color: rgba(47, 111, 237, 0.24);
+  background: rgba(37, 99, 235, 0.08);
+  border-color: rgba(37, 99, 235, 0.24);
 }
 
 :root.light .dtb-backdrop {

@@ -468,13 +468,16 @@ export default function SmartSearchModal({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
+            aria-label="Search scripture"
             autoFocus
           />
           <div className="smart-search-hints">
             {query && (
               <button
+                type="button"
                 className="smart-search-clear"
                 onClick={() => setQuery("")}
+                aria-label="Clear scripture search"
                 title="Clear"
               >
                 <Icon name="close" size={20} />

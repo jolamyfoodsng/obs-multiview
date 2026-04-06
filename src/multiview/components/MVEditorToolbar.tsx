@@ -654,14 +654,28 @@ function ShortcutsReferenceModal({ onClose }: { onClose: () => void }) {
       <div className="mv-modal mv-shortcuts-modal" onClick={(e) => e.stopPropagation()}>
         <div className="mv-shortcuts-header">
           <h3 className="mv-modal-title">Keyboard Shortcuts</h3>
-          <input
-            className="mv-shortcuts-search"
-            type="text"
-            placeholder="Search shortcuts…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            autoFocus
-          />
+          <div className="mv-shortcuts-search-wrap">
+            <input
+              className="mv-shortcuts-search"
+              type="text"
+              placeholder="Search shortcuts…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              aria-label="Search keyboard shortcuts"
+              autoFocus
+            />
+            {search && (
+              <button
+                type="button"
+                className="mv-inline-search-clear"
+                onClick={() => setSearch("")}
+                aria-label="Clear shortcut search"
+                title="Clear shortcut search"
+              >
+                <Icon name="close" size={14} />
+              </button>
+            )}
+          </div>
           <button className="mv-toolbar-btn" onClick={onClose} title="Close">
             <Icon name="close" size={20} />
           </button>

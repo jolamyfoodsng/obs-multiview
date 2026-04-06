@@ -531,6 +531,7 @@ export default function GlobalSearchModal({
             type="text"
             className="gs-input"
             placeholder="Search Bible, Worship Songs, Speakers…"
+            aria-label="Search Bible, worship songs, and speakers"
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="off"
@@ -542,8 +543,10 @@ export default function GlobalSearchModal({
           <div className="gs-input-hints">
             {query && (
               <button
+                type="button"
                 className="gs-clear-btn"
                 onClick={() => { setQuery(""); inputRef.current?.focus(); }}
+                aria-label="Clear global search"
                 title="Clear"
               >
                 <Icon name="close" size={20} />
