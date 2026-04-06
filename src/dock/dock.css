@@ -3681,9 +3681,15 @@
 }
 
 .dock-bible-browser__footer-actions {
-  display: flex;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
   margin-top: 2px;
+}
+
+.dock-bible-browser__footer-actions .dock-btn {
+  min-width: 0;
+  padding-inline: 8px;
 }
 
 .dock-module--worship {

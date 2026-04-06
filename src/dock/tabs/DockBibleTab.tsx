@@ -1466,6 +1466,16 @@ export default function DockBibleTab({
     }
   }, [onStage]);
 
+  const handleClearBibleTarget = useCallback((live: boolean) => {
+    setActionError("");
+    if (!dockObsClient.isConnected) return;
+    dockObsClient.clearBibleTarget(live).catch((err) => {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[DockBibleTab] clearBibleTarget(${live ? "program" : "preview"}) failed:`, err);
+      setActionError(message);
+    });
+  }, []);
+
   const handleSearchKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "a") {
@@ -2190,11 +2200,32 @@ export default function DockBibleTab({
               <button
                 type="button"
                 className="dock-btn dock-btn--ghost dock-btn--compact"
-                onClick={handleClearVerse}
+                onClick={() => handleClearBibleTarget(false)}
                 disabled={sending}
+                aria-label="Clear Bible preview"
               >
                 <Icon name="clear" size={14} />
-                Clear
+                Clear Preview
+              </button>
+              <button
+                type="button"
+                className="dock-btn dock-btn--ghost dock-btn--compact"
+                onClick={() => handleClearBibleTarget(true)}
+                disabled={sending}
+                aria-label="Clear Bible program"
+              >
+                <Icon name="clear" size={14} />
+                Clear Program
+              </button>
+              <button
+                type="button"
+                className="dock-btn dock-btn--ghost dock-btn--compact"
+                onClick={handleClearVerse}
+                disabled={sending}
+                aria-label="Clear Bible preview and program"
+              >
+                <Icon name="clear" size={14} />
+                Clear All
               </button>
             </div>
           )}

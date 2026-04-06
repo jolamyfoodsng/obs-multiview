@@ -2253,77 +2253,86 @@ class DockObsClient {
     console.log(`[DockOBS] Bible "${ref}" (${mode}) → scene "${sceneName}" (${live ? "Program" : "Preview"})`);
   }
 
-  /**
-   * Clear the Bible overlay.
-   * Sends a blanked URL first (triggers exit animation in the overlay HTML),
-   * waits for the animation to finish, then hides the OBS source.
-   */
-  async clearBible(): Promise<void> {
-    for (const resources of getAllDockResources()) {
-      const lastMode = this._lastOverlayMode[resources.bibleSource] ?? "fullscreen";
-      try {
-        const cachedPayload = this._lastCssOverlayPacketBySource[resources.bibleSource];
-        const cachedBaseUrl = this._lastCssOverlayBaseUrlBySource[resources.bibleSource];
-        if (cachedPayload && cachedBaseUrl) {
-          const blankedPacket = {
-            ...cachedPayload,
-            live: false,
-            blanked: true,
-            timestamp: Date.now(),
-          };
-          const overlayCss = this.buildCssOverlayDataCss(
-            blankedPacket,
-            this._lastCssOverlayThemeCssBySource[resources.bibleSource] || "",
-          );
-          await this.call("SetInputSettings", {
-            inputName: resources.bibleSource,
-            inputSettings: { css: overlayCss },
-          });
-        } else {
-          const fallbackUrl = lastMode === "lower-third"
-            ? this.buildBibleUrl(null, false, true, null, "lower-third")
-            : this.buildBibleUrl(null, false, true, null);
-          const url = await this.buildBlankedOverlayUrlFromCurrentSource(resources.bibleSource, fallbackUrl);
-          await this.setBrowserSourceUrl(resources.bibleSource, url);
-        }
-      } catch { /* ignore */ }
-    }
+  private async blankBibleResource(resources: DockResourceNames): Promise<void> {
+    const lastMode = this._lastOverlayMode[resources.bibleSource] ?? "fullscreen";
+    try {
+      const cachedPayload = this._lastCssOverlayPacketBySource[resources.bibleSource];
+      const cachedBaseUrl = this._lastCssOverlayBaseUrlBySource[resources.bibleSource];
+      if (cachedPayload && cachedBaseUrl) {
+        const blankedPacket = {
+          ...cachedPayload,
+          live: false,
+          blanked: true,
+          timestamp: Date.now(),
+        };
+        const overlayCss = this.buildCssOverlayDataCss(
+          blankedPacket,
+          this._lastCssOverlayThemeCssBySource[resources.bibleSource] || "",
+        );
+        await this.call("SetInputSettings", {
+          inputName: resources.bibleSource,
+          inputSettings: { css: overlayCss },
+        });
+      } else {
+        const fallbackUrl = lastMode === "lower-third"
+          ? this.buildBibleUrl(null, false, true, null, "lower-third")
+          : this.buildBibleUrl(null, false, true, null);
+        const url = await this.buildBlankedOverlayUrlFromCurrentSource(resources.bibleSource, fallbackUrl);
+        await this.setBrowserSourceUrl(resources.bibleSource, url);
+      }
+    } catch { /* ignore */ }
+  }
 
-    // Wait for exit animation before hiding the source
+  private async removeBibleResourceFromScene(resources: DockResourceNames, sceneName: string): Promise<void> {
+    await this.hideOverlaySource(sceneName, resources.bibleSource);
+    await this.hideFullscreenBg(sceneName, resources);
+    await this.hideSceneSource(sceneName, resources.bibleScene);
+    await this.removeSceneItemBySource(sceneName, resources.bibleSource);
+    await this.removeSceneItemBySource(sceneName, resources.bibleScene);
+    const targetBgSourceName = this.getTargetFullscreenBgSourceName(sceneName, resources);
+    await this.removeSceneItemBySource(sceneName, targetBgSourceName);
+    await this.removeInputIfExists(targetBgSourceName);
+    delete this._lastTargetBgSignature[targetBgSourceName];
+  }
+
+  private async removeBibleResource(resources: DockResourceNames, sceneName: string): Promise<void> {
+    await this.removeBibleResourceFromScene(resources, sceneName);
+    await this.removeSceneIfExists(resources.bibleScene);
+    await this.removeInputIfExists(resources.bibleSource);
+    await this.removeInputIfExists(resources.fsBgSource);
+    delete this._lastOverlayMode[resources.bibleSource];
+    delete this._lastFullscreenSourceSignature[resources.bibleSource];
+    delete this._lastCssOverlayPacketBySource[resources.bibleSource];
+    delete this._lastCssOverlayBaseUrlBySource[resources.bibleSource];
+    delete this._lastCssOverlayThemeCssBySource[resources.bibleSource];
+  }
+
+  /**
+   * Clear one Bible target without touching the other output.
+   * live=false clears Preview, live=true clears Program.
+   */
+  async clearBibleTarget(live: boolean): Promise<void> {
+    const resources = getDockResources(live);
+    await this.blankBibleResource(resources);
+
+    // Wait for exit animation before hiding/removing the target source.
     await new Promise((r) => setTimeout(r, FULLSCREEN_CLEAR_WAIT_MS));
 
-    const scenes = new Set<string>();
     try {
-      const { sceneName: progScene } = await this.getTargetScene(true);
-      if (progScene) scenes.add(progScene);
-    } catch { /* ignore */ }
-    try {
-      const { sceneName: prevScene } = await this.getTargetScene(false);
-      if (prevScene) scenes.add(prevScene);
+      const { sceneName } = await this.getTargetScene(live);
+      if (!sceneName) return;
+      const resolvedScene = live ? sceneName : await this.ensurePreviewTargetScene(sceneName);
+      await this.removeBibleResource(resources, resolvedScene);
     } catch { /* ignore */ }
 
-    for (const resources of getAllDockResources()) {
-      for (const sceneName of scenes) {
-        await this.hideOverlaySource(sceneName, resources.bibleSource);
-        await this.hideFullscreenBg(sceneName, resources);
-        await this.hideSceneSource(sceneName, resources.bibleScene);
-        await this.removeSceneItemBySource(sceneName, resources.bibleSource);
-        await this.removeSceneItemBySource(sceneName, resources.bibleScene);
-        const targetBgSourceName = this.getTargetFullscreenBgSourceName(sceneName, resources);
-        await this.removeSceneItemBySource(sceneName, targetBgSourceName);
-        await this.removeInputIfExists(targetBgSourceName);
-        delete this._lastTargetBgSignature[targetBgSourceName];
-      }
-      await this.removeSceneIfExists(resources.bibleScene);
-      await this.removeInputIfExists(resources.bibleSource);
-      await this.removeInputIfExists(resources.fsBgSource);
-      delete this._lastOverlayMode[resources.bibleSource];
-      delete this._lastFullscreenSourceSignature[resources.bibleSource];
-      delete this._lastCssOverlayPacketBySource[resources.bibleSource];
-      delete this._lastCssOverlayBaseUrlBySource[resources.bibleSource];
-      delete this._lastCssOverlayThemeCssBySource[resources.bibleSource];
-    }
+    console.log(`[DockOBS] Bible ${live ? "Program" : "Preview"} cleared`);
+  }
 
+  /**
+   * Clear the Bible overlay from Preview and Program.
+   */
+  async clearBible(): Promise<void> {
+    await Promise.all([this.clearBibleTarget(false), this.clearBibleTarget(true)]);
     console.log("[DockOBS] Bible cleared");
   }
 
