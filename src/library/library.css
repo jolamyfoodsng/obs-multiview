@@ -102,6 +102,7 @@
   align-items: center;
   gap: 8px;
   flex: 1;
+  min-width: 0;
 }
 
 .lib-toolbar-actions {
@@ -159,6 +160,7 @@
 .lib-search-wrap {
   position: relative;
   flex: 1;
+  min-width: 220px;
   max-width: 420px;
 }
 

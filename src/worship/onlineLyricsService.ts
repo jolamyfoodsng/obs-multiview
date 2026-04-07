@@ -33,6 +33,17 @@ interface SpotifyOEmbedResponse {
   title?: string;
 }
 
+interface LrcLibTrack {
+  id?: number;
+  name?: string;
+  trackName?: string;
+  artistName?: string;
+  albumName?: string;
+  instrumental?: boolean;
+  plainLyrics?: string | null;
+  syncedLyrics?: string | null;
+}
+
 type TauriWindow = Window & { __TAURI_INTERNALS__?: unknown };
 
 const WORDPRESS_LYRICS_SOURCES: WordPressLyricsSource[] = [
@@ -410,9 +421,59 @@ async function searchWordPressLyricsSource(
     .filter((result): result is OnlineLyricsSearchResult => result !== null);
 }
 
+function buildLrcLibResult(track: LrcLibTrack, query: string): OnlineLyricsSearchResult | null {
+  const id = typeof track.id === "number" ? String(track.id) : "";
+  const lyrics = pruneLyricsText(track.plainLyrics ?? "");
+  const title = cleanInlineText(track.trackName ?? track.name ?? "");
+  const artist = cleanInlineText(track.artistName ?? "");
+  const preview = buildPreview(lyrics);
+  const score = computeScore(query, title, artist, preview, lyrics);
+
+  if (!id || track.instrumental || !title || lyrics.length < 40 || score < 12) {
+    return null;
+  }
+
+  return {
+    id: `lrclib:${id}`,
+    sourceId: "lrclib",
+    sourceName: "LRCLIB",
+    title,
+    artist,
+    url: `https://lrclib.net/api/get/${id}`,
+    preview,
+    lyrics,
+    thumbnailUrl: null,
+  };
+}
+
+async function searchLrcLibLyricsSource(query: string): Promise<OnlineLyricsSearchResult[]> {
+  const url = new URL("https://lrclib.net/api/search");
+  url.searchParams.set("q", query);
+
+  const response = await fetch(url.toString(), {
+    headers: { Accept: "application/json" },
+  });
+
+  if (!response.ok) {
+    throw new Error(`LRCLIB returned HTTP ${response.status}`);
+  }
+
+  const tracks = (await response.json()) as LrcLibTrack[];
+  if (!Array.isArray(tracks)) {
+    throw new Error("LRCLIB returned an invalid response");
+  }
+
+  return tracks
+    .map((track) => buildLrcLibResult(track, query))
+    .filter((result): result is OnlineLyricsSearchResult => result !== null);
+}
+
 async function searchOnlineSongLyricsFallback(query: string): Promise<OnlineLyricsSearchResult[]> {
   const settledResults = await Promise.allSettled(
-    WORDPRESS_LYRICS_SOURCES.map((source) => searchWordPressLyricsSource(source, query))
+    [
+      ...WORDPRESS_LYRICS_SOURCES.map((source) => searchWordPressLyricsSource(source, query)),
+      searchLrcLibLyricsSource(query),
+    ],
   );
   const results = settledResults.flatMap((result) => (result.status === "fulfilled" ? result.value : []));
 

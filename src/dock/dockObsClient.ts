@@ -2474,15 +2474,137 @@ class DockObsClient {
   }
 
   /**
+   * Push sermon quotes/points using the same general fullscreen/lower-third
+   * theme structure as Bible and Worship, while keeping the existing LT source.
+   */
+  async pushSermonCue(data: {
+    text: string;
+    label?: string;
+    topic?: string;
+    itemType?: "quote" | "point";
+    overlayMode?: "fullscreen" | "lower-third";
+    bibleThemeSettings?: Record<string, unknown> | null;
+    liveOverrides?: DockLiveThemeOverrides | Record<string, unknown> | null;
+  }, live: boolean): Promise<void> {
+    const resources = getDockResources(live);
+    const target = await this.getTargetScene(live);
+    let sceneName = target.sceneName;
+    const studioMode = target.studioMode;
+    if (!sceneName) throw new Error("Could not determine the current OBS scene.");
+    if (!live) {
+      sceneName = await this.ensurePreviewTargetScene(sceneName);
+    }
+
+    const shouldEnable = live || (!live && (studioMode || sceneName !== target.sceneName));
+    const mode = data.overlayMode ?? "lower-third";
+    const effectiveThemeSettings = this.mergeThemeSettingsWithLiveOverrides(
+      data.bibleThemeSettings,
+      data.liveOverrides,
+    );
+    const prevMode = this._lastOverlayMode[resources.ltSource];
+    const modeChanged = prevMode !== undefined && prevMode !== mode;
+    this._lastOverlayMode[resources.ltSource] = mode;
+
+    if (mode === "fullscreen") {
+      await this.clearAllOverlays([resources.ltSource, resources.fsBgSource], sceneName, resources);
+      await this.ensureFullscreenBg(sceneName, effectiveThemeSettings, shouldEnable, resources);
+      await this.ensureOverlaySource(sceneName, resources.ltSource, undefined, undefined, shouldEnable);
+    } else {
+      await this.clearAllOverlays(resources.ltSource, sceneName, resources);
+      await this.ensureOverlaySource(sceneName, resources.ltSource, undefined, undefined, shouldEnable);
+      await this.hideFullscreenBg(sceneName, resources);
+    }
+
+    const themeForOverlay = mode === "lower-third"
+      ? this.prepareDedicatedLowerThirdTheme(effectiveThemeSettings).overlayTheme
+      : effectiveThemeSettings;
+    const { cleanSettings, css } = this.stripThemeDataUris(themeForOverlay);
+    const reference = data.itemType === "point"
+      ? ""
+      : data.label || data.topic || "Quote";
+    const slide = {
+      ...this.buildBibleSlide(data.text, reference),
+      showCounter: data.itemType !== "point",
+    };
+    const packet = {
+      slide,
+      theme: cleanSettings ?? null,
+      live: true,
+      blanked: false,
+      timestamp: Date.now(),
+    };
+    const baseUrl = `${this.getOverlayBaseUrl()}/${mode === "fullscreen" ? "bible-overlay-fullscreen.html" : "bible-overlay-lower-third.html"}`;
+
+    if (live) {
+      await this.hideInOppositeScene(
+        live,
+        mode === "fullscreen" ? [resources.ltSource, resources.fsBgSource] : [resources.ltSource],
+        [],
+        mode === "fullscreen",
+        sceneName,
+        resources,
+      );
+    }
+
+    this.publishFullscreenOverlayPacket(packet);
+    const sourceSignature = JSON.stringify({
+      baseUrl,
+      css: css || "",
+    });
+    const overlayCss = this.buildCssOverlayDataCss(packet, css);
+    if (modeChanged || this._lastFullscreenSourceSignature[resources.ltSource] !== sourceSignature) {
+      await this.setBrowserSourceUrl(resources.ltSource, baseUrl, modeChanged, overlayCss);
+      this._lastFullscreenSourceSignature[resources.ltSource] = sourceSignature;
+    } else {
+      await this.call("SetInputSettings", {
+        inputName: resources.ltSource,
+        inputSettings: { css: overlayCss },
+      });
+    }
+    this._lastCssOverlayPacketBySource[resources.ltSource] = packet;
+    this._lastCssOverlayBaseUrlBySource[resources.ltSource] = baseUrl;
+    this._lastCssOverlayThemeCssBySource[resources.ltSource] = css || "";
+
+    if (!live) {
+      await this.ensureOverlaySource(sceneName, resources.ltSource, undefined, undefined, true);
+      if (mode === "fullscreen") {
+        await this.ensureFullscreenBg(sceneName, effectiveThemeSettings, true, resources);
+      }
+      await this.setCurrentPreviewScene(sceneName);
+    }
+
+    console.log(`[DockOBS] Sermon ${data.itemType ?? "cue"} (${mode}) → scene "${sceneName}" (${live ? "Program" : "Preview"})`);
+  }
+
+  /**
    * Clear all lower-third overlays.
    * Sends a blanked URL first (triggers exit animation), waits, then hides.
    */
   async clearLowerThirds(): Promise<void> {
     for (const resources of getAllDockResources()) {
       try {
-        const fallbackUrl = this.buildLowerThirdUrl({}, false, true);
-        const url = await this.buildBlankedOverlayUrlFromCurrentSource(resources.ltSource, fallbackUrl);
-        await this.setBrowserSourceUrl(resources.ltSource, url);
+        const cachedPayload = this._lastCssOverlayPacketBySource[resources.ltSource];
+        const cachedBaseUrl = this._lastCssOverlayBaseUrlBySource[resources.ltSource];
+        if (cachedPayload && cachedBaseUrl) {
+          const blankedPacket = {
+            ...cachedPayload,
+            live: false,
+            blanked: true,
+            timestamp: Date.now(),
+          };
+          const overlayCss = this.buildCssOverlayDataCss(
+            blankedPacket,
+            this._lastCssOverlayThemeCssBySource[resources.ltSource] || "",
+          );
+          await this.call("SetInputSettings", {
+            inputName: resources.ltSource,
+            inputSettings: { css: overlayCss },
+          });
+        } else {
+          const fallbackUrl = this.buildLowerThirdUrl({}, false, true);
+          const url = await this.buildBlankedOverlayUrlFromCurrentSource(resources.ltSource, fallbackUrl);
+          await this.setBrowserSourceUrl(resources.ltSource, url);
+        }
       } catch { /* ignore */ }
     }
 
@@ -2502,9 +2624,17 @@ class DockObsClient {
     for (const resources of getAllDockResources()) {
       for (const sceneName of scenes) {
         await this.hideOverlaySource(sceneName, resources.ltSource);
+        await this.hideFullscreenBg(sceneName, resources);
         await this.removeSceneItemBySource(sceneName, resources.ltSource);
+        await this.removeSceneItemBySource(sceneName, resources.fsBgSource);
       }
       await this.removeInputIfExists(resources.ltSource);
+      await this.removeInputIfExists(resources.fsBgSource);
+      delete this._lastOverlayMode[resources.ltSource];
+      delete this._lastFullscreenSourceSignature[resources.ltSource];
+      delete this._lastCssOverlayPacketBySource[resources.ltSource];
+      delete this._lastCssOverlayBaseUrlBySource[resources.ltSource];
+      delete this._lastCssOverlayThemeCssBySource[resources.ltSource];
     }
 
     console.log("[DockOBS] LT cleared");

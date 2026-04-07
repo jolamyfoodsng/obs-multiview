@@ -391,6 +391,22 @@ struct BloggerEntry {
     thumbnail: Option<BloggerThumbnail>,
 }
 
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct LrcLibTrack {
+    id: i64,
+    #[serde(default)]
+    name: Option<String>,
+    #[serde(default)]
+    track_name: Option<String>,
+    #[serde(default)]
+    artist_name: Option<String>,
+    #[serde(default)]
+    instrumental: bool,
+    #[serde(default)]
+    plain_lyrics: Option<String>,
+}
+
 fn build_online_lyrics_client() -> Result<reqwest::blocking::Client, String> {
     reqwest::blocking::Client::builder()
         .connect_timeout(Duration::from_secs(4))
@@ -1202,6 +1218,64 @@ fn search_godlyrics(
     Ok(results)
 }
 
+fn search_lrclib(
+    client: &reqwest::blocking::Client,
+    query: &str,
+) -> Result<Vec<OnlineLyricsSearchResult>, String> {
+    let response = client
+        .get("https://lrclib.net/api/search")
+        .query(&[("q", query)])
+        .send()
+        .map_err(|err| format!("LRCLIB search failed: {}", err))?
+        .error_for_status()
+        .map_err(|err| format!("LRCLIB search failed: {}", err))?;
+
+    let tracks: Vec<LrcLibTrack> = response
+        .json()
+        .map_err(|err| format!("LRCLIB search decode failed: {}", err))?;
+
+    let mut results = tracks
+        .into_iter()
+        .filter_map(|track| {
+            if track.instrumental {
+                return None;
+            }
+
+            let lyrics = prune_lyrics_text(&track.plain_lyrics.unwrap_or_default());
+            let title = clean_inline_text(
+                track
+                    .track_name
+                    .as_deref()
+                    .or(track.name.as_deref())
+                    .unwrap_or_default(),
+            );
+            let artist = clean_inline_text(track.artist_name.as_deref().unwrap_or_default());
+            let preview = build_preview(&lyrics);
+            let score = compute_result_score(query, &title, &artist, &preview, &lyrics);
+
+            if title.is_empty() || lyrics.len() < 40 || score < 12 {
+                return None;
+            }
+
+            Some(OnlineLyricsSearchResult {
+                id: format!("lrclib:{}", track.id),
+                source_id: "lrclib".to_string(),
+                source_name: "LRCLIB".to_string(),
+                title,
+                artist,
+                url: format!("https://lrclib.net/api/get/{}", track.id),
+                preview,
+                lyrics,
+                thumbnail_url: None,
+                score,
+            })
+        })
+        .collect::<Vec<_>>();
+
+    results.sort_by(|left, right| right.score.cmp(&left.score));
+    Ok(results)
+}
+
 fn append_source_results(
     results: &mut Vec<OnlineLyricsSearchResult>,
     source_results: Result<Vec<OnlineLyricsSearchResult>, String>,
@@ -1272,6 +1346,10 @@ fn search_online_song_lyrics_blocking(
                 )
             });
 
+            let lrclib_client = client.clone();
+            let lrclib_query = search_query.clone();
+            let lrclib = scope.spawn(move || search_lrclib(&lrclib_client, &lrclib_query));
+
             for source_results in [
                 gospellyrics
                     .join()
@@ -1282,6 +1360,9 @@ fn search_online_song_lyrics_blocking(
                 ceenaija
                     .join()
                     .unwrap_or_else(|_| Err("CeeNaija search worker panicked".to_string())),
+                lrclib
+                    .join()
+                    .unwrap_or_else(|_| Err("LRCLIB search worker panicked".to_string())),
             ] {
                 append_source_results(&mut results, source_results);
             }

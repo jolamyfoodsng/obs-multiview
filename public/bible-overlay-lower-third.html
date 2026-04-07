@@ -522,7 +522,9 @@
     const referenceText = typeof slide.reference === "string" ? slide.reference.trim() : "";
     refText.textContent = referenceText;
     reference.style.display = referenceText ? "block" : "none";
-    // slideCounter.textContent = `${slide.index + 1} / ${slide.total}`;
+    if (slideCounter) {
+      slideCounter.style.display = slide.showCounter === false ? "none" : "";
+    }
 
     // Auto-scale: shrink font so bar stays within max height
     autoScaleFont();

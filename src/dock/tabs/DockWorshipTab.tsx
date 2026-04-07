@@ -55,10 +55,12 @@ interface DockWorshipPreferences {
 
 const DOCK_WORSHIP_PREFS_KEY = "ocs-dock-worship-preferences";
 const DOCK_WORSHIP_SONG_DEFAULTS_KEY = "ocs-dock-worship-song-defaults-v1";
+const DOCK_WORSHIP_RECENT_SEARCHES_KEY = "ocs-dock-worship-recent-searches-v1";
 const LINES_PER_SLIDE_OPTIONS = [1, 2, 3, 4, 5, 6] as const;
 const DOCK_WORSHIP_SAVE_TIMEOUT_MS = 3500;
 const DOCK_WORSHIP_SAVE_FALLBACK_DELAY_MS = 350;
 const DOCK_WORSHIP_SAVE_RESULT_POLL_MS = 250;
+const DOCK_WORSHIP_RECENT_SEARCH_LIMIT = 6;
 
 interface DockSongDraft {
   title: string;
@@ -79,6 +81,37 @@ interface DockToast {
   id: string;
   message: string;
   tone: DockToastTone;
+}
+
+function readRecentWorshipSearches(): string[] {
+  try {
+    const raw = localStorage.getItem(DOCK_WORSHIP_RECENT_SEARCHES_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeRecentWorshipSearches(items: string[]): void {
+  try {
+    localStorage.setItem(DOCK_WORSHIP_RECENT_SEARCHES_KEY, JSON.stringify(items.slice(0, DOCK_WORSHIP_RECENT_SEARCH_LIMIT)));
+  } catch {
+    // ignore OBS CEF storage failures
+  }
+}
+
+function pushRecentWorshipSearch(label: string): string[] {
+  const normalized = label.trim();
+  if (!normalized) return readRecentWorshipSearches();
+  const next = [
+    normalized,
+    ...readRecentWorshipSearches().filter((item) => item.toLowerCase() !== normalized.toLowerCase()),
+  ].slice(0, DOCK_WORSHIP_RECENT_SEARCH_LIMIT);
+  writeRecentWorshipSearches(next);
+  return next;
 }
 
 function createDockSongId(): string {
@@ -200,6 +233,8 @@ function stageItemLabel(song: DockSong, section: DockWorshipSection, live: boole
 export default function DockWorshipTab({ staged, onStage, productionDefaults }: Props) {
   const [songs, setSongs] = useState<DockSong[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showRecentSearches, setShowRecentSearches] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => readRecentWorshipSearches());
   const [selectedSong, setSelectedSong] = useState<DockSong | null>(null);
   const [liveIdx, setLiveIdx] = useState<number | null>(null);
   const [previewIdx, setPreviewIdx] = useState<number | null>(null);
@@ -230,6 +265,7 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
   const [toasts, setToasts] = useState<DockToast[]>([]);
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const searchRef = useRef<HTMLDivElement>(null);
   const prefsReadyRef = useRef(false);
   const isProgramLive =
     staged?.type === "worship" &&
@@ -362,6 +398,16 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
     });
     return unsub;
   }, [loadSongs]);
+
+  useEffect(() => {
+    const handler = (event: MouseEvent) => {
+      if (searchRef.current && !searchRef.current.contains(event.target as Node)) {
+        setShowRecentSearches(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const filteredSongs = useMemo(() => {
     if (!searchQuery.trim()) return songs;
@@ -697,6 +743,8 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
   const activeSection = activeSectionIndex !== null ? selectedSongSections[activeSectionIndex] ?? null : null;
 
   const handleSelectSong = useCallback((song: DockSong) => {
+    setRecentSearches(pushRecentWorshipSearch(`song: ${song.title}`));
+    setShowRecentSearches(false);
     setSelectedSong(song);
     setSelectedIdx(0);
     setLiveIdx(null);
@@ -704,6 +752,24 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
     setHiddenSectionIndexes(new Set());
     setActionError("");
   }, []);
+
+  const applyRecentWorshipSearch = useCallback(
+    (recentLabel: string) => {
+      const title = recentLabel.replace(/^song:\s*/i, "").trim();
+      setShowRecentSearches(false);
+      if (!title) return;
+
+      const exactSong = songs.find((song) => song.title.toLowerCase() === title.toLowerCase());
+      if (exactSong) {
+        setSearchQuery("");
+        handleSelectSong(exactSong);
+        return;
+      }
+
+      setSearchQuery(title);
+    },
+    [handleSelectSong, songs],
+  );
 
   const handleBackToSongList = useCallback(() => {
     setSelectedSong(null);
@@ -1081,25 +1147,56 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
                 </button>
               </div>
             </div>
-            <div className="dock-search dock-search--console" style={{ marginBottom: 0 }}>
+            <div className="dock-search dock-search--console" style={{ marginBottom: 0 }} ref={searchRef}>
               <Icon name="search" size={14} className="dock-search__icon" />
               <input
                 className="dock-input"
                 placeholder="Search title or artist..."
                 value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  setSearchQuery(next);
+                  setShowRecentSearches(next.trim().length === 0 && recentSearches.length > 0);
+                }}
+                onFocus={() => {
+                  if (!searchQuery.trim() && recentSearches.length > 0) {
+                    setShowRecentSearches(true);
+                  }
+                }}
                 aria-label="Search songs"
               />
               {searchQuery && (
                 <button
                   type="button"
                   className="dock-search__clear"
-                  onClick={() => setSearchQuery("")}
+                  onClick={() => {
+                    setSearchQuery("");
+                    setShowRecentSearches(recentSearches.length > 0);
+                  }}
                   aria-label="Clear song search"
                   title="Clear song search"
                 >
                   <Icon name="close" size={13} />
                 </button>
+              )}
+              {showRecentSearches && !searchQuery.trim() && recentSearches.length > 0 && (
+                <div className="dock-search-dropdown dock-search-dropdown--recent">
+                  <div className="dock-search-dropdown__heading">Recent searches</div>
+                  {recentSearches.map((item) => (
+                    <button
+                      type="button"
+                      key={item}
+                      className="dock-search-dropdown__item dock-search-dropdown__item--recent"
+                      onMouseDown={(event) => event.preventDefault()}
+                      onClick={() => applyRecentWorshipSearch(item)}
+                    >
+                      <Icon name="history" size={13} style={{ opacity: 0.5 }} />
+                      <span className="dock-search-dropdown__content">
+                        <span className="dock-search-dropdown__label">{item}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
               )}
             </div>
           </>

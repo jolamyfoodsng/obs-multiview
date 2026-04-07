@@ -374,7 +374,7 @@ export default function DockSpeakerTab({ staged, onStage }: Props) {
         selectedThemeId={selectedTheme?.id ?? null}
         onSelect={handleSelectTheme}
         label="Speaker Theme"
-        tags={["speaker", "pastor", "minister", "guest", "name", "title"]}
+        tags={["lt-121-modern-speaker-clean"]}
       />
 
       {/* Staged preview */}

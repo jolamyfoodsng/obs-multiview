@@ -324,6 +324,10 @@ export function SongsTab() {
               </button>
             )}
           </div>
+          <button type="button" className="lib-add-btn" onClick={() => setShowAddModal(true)}>
+            <Icon name="add" size={20} />
+            Add Song
+          </button>
           <button type="button" className="lib-archive-btn" onClick={() => setShowArchiveModal(true)}>
             <Icon name="archive" size={18} />
             View Archive
@@ -336,10 +340,6 @@ export function SongsTab() {
           <button type="button" className="lib-online-search-trigger" onClick={handleOpenOnlineSearch}>
             <Icon name="travel_explore" size={18} />
             Search Online
-          </button>
-          <button type="button" className="lib-add-btn" onClick={() => setShowAddModal(true)}>
-            <Icon name="add" size={20} />
-            Add Song
           </button>
         </div>
       </div>

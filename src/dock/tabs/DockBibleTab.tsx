@@ -62,6 +62,8 @@ const DEFAULT_VERSE_LINES = 1;
 const QUICK_SELECT_VERSION_COUNT = 3;
 const MIN_DOCK_KEYWORD_SEARCH_LENGTH = 2;
 const DOCK_KEYWORD_SEARCH_LIMIT = 24;
+const BIBLE_RECENT_SEARCHES_KEY = "ocs-dock-bible-recent-searches-v1";
+const BIBLE_RECENT_SEARCH_LIMIT = 6;
 
 interface DockBiblePreferences {
   overlayMode?: OverlayMode;
@@ -314,6 +316,37 @@ function emptyVoiceBibleSnapshot(): VoiceBibleSnapshot {
   };
 }
 
+function readRecentBibleSearches(): string[] {
+  try {
+    const raw = localStorage.getItem(BIBLE_RECENT_SEARCHES_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed)
+      ? parsed.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeRecentBibleSearches(items: string[]): void {
+  try {
+    localStorage.setItem(BIBLE_RECENT_SEARCHES_KEY, JSON.stringify(items.slice(0, BIBLE_RECENT_SEARCH_LIMIT)));
+  } catch {
+    // ignore OBS CEF storage failures
+  }
+}
+
+function pushRecentBibleSearch(label: string): string[] {
+  const normalized = label.trim();
+  if (!normalized) return readRecentBibleSearches();
+  const next = [
+    normalized,
+    ...readRecentBibleSearches().filter((item) => item.toLowerCase() !== normalized.toLowerCase()),
+  ].slice(0, BIBLE_RECENT_SEARCH_LIMIT);
+  writeRecentBibleSearches(next);
+  return next;
+}
+
 export default function DockBibleTab({
   staged,
   onStage,
@@ -339,6 +372,8 @@ export default function DockBibleTab({
     { value: "KJV", label: "KJV" },
   ]);
   const [showDropdown, setShowDropdown] = useState(false);
+  const [showRecentSearches, setShowRecentSearches] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => readRecentBibleSearches());
   const [activeIdx, setActiveIdx] = useState(-1);
   const [keywordResults, setKeywordResults] = useState<BibleKeywordResult[]>([]);
   const [isKeywordSearching, setIsKeywordSearching] = useState(false);
@@ -1401,6 +1436,7 @@ export default function DockBibleTab({
     const handler = (e: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
         setShowDropdown(false);
+        setShowRecentSearches(false);
       }
     };
     document.addEventListener("mousedown", handler);
@@ -1412,6 +1448,7 @@ export default function DockBibleTab({
     const val = e.target.value;
     setSearchQuery(val);
     setShowDropdown(val.trim().length > 0);
+    setShowRecentSearches(val.trim().length === 0);
     setActiveIdx(-1);
   }, []);
 
@@ -1420,8 +1457,10 @@ export default function DockBibleTab({
     async (result: DockBibleSearchOption, options?: { sendToPreview?: boolean; sendToProgram?: boolean }) => {
       const sendToProgram = options?.sendToProgram ?? false;
       const sendToPreview = options?.sendToPreview ?? false;
+      setRecentSearches(pushRecentBibleSearch(result.label));
       setSearchQuery("");
       setShowDropdown(false);
+      setShowRecentSearches(false);
       setActiveIdx(-1);
 
       if (result.kind === "keyword") {
@@ -1450,6 +1489,21 @@ export default function DockBibleTab({
       }
     },
     [activeColumnIndex, activeTranslation, focusReference, stageVerse]
+  );
+
+  const applyRecentBibleSearch = useCallback(
+    (query: string) => {
+      const recentResult = parseBibleSearch(query)[0];
+      setSearchQuery("");
+      setShowRecentSearches(false);
+      setShowDropdown(false);
+      setActiveIdx(-1);
+
+      if (recentResult) {
+        void handlePickResult({ ...recentResult, kind: "reference" });
+      }
+    },
+    [handlePickResult],
   );
 
   // ── Keyboard navigation ──
@@ -1779,6 +1833,7 @@ export default function DockBibleTab({
               onKeyDown={handleSearchKeyDown}
               onFocus={() => {
                 if (searchQuery.trim()) setShowDropdown(true);
+                else if (recentSearches.length > 0) setShowRecentSearches(true);
               }}
             />
             {searchQuery && (
@@ -1788,6 +1843,7 @@ export default function DockBibleTab({
                 onClick={() => {
                   setSearchQuery("");
                   setShowDropdown(false);
+                  setShowRecentSearches(recentSearches.length > 0);
                 }}
                 aria-label="Clear Bible search"
                 title="Clear Bible search"
@@ -1795,6 +1851,7 @@ export default function DockBibleTab({
                 <Icon name="close" size={13} />
               </button>
             )}
+
             <button
               type="button"
               className={`dock-search__action dock-search__action--voice${voiceListening ? " is-listening" : ""}${voiceBusy ? " is-busy" : ""}`}
@@ -1851,6 +1908,26 @@ export default function DockBibleTab({
                           : result.chapter !== null
                             ? "Chapter"
                             : "Book"}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {showRecentSearches && !searchQuery.trim() && recentSearches.length > 0 && (
+              <div className="dock-search-dropdown dock-search-dropdown--recent">
+                <div className="dock-search-dropdown__heading">Recent searches</div>
+                {recentSearches.map((item) => (
+                  <button
+                    type="button"
+                    key={item}
+                    className="dock-search-dropdown__item dock-search-dropdown__item--recent"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => applyRecentBibleSearch(item)}
+                  >
+                    <Icon name="history" size={13} style={{ opacity: 0.5 }} />
+                    <span className="dock-search-dropdown__content">
+                      <span className="dock-search-dropdown__label">{item}</span>
                     </span>
                   </button>
                 ))}

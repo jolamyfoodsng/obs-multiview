@@ -1172,7 +1172,8 @@
 }
 
 /* ── Smart search dropdown ── */
-.dock-search--smart {
+.dock-search--smart,
+.dock-search--console {
   position: relative;
 }
 
@@ -1213,6 +1214,18 @@
 .dock-search-dropdown__item--active {
   background: color-mix(in srgb, var(--dock-accent-soft) 86%, var(--dock-surface));
   color: var(--dock-text);
+}
+
+.dock-search-dropdown__heading {
+  padding: 4px 7px 3px;
+  color: var(--dock-text-muted);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.dock-search-dropdown__item--recent {
+  min-height: 28px;
 }
 
 .dock-search-dropdown__label {
@@ -1699,6 +1712,440 @@
   font-size: 10px;
   color: var(--dock-text-dim);
   margin-top: 2px;
+}
+
+/* ── Sermon quote/point library ── */
+.dock-sermon-view {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.dock-sermon-view--detail {
+  flex: 1 1 auto;
+  height: 100%;
+  min-height: 0;
+}
+
+.dock-sermon-main {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 4px;
+}
+
+.dock-sermon-toolbar,
+.dock-sermon-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.dock-sermon-title {
+  color: var(--dock-text);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.dock-sermon-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-height: 0;
+}
+
+.dock-sermon-slide-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 5px;
+  min-height: 0;
+}
+
+.dock-sermon-item {
+  width: 100%;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 8px;
+  border: 1px solid color-mix(in srgb, var(--dock-border) 88%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--dock-surface-alt) 72%, var(--dock-surface));
+  color: var(--dock-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.dock-sermon-item:hover,
+.dock-sermon-item:focus-visible {
+  border-color: color-mix(in srgb, var(--dock-accent) 32%, var(--dock-border));
+  background: color-mix(in srgb, var(--dock-surface-hover) 72%, var(--dock-surface));
+  outline: none;
+}
+
+.dock-sermon-item__type {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 42px;
+  min-height: 22px;
+  padding: 0 6px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.dock-sermon-item__type--quote {
+  background: color-mix(in srgb, var(--dock-yellow) 18%, transparent);
+  color: var(--dock-yellow);
+}
+
+.dock-sermon-item__type--point {
+  background: color-mix(in srgb, var(--dock-accent) 16%, transparent);
+  color: var(--dock-accent);
+}
+
+.dock-sermon-item__main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dock-sermon-item__topic,
+.dock-sermon-item__meta,
+.dock-sermon-slide__text,
+.dock-sermon-slide__meta {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dock-sermon-item__topic {
+  color: var(--dock-text);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.dock-sermon-item__meta {
+  color: var(--dock-text-dim);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.dock-sermon-item__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 22px;
+  border: 1px solid color-mix(in srgb, var(--dock-border) 84%, transparent);
+  border-radius: 3px;
+  color: var(--dock-text-dim);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.dock-sermon-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  border: 1px dashed color-mix(in srgb, var(--dock-border) 82%, transparent);
+  border-radius: 3px;
+}
+
+.dock-sermon-detail-head {
+  padding-bottom: 2px;
+}
+
+.dock-sermon-back {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 26px;
+  border: 1px solid color-mix(in srgb, var(--dock-border) 86%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--dock-surface-alt) 80%, transparent);
+  color: var(--dock-text);
+  cursor: pointer;
+}
+
+.dock-sermon-back:hover {
+  border-color: color-mix(in srgb, var(--dock-accent) 32%, var(--dock-border));
+  background: color-mix(in srgb, var(--dock-accent-soft) 70%, var(--dock-surface));
+}
+
+.dock-sermon-detail-head__copy {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.dock-sermon-detail-head__meta {
+  color: var(--dock-text-dim);
+  font-size: 10px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dock-sermon-detail-head__actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dock-sermon-theme-row {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px;
+  border: 1px solid color-mix(in srgb, var(--dock-border) 88%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--dock-surface-alt) 70%, var(--dock-surface));
+}
+
+.dock-sermon-theme-row .dock-bible-theme-picker {
+  min-width: 0;
+}
+
+.dock-sermon-bottom-deck {
+  flex: 0 0 auto;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 6px;
+  border-top: 1px solid color-mix(in srgb, var(--dock-border) 86%, transparent);
+  background: color-mix(in srgb, var(--dock-surface) 94%, var(--dock-surface-alt));
+}
+
+.dock-sermon-bottom-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  gap: 6px;
+}
+
+.dock-sermon-bottom-settings-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  min-height: 32px;
+  border: 1px solid color-mix(in srgb, var(--dock-border) 88%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--dock-surface-alt) 76%, var(--dock-surface));
+  color: var(--dock-text-dim);
+  cursor: pointer;
+}
+
+.dock-sermon-bottom-settings-trigger:hover,
+.dock-sermon-bottom-settings-trigger:focus-visible,
+.dock-sermon-bottom-settings-trigger--active {
+  border-color: color-mix(in srgb, var(--dock-accent) 40%, var(--dock-border));
+  background: color-mix(in srgb, var(--dock-accent-soft) 68%, var(--dock-surface));
+  color: var(--dock-text);
+  outline: none;
+}
+
+.dock-sermon-bottom-settings-trigger:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+}
+
+.dock-sermon-bottom-settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 6px;
+  border: 1px solid color-mix(in srgb, var(--dock-border) 88%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--dock-surface-alt) 72%, var(--dock-surface));
+}
+
+.dock-sermon-bottom-settings-row {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 5px;
+}
+
+.dock-sermon-bottom-settings-row--size {
+  grid-template-columns: 42px minmax(0, 1fr) 48px;
+}
+
+.dock-sermon-size-readout {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  padding: 0 6px;
+  border: 1px solid color-mix(in srgb, var(--dock-border) 82%, transparent);
+  border-radius: 3px;
+  color: var(--dock-text-dim);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.dock-sermon-size-slider {
+  min-width: 0;
+}
+
+.dock-sermon-slide {
+  position: relative;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 7px;
+  min-height: 76px;
+  padding: 7px 34px 7px 8px;
+  border: 1px solid color-mix(in srgb, var(--dock-border) 88%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--dock-surface-alt) 72%, var(--dock-surface));
+  cursor: pointer;
+}
+
+.dock-sermon-slide:hover {
+  border-color: color-mix(in srgb, var(--dock-accent) 30%, var(--dock-border));
+}
+
+.dock-sermon-slide:hover .dock-lyric-card__actions,
+.dock-sermon-slide:focus-within .dock-lyric-card__actions {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.dock-sermon-slide:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--dock-accent) 72%, transparent);
+  outline-offset: 2px;
+}
+
+.dock-sermon-slide--active {
+  border-color: color-mix(in srgb, var(--dock-accent) 74%, var(--dock-border));
+  background: color-mix(in srgb, var(--dock-accent-soft) 68%, var(--dock-surface));
+}
+
+.dock-sermon-slide--live {
+  border-color: color-mix(in srgb, var(--dock-green) 64%, var(--dock-border));
+}
+
+.dock-sermon-slide__index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--dock-surface) 90%, transparent);
+  color: var(--dock-text-dim);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.dock-sermon-slide__copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dock-sermon-slide__text {
+  color: var(--dock-text);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.dock-sermon-slide--normal .dock-sermon-slide__text {
+  font-weight: 500;
+}
+
+.dock-sermon-slide__meta {
+  color: var(--dock-text-dim);
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.dock-sermon-type-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.dock-sermon-quote-meta-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.dock-sermon-view > .dock-btn--block {
+  width: 100%;
+}
+
+.dock-sermon-slide-tools {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.dock-sermon-tool-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 5px;
+  border: 1px solid color-mix(in srgb, var(--dock-border) 88%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--dock-surface-alt) 72%, transparent);
+  color: var(--dock-text-dim);
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.dock-sermon-tool-button:hover,
+.dock-sermon-tool-button:focus-visible {
+  border-color: color-mix(in srgb, var(--dock-accent) 38%, var(--dock-border));
+  background: color-mix(in srgb, var(--dock-surface-hover) 80%, var(--dock-surface));
+  color: var(--dock-text);
+  outline: none;
+}
+
+.dock-sermon-tool-button--active {
+  border-color: color-mix(in srgb, var(--dock-accent) 54%, var(--dock-border));
+  background: color-mix(in srgb, var(--dock-accent-soft) 70%, var(--dock-surface));
+  color: var(--dock-text);
+}
+
+.dock-sermon-tool-button:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.dock-sermon-tool-button--icon {
+  width: 24px;
+  padding: 0;
 }
 
 /* ── Pinned/Recent pills ── */
@@ -3052,6 +3499,154 @@
 .dock-shell-icon-btn--active {
   border-color: color-mix(in srgb, var(--dock-accent) 36%, var(--dock-border));
   background: color-mix(in srgb, var(--dock-accent-soft) 72%, var(--dock-surface));
+}
+
+.dock-shell-history {
+  position: relative;
+  display: inline-flex;
+}
+
+.dock-shell-history-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 220;
+  width: min(300px, calc(100vw - 18px));
+  max-height: min(70vh, 360px);
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--dock-border) 94%, transparent);
+  border-radius: 3px;
+  background: var(--dock-surface);
+  box-shadow: 0 12px 28px color-mix(in srgb, #000 28%, transparent);
+}
+
+.dock-shell-history-menu__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 0 6px;
+  border-bottom: 1px solid color-mix(in srgb, var(--dock-border) 86%, transparent);
+}
+
+.dock-shell-history-menu__eyebrow,
+.dock-shell-history-section__label {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dock-text-dim);
+}
+
+.dock-shell-history-menu__title {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--dock-text);
+}
+
+.dock-shell-history-menu__close,
+.dock-shell-history-item__favorite {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--dock-border) 86%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--dock-surface-alt) 84%, transparent);
+  color: var(--dock-text-dim);
+  cursor: pointer;
+}
+
+.dock-shell-history-menu__close:hover,
+.dock-shell-history-item__favorite:hover,
+.dock-shell-history-item__favorite--active {
+  border-color: color-mix(in srgb, var(--dock-accent) 34%, var(--dock-border));
+  background: color-mix(in srgb, var(--dock-accent-soft) 68%, var(--dock-surface));
+  color: var(--dock-text);
+}
+
+.dock-shell-history-section {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.dock-shell-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dock-shell-history-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 24px;
+  align-items: stretch;
+  gap: 4px;
+}
+
+.dock-shell-history-item__main {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 6px 7px;
+  border: 1px solid color-mix(in srgb, var(--dock-border) 78%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--dock-surface-alt) 74%, transparent);
+  color: var(--dock-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.dock-shell-history-item__main:hover,
+.dock-shell-history-item__main:focus-visible {
+  border-color: color-mix(in srgb, var(--dock-accent) 36%, var(--dock-border));
+  background: color-mix(in srgb, var(--dock-accent-soft) 58%, var(--dock-surface));
+  outline: none;
+}
+
+.dock-shell-history-item__label,
+.dock-shell-history-item__meta {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dock-shell-history-item__label {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.dock-shell-history-item__meta {
+  font-size: 10px;
+  color: var(--dock-text-dim);
+}
+
+.dock-shell-history-empty {
+  padding: 12px 8px;
+  border: 1px dashed color-mix(in srgb, var(--dock-border) 84%, transparent);
+  border-radius: 3px;
+  color: var(--dock-text-dim);
+}
+
+.dock-shell-history-empty__title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--dock-text);
+}
+
+.dock-shell-history-empty__body {
+  margin-top: 2px;
+  font-size: 10px;
+  line-height: 1.35;
 }
 
 .dock-content {

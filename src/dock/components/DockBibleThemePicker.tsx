@@ -10,6 +10,9 @@ interface Props {
   templateType?: BibleTheme["templateType"];
   previewTheme?: BibleTheme | null;
   allowedCategories?: Array<NonNullable<BibleTheme["category"]>>;
+  browserTitle?: string;
+  sampleText?: string;
+  sampleReference?: string;
 }
 
 function clampPreviewSize(size: number, min: number, max: number, ratio = 0.18): number {
@@ -58,12 +61,17 @@ export default function DockBibleThemePicker({
   templateType,
   previewTheme,
   allowedCategories,
+  browserTitle,
+  sampleText,
+  sampleReference,
 }: Props) {
   const [allThemes, setAllThemes] = useState<BibleTheme[]>([]);
   const [showBrowser, setShowBrowser] = useState(false);
   const resolvedLabel = typeof label === "string" ? label.trim() : "Bible Theme";
   const showLabel = typeof label === "string" ? resolvedLabel.length > 0 : true;
   const previewRatio = templateType === "fullscreen" ? 0.15 : 0.18;
+  const sampleMain = sampleText || "Faith";
+  const sampleMeta = sampleReference ?? "John 3:16";
 
   const loadThemes = useCallback(async () => {
     const favorites = await loadDockFavoriteBibleThemes(templateType);
@@ -143,18 +151,20 @@ export default function DockBibleThemePicker({
                     lineHeight: 1.05,
                   }}
                 >
-                  Faith
+                  {sampleMain}
                 </span>
-                <span
-                  className="dock-theme-dropdown-trigger__sample-ref"
-                  style={{
-                    fontSize: clampPreviewSize(displayTheme.settings.refFontSize, 7, 11, previewRatio),
-                    color: displayTheme.settings.refFontColor || displayTheme.settings.fontColor || "#fff",
-                    fontWeight: displayTheme.settings.refFontWeight === "light" ? 400 : displayTheme.settings.refFontWeight === "bold" ? 700 : 500,
-                  }}
-                >
-                  John 3:16
-                </span>
+                {sampleMeta && (
+                  <span
+                    className="dock-theme-dropdown-trigger__sample-ref"
+                    style={{
+                      fontSize: clampPreviewSize(displayTheme.settings.refFontSize, 7, 11, previewRatio),
+                      color: displayTheme.settings.refFontColor || displayTheme.settings.fontColor || "#fff",
+                      fontWeight: displayTheme.settings.refFontWeight === "light" ? 400 : displayTheme.settings.refFontWeight === "bold" ? 700 : 500,
+                    }}
+                  >
+                    {sampleMeta}
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -170,7 +180,7 @@ export default function DockBibleThemePicker({
         selectedThemeId={selectedThemeId}
         onSelect={handleSelect}
         onClose={() => setShowBrowser(false)}
-        title={showLabel ? resolvedLabel : "Select Bible Theme"}
+        title={browserTitle ?? (showLabel ? resolvedLabel : "Select Bible Theme")}
         templateType={templateType}
         allowedCategories={allowedCategories}
       />

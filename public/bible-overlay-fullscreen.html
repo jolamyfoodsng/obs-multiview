@@ -476,7 +476,9 @@
     reference.style.display = referenceText ? "block" : "none";
     autoScaleContent();
     if (slideCounter) {
-      slideCounter.textContent = `${slide.index + 1} / ${slide.total}`;
+      const showCounter = slide.showCounter !== false;
+      slideCounter.textContent = showCounter ? `${slide.index + 1} / ${slide.total}` : "";
+      slideCounter.style.display = showCounter ? "block" : "none";
     }
 
     if (isNew) {
