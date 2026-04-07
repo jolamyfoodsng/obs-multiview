@@ -4,9 +4,8 @@
  * Restores speaker, sermon, and event lower-third control in a denser console shell.
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import type { DockStagedItem } from "../dockTypes";
-import { dockObsClient } from "../dockObsClient";
 import DockSpeakerTab from "./DockSpeakerTab";
 import DockSermonTab from "./DockSermonTab";
 import DockEventTab from "./DockEventTab";
@@ -43,11 +42,6 @@ function loadActiveSubTab(): MinistrySubTab {
 
 export default function DockMinistryTab({ staged, onStage }: Props) {
   const [activeSubTab, setActiveSubTab] = useState<MinistrySubTab>(() => loadActiveSubTab());
-  const hasLowerThirdStage =
-    staged?.type === "speaker" ||
-    staged?.type === "sermon" ||
-    staged?.type === "event" ||
-    staged?.type === "animated-lt";
 
   useEffect(() => {
     try {
@@ -56,15 +50,6 @@ export default function DockMinistryTab({ staged, onStage }: Props) {
       // ignore persistence failures
     }
   }, [activeSubTab]);
-
-  const handleClearMinistry = useCallback(() => {
-    onStage(null);
-    if (dockObsClient.isConnected) {
-      dockObsClient.clearLowerThirds().catch((err) => {
-        console.warn("[DockMinistryTab] clearLowerThirds failed:", err);
-      });
-    }
-  }, [onStage]);
 
   return (
     <div className="dock-module dock-module--ministry">

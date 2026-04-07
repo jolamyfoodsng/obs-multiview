@@ -682,47 +682,6 @@
   gap: 6px;
 }
 
-.dock-animated-lt-legacy__setup {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 6px;
-  border: 1px solid color-mix(in srgb, var(--dock-border) 90%, transparent);
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--dock-surface-alt) 78%, var(--dock-surface));
-}
-
-.dock-animated-lt-legacy__copy {
-  display: flex;
-  min-width: 0;
-  flex: 1 1 auto;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.dock-animated-lt-legacy__status {
-  color: var(--dock-text-dim);
-  font-size: 10px;
-  line-height: 1.25;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.dock-animated-lt-legacy__actions {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-  min-width: min(100%, 244px);
-}
-
-.dock-animated-lt-legacy__actions .dock-btn {
-  min-height: 32px;
-  padding-inline: 8px;
-  font-size: 11px;
-}
-
 .dock-animated-lt-legacy__error {
   padding: 6px 8px;
   border: 1px solid color-mix(in srgb, var(--dock-red) 42%, var(--dock-border));
@@ -5211,15 +5170,6 @@
 
   .dock-console-row--stretch {
     flex-direction: column;
-  }
-
-  .dock-animated-lt-legacy__setup {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .dock-animated-lt-legacy__actions {
-    min-width: 0;
   }
 
   .dock-bible-browser__summary {

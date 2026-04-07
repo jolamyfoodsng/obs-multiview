@@ -415,8 +415,7 @@
 		}
 
 		///////////////////////////
-		bcp.onmessage = function (ev) {
-			const received_data = ev.data;
+		function applyLowerThirdData(received_data) {
 			const {global_animation_time, global_oneshot} = received_data;
 
 			if (mode != "preview") {
@@ -433,8 +432,8 @@
 				alt_1_logo_size, alt_1_shadow_amount, alt_1_corners, alt_1_border_switch} = received_data;
 			let {alt_1_switch, alt_1_preview, alt_1_style_color_1, alt_1_style_color_2, alt_1_line_spacing, alt_1_border_thickness_amount, alt_1_style_color_3, alt_1_style_color_4} = received_data;
 
-			document.getElementById("alt-1-name").innerHTML = alt_1_name;
-			document.getElementById("alt-1-info").innerHTML = alt_1_info;
+			document.getElementById("alt-1-name").innerHTML = alt_1_name || "";
+			document.getElementById("alt-1-info").innerHTML = alt_1_info || "";
 
 			if (alt_1_background_switch == "false"){
 				alt_1_style_color_1 = "none";
@@ -462,8 +461,8 @@
 				alt_2_logo_size, alt_2_shadow_amount, alt_2_corners, alt_2_border_switch} = received_data;
 			let {alt_2_switch, alt_2_preview, alt_2_style_color_1, alt_2_style_color_2, alt_2_line_spacing, alt_2_border_thickness_amount, alt_2_style_color_3, alt_2_style_color_4} = received_data;
 
-			document.getElementById("alt-2-name").innerHTML = alt_2_name;
-			document.getElementById("alt-2-info").innerHTML = alt_2_info;
+			document.getElementById("alt-2-name").innerHTML = alt_2_name || "";
+			document.getElementById("alt-2-info").innerHTML = alt_2_info || "";
 
 			if (alt_2_background_switch == "false"){
 				alt_2_style_color_1 = "none";
@@ -490,8 +489,8 @@
 				alt_3_logo_size, alt_3_shadow_amount, alt_3_corners, alt_3_border_switch} = received_data;
 			let {alt_3_switch, alt_3_preview, alt_3_style_color_1, alt_3_style_color_2, alt_3_line_spacing, alt_3_border_thickness_amount, alt_3_style_color_3, alt_3_style_color_4} = received_data;
 
-			document.getElementById("alt-3-name").innerHTML = alt_3_name;
-			document.getElementById("alt-3-info").innerHTML = alt_3_info;
+			document.getElementById("alt-3-name").innerHTML = alt_3_name || "";
+			document.getElementById("alt-3-info").innerHTML = alt_3_info || "";
 
 			if (alt_3_background_switch == "false"){
 				alt_3_style_color_1 = "none";
@@ -518,8 +517,8 @@
 				alt_4_logo_size, alt_4_shadow_amount, alt_4_corners, alt_4_border_switch} = received_data;
 			let {alt_4_switch, alt_4_preview, alt_4_style_color_1, alt_4_style_color_2, alt_4_line_spacing, alt_4_border_thickness_amount, alt_4_style_color_3, alt_4_style_color_4} = received_data;
 
-			document.getElementById("alt-4-name").innerHTML = alt_4_name;
-			document.getElementById("alt-4-info").innerHTML = alt_4_info;
+			document.getElementById("alt-4-name").innerHTML = alt_4_name || "";
+			document.getElementById("alt-4-info").innerHTML = alt_4_info || "";
 
 			if (alt_4_background_switch == "false"){
 				alt_4_style_color_1 = "none";
@@ -584,7 +583,7 @@
 			}
 
 			//Check the switches
-			if (alt_1_switch == "false" || alt_1_name.length == 0 || alt_1_info.length == 0) {
+			if (alt_1_switch == "false" || (!alt_1_name && !alt_1_info)) {
 				if(canIn1){
 					canIn1 = false;
 					stopTimeCount("lower-third-1");
@@ -599,7 +598,7 @@
 				}
 			};
 
-			if (alt_2_switch == "false" || alt_2_name.length == 0 || alt_2_info.length == 0) {
+			if (alt_2_switch == "false" || (!alt_2_name && !alt_2_info)) {
 				if(canIn2){
 					canIn2 = false;
 					stopTimeCount("lower-third-2");
@@ -614,7 +613,7 @@
 				}
 			};
 
-			if (alt_3_switch == "false" || alt_3_name.length == 0 || alt_3_info.length == 0) {
+			if (alt_3_switch == "false" || (!alt_3_name && !alt_3_info)) {
 				if(canIn3){
 					canIn3 = false;
 					stopTimeCount("lower-third-3");
@@ -628,7 +627,7 @@
 					startActiveCount("lower-third-3");
 				}
 			};
-			if (alt_4_switch == "false" || alt_4_name.length == 0 || alt_4_info.length == 0) {
+			if (alt_4_switch == "false" || (!alt_4_name && !alt_4_info)) {
 				if(canIn4){
 					canIn4 = false;
 					stopTimeCount("lower-third-4");
@@ -952,6 +951,62 @@
 				} 
 			}
 		}
+
+		bcp.onmessage = function (ev) {
+			applyLowerThirdData(ev.data);
+		}
+
+		function getInitialLowerThirdPayload() {
+			try {
+				const encoded = new URLSearchParams(window.location.hash ? window.location.hash.slice(1) : window.location.search).get('data');
+				return encoded ? JSON.parse(encoded) : null;
+			} catch (err) {
+				console.warn('[AnimatedLT] Could not parse URL payload:', err);
+				return null;
+			}
+		}
+
+		let lastCssLowerThirdPayload = '';
+		function getCssLowerThirdPayload() {
+			try {
+				const rawValue = getComputedStyle(document.documentElement).getPropertyValue('--animated-lt-data').trim();
+				if (!rawValue) return null;
+				const encoded = rawValue.replace(/^["']|["']$/g, '');
+				if (!encoded || encoded === lastCssLowerThirdPayload) return null;
+				lastCssLowerThirdPayload = encoded;
+				return JSON.parse(decodeURIComponent(encoded));
+			} catch (err) {
+				console.warn('[AnimatedLT] Could not parse CSS payload:', err);
+				return null;
+			}
+		}
+
+		function applyCssLowerThirdPayload() {
+			const payload = getCssLowerThirdPayload();
+			if (payload) {
+				applyLowerThirdData(payload);
+			}
+		}
+
+		const initialLowerThirdPayload = getInitialLowerThirdPayload();
+		if (initialLowerThirdPayload) {
+			setTimeout(function () {
+				applyLowerThirdData(initialLowerThirdPayload);
+			}, 40);
+		}
+		setTimeout(applyCssLowerThirdPayload, 40);
+		setTimeout(applyCssLowerThirdPayload, 160);
+		setTimeout(applyCssLowerThirdPayload, 420);
+		setInterval(applyCssLowerThirdPayload, 1000);
+
+		window.addEventListener('hashchange', function () {
+			const payload = getInitialLowerThirdPayload();
+			if (payload) {
+				applyLowerThirdData(payload);
+			}
+			setTimeout(applyCssLowerThirdPayload, 40);
+			setTimeout(applyCssLowerThirdPayload, 160);
+		});
 
 		bcf.onmessage = function (ev) {
 			received_data = ev.data;

@@ -55,10 +55,12 @@ export interface DockLTThemeRef {
 
 /** Source names the dock creates as overlays in the user's scenes */
 const DOCK_LT_SOURCE = "⛪ OCS Lower Third";
+const DOCK_ANIMATED_LT_SOURCE = "⛪ OCS Animated Lower Thirds";
 const DOCK_BIBLE_SOURCE = "⛪ OCS Bible Overlay";
 const DOCK_WORSHIP_SOURCE = "⛪ OCS Worship Lyrics";
 const DOCK_TICKER_SOURCE = "⛪ OCS Ticker";
 const DOCK_PREVIEW_LT_SOURCE = "⛪ OCS Preview Lower Third";
+const DOCK_PREVIEW_ANIMATED_LT_SOURCE = "⛪ OCS Preview Animated Lower Thirds";
 const DOCK_PREVIEW_BIBLE_SOURCE = "⛪ OCS Preview Bible Overlay";
 const DOCK_PREVIEW_WORSHIP_SOURCE = "⛪ OCS Preview Worship Lyrics";
 const DOCK_PREVIEW_TICKER_SOURCE = "⛪ OCS Preview Ticker";
@@ -82,6 +84,7 @@ const FULLSCREEN_CLEAR_WAIT_MS = 240;
 
 interface DockResourceNames {
   ltSource: string;
+  animatedLtSource: string;
   bibleSource: string;
   worshipSource: string;
   tickerSource: string;
@@ -95,6 +98,7 @@ interface DockResourceNames {
 
 const LIVE_DOCK_RESOURCES: DockResourceNames = {
   ltSource: DOCK_LT_SOURCE,
+  animatedLtSource: DOCK_ANIMATED_LT_SOURCE,
   bibleSource: DOCK_BIBLE_SOURCE,
   worshipSource: DOCK_WORSHIP_SOURCE,
   tickerSource: DOCK_TICKER_SOURCE,
@@ -108,6 +112,7 @@ const LIVE_DOCK_RESOURCES: DockResourceNames = {
 
 const PREVIEW_DOCK_RESOURCES: DockResourceNames = {
   ltSource: DOCK_PREVIEW_LT_SOURCE,
+  animatedLtSource: DOCK_PREVIEW_ANIMATED_LT_SOURCE,
   bibleSource: DOCK_PREVIEW_BIBLE_SOURCE,
   worshipSource: DOCK_PREVIEW_WORSHIP_SOURCE,
   tickerSource: DOCK_PREVIEW_TICKER_SOURCE,
@@ -1984,6 +1989,7 @@ class DockObsClient {
 
     const ALL_OVERLAY_SOURCES = [
       resources.ltSource,
+      resources.animatedLtSource,
       resources.bibleSource,
       resources.worshipSource,
       resources.tickerSource,
@@ -2479,8 +2485,9 @@ class DockObsClient {
    * The legacy control panel talks to this browser source with BroadcastChannel,
    * so this method only provisions the correct page and scene visibility.
    */
-  async loadAnimatedLowerThirdSource(live: boolean): Promise<void> {
+  async loadAnimatedLowerThirdSource(live: boolean, payload?: Record<string, unknown>): Promise<boolean> {
     const resources = getDockResources(live);
+    const sourceName = resources.animatedLtSource;
     const target = await this.getTargetScene(live);
     let sceneName = target.sceneName;
     const studioMode = target.studioMode;
@@ -2491,31 +2498,47 @@ class DockObsClient {
 
     const shouldEnable = live || (!live && (studioMode || sceneName !== target.sceneName));
     const baseUrl = `${this.getOverlayBaseUrl()}/animated-lower-thirds/lower-thirds/browser-source.html`;
-    const sourceUrl = live ? baseUrl : `${baseUrl}?mode=preview`;
+    const serializedPayload = payload ? encodeURIComponent(JSON.stringify(payload)) : "";
+    const sourceUrl = payload ? `${baseUrl}#v=${Date.now()}` : baseUrl;
+    const sourceCss = serializedPayload
+      ? `:root { --animated-lt-data: "${serializedPayload}"; }`
+      : "";
 
-    await this.clearAllOverlays(resources.ltSource, sceneName, resources);
-    await this.ensureOverlaySource(sceneName, resources.ltSource, undefined, undefined, shouldEnable);
+    await this.clearAllOverlays(sourceName, sceneName, resources);
+    await this.ensureOverlaySource(sceneName, sourceName, undefined, undefined, shouldEnable);
 
     try {
       const oppositeResources = getDockResources(!live);
       const { sceneName: oppositeScene } = await this.getTargetScene(!live);
       if (oppositeScene) {
-        await this.hideOverlaySource(oppositeScene, oppositeResources.ltSource);
+        await this.hideOverlaySource(oppositeScene, oppositeResources.animatedLtSource);
       }
     } catch { /* ignore legacy opposite-source cleanup failures */ }
 
     if (live) {
-      await this.hideInOppositeScene(live, [resources.ltSource], [], false, sceneName, resources);
+      await this.hideInOppositeScene(live, [sourceName], [], false, sceneName, resources);
     }
 
-    await this.setBrowserSourceUrl(resources.ltSource, sourceUrl, true, "");
+    let currentUrl = "";
+    try {
+      const current = await this.call("GetInputSettings", { inputName: sourceName }) as {
+        inputSettings?: { url?: string };
+      };
+      currentUrl = current.inputSettings?.url ?? "";
+    } catch { /* ignore and load below */ }
+
+    const sourceChanged = currentUrl !== sourceUrl;
+    if (sourceChanged || payload) {
+      await this.setBrowserSourceUrl(sourceName, sourceUrl, false, sourceCss);
+    }
 
     if (!live) {
-      await this.ensureOverlaySource(sceneName, resources.ltSource, undefined, undefined, true);
+      await this.ensureOverlaySource(sceneName, sourceName, undefined, undefined, true);
       await this.setCurrentPreviewScene(sceneName);
     }
 
-    console.log(`[DockOBS] Animated Lower Thirds source → scene "${sceneName}" (${live ? "Program" : "Preview"})`);
+    console.log(`[DockOBS] Animated Lower Thirds source → scene "${sceneName}" (${live ? "Program" : "Preview"})${sourceChanged ? "" : " (reused)"}`);
+    return sourceChanged;
   }
 
   /**

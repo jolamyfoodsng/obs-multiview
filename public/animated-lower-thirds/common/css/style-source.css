@@ -436,6 +436,19 @@ body {
 .animation-out > .text-content > div:nth-child(2) div {
 	animation: cubic-bezier(0.19, 0.76, 0.32, 1) 1 reverse both;
 }
+
+.animation-in,
+.animation-out,
+.animation-in > div,
+.animation-out > div,
+.animation-in img,
+.animation-out img,
+.animation-in > .text-content > div div,
+.animation-out > .text-content > div div {
+	backface-visibility: hidden;
+	transform: translateZ(0);
+	will-change: transform, opacity;
+}
 #lower-third-1.animation-in > .text-content > div:first-child div, #lower-third-1.animation-in > .text-content > div:nth-child(2) div,
 #lower-third-1.animation-out > .text-content > div:first-child div, #lower-third-1.animation-out > .text-content > div:nth-child(2) div {
 	animation-duration: var(--alt-1-animation-time);
@@ -485,6 +498,7 @@ body {
     align-items: center;
     justify-content: center;
     position: absolute;
+    contain: layout paint;
     transition: left 0.1s, bottom 0.1s, right 0.1s;
 }
 .alt > .text-content {
