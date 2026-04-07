@@ -36,6 +36,11 @@ import { AppLogo } from "../../components/AppLogo";
 import { ltDurationStore } from "../../lowerthirds/ltDurationStore";
 import { applyBrandingSettingsToDom } from "../../services/branding";
 import { saveUploadFile } from "../../services/layoutEngine";
+import {
+  getLocalLlmRuntimeStatus,
+  installLocalLlmModel,
+  type LocalLlmRuntimeStatus,
+} from "../../services/localLlm";
 import { STREAMING_PLATFORM_OPTIONS, getStreamingPlatformLabel } from "../../services/streamQuality";
 import { voiceBibleService } from "../../services/voiceBibleService";
 import {
@@ -252,9 +257,19 @@ export function MVSettings() {
   const [voiceDevices, setVoiceDevices] = useState<VoiceBibleInputOption[]>([]);
   const [voiceObsInputs, setVoiceObsInputs] = useState<VoiceBibleObsInputOption[]>([]);
   const [voiceSemanticReady, setVoiceSemanticReady] = useState(false);
+  const [localLlmRuntime, setLocalLlmRuntime] = useState<LocalLlmRuntimeStatus>({
+    modelReady: false,
+    modelName: "Qwen2.5-1.5B-Instruct Q4_K_M",
+    modelPath: null,
+    expectedPath: "",
+    installSourcePath: null,
+    installActionAvailable: false,
+    loaded: false,
+  });
   const [voiceStatusMessage, setVoiceStatusMessage] = useState<string | null>(null);
   const [voiceStatusType, setVoiceStatusType] = useState<"ok" | "err">("ok");
   const [voicePreparingModel, setVoicePreparingModel] = useState(false);
+  const [voiceInstallingLocalLlm, setVoiceInstallingLocalLlm] = useState(false);
   const [voiceBibleDirty, setVoiceBibleDirty] = useState(false);
 
   // Load Bible settings from IndexedDB on mount
@@ -284,7 +299,7 @@ export function MVSettings() {
   }, []);
 
   const refreshVoiceBibleDiagnostics = useCallback(async () => {
-    const [runtime, permission, devices] = await Promise.all([
+    const [runtime, permission, devices, nextLocalLlmRuntime] = await Promise.all([
       getVoiceBibleRuntimeStatus().catch(() => ({
         modelReady: false,
         modelName: "large-v3",
@@ -292,11 +307,21 @@ export function MVSettings() {
       })),
       getMicrophonePermissionState(),
       listAudioInputDevices().catch(() => []),
+      getLocalLlmRuntimeStatus().catch(() => ({
+        modelReady: false,
+        modelName: "Qwen2.5-1.5B-Instruct Q4_K_M",
+        modelPath: null,
+        expectedPath: "",
+        installSourcePath: null,
+        installActionAvailable: false,
+        loaded: false,
+      })),
     ]);
 
     setVoiceRuntime(runtime);
     setVoicePermission(permission);
     setVoiceDevices(devices);
+    setLocalLlmRuntime(nextLocalLlmRuntime);
 
     if (obsService.isConnected) {
       const obsInputs = await listObsAudioInputs().catch(() => []);
@@ -305,7 +330,9 @@ export function MVSettings() {
       setVoiceObsInputs([]);
     }
 
-    if (
+    if (voiceBibleSettings.semanticMode === "local") {
+      setVoiceSemanticReady(nextLocalLlmRuntime.modelReady);
+    } else if (
       voiceBibleSettings.semanticMode === "ollama" &&
       voiceBibleSettings.ollamaBaseUrl &&
       voiceBibleSettings.ollamaModel
@@ -611,6 +638,12 @@ export function MVSettings() {
   }, []);
 
   const handleSaveVoiceBible = useCallback(async () => {
+    if (voiceBibleSettings.semanticMode === "local" && !localLlmRuntime.modelReady) {
+      setVoiceStatusMessage("Install the local AI helper before enabling the Local provider.");
+      setVoiceStatusType("err");
+      return;
+    }
+
     try {
       const saved = await saveVoiceBibleSettings(voiceBibleSettings);
       setVoiceBibleSettings(saved);
@@ -623,7 +656,7 @@ export function MVSettings() {
       setVoiceStatusMessage(err instanceof Error ? err.message : String(err));
       setVoiceStatusType("err");
     }
-  }, [refreshVoiceBibleDiagnostics, voiceBibleSettings]);
+  }, [localLlmRuntime.modelReady, refreshVoiceBibleDiagnostics, voiceBibleSettings]);
 
   const handleRequestVoiceMic = useCallback(async () => {
     const requestedDeviceId =
@@ -658,6 +691,23 @@ export function MVSettings() {
       await refreshVoiceBibleDiagnostics();
     }
   }, [refreshVoiceBibleDiagnostics]);
+
+  const handleInstallLocalVoiceModel = useCallback(async () => {
+    setVoiceInstallingLocalLlm(true);
+    try {
+      const runtime = await installLocalLlmModel(localLlmRuntime.installSourcePath ?? undefined);
+      setLocalLlmRuntime(runtime);
+      setVoiceStatusMessage("Local AI helper installed.");
+      setVoiceStatusType("ok");
+      await voiceBibleService.refreshAvailability();
+    } catch (err) {
+      setVoiceStatusMessage(err instanceof Error ? err.message : String(err));
+      setVoiceStatusType("err");
+    } finally {
+      setVoiceInstallingLocalLlm(false);
+      await refreshVoiceBibleDiagnostics();
+    }
+  }, [localLlmRuntime.installSourcePath, refreshVoiceBibleDiagnostics]);
 
   const overlayUrls = useMemo(
     () => ({
@@ -1619,7 +1669,7 @@ export function MVSettings() {
             Configure local speech-to-verse lookup for the OBS dock mic button.
           </p>
           <p className="mv-settings-hint">
-            Supported commands include: “John 1 verse 2”, “next verse”, “previous verse”, “go to chapter 4”, “last chapter”, and “use NIV”.
+            Whisper stays dedicated to transcription. The provider below is only used for cleanup, reference normalization, reranking, and short sermon text cleanup.
           </p>
 
           <div className="mv-settings-form">
@@ -1688,7 +1738,7 @@ export function MVSettings() {
 
           <div className="mv-settings-form" style={{ marginTop: 12 }}>
             <label className="mv-settings-field" style={{ maxWidth: 240 }}>
-              <span className="mv-settings-field-label">Semantic Matching</span>
+              <span className="mv-settings-field-label">LLM Provider</span>
               <select
                 className="mv-input"
                 value={voiceBibleSettings.semanticMode}
@@ -1698,8 +1748,9 @@ export function MVSettings() {
                   })
                 }
               >
-                <option value="ollama">Ollama rerank</option>
-                <option value="lexical-only">Lexical only</option>
+                <option value="off">Off</option>
+                <option value="local">Local (llama.cpp)</option>
+                <option value="ollama">Ollama</option>
               </select>
             </label>
 
@@ -1741,6 +1792,19 @@ export function MVSettings() {
             )}
           </div>
 
+          {voiceBibleSettings.semanticMode === "local" && (
+            <div className="mv-settings-form" style={{ marginTop: 12 }}>
+              <div className="mv-settings-field" style={{ maxWidth: 420 }}>
+                <span className="mv-settings-field-label">Local AI Helper</span>
+                <div className="mv-settings-hint">
+                  {localLlmRuntime.modelReady
+                    ? `Qwen2.5-1.5B GGUF is installed at ${localLlmRuntime.modelPath ?? localLlmRuntime.expectedPath}.`
+                    : `Install ${localLlmRuntime.modelName} at ${localLlmRuntime.expectedPath} to enable the Local provider.`}
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="mv-settings-row" style={{ marginTop: 12, gap: 8, flexWrap: "wrap" }}>
             <button className="mv-btn mv-btn--outline mv-btn--sm" onClick={() => void handleRequestVoiceMic()}>
               <Icon name="mic" size={14} />
@@ -1762,6 +1826,20 @@ export function MVSettings() {
               {voicePreparingModel ? "Downloading Whisper…" : voiceRuntime.modelReady ? "Re-check Whisper" : "Download Whisper"}
             </button>
             <button
+              className="mv-btn mv-btn--outline mv-btn--sm"
+              onClick={() => void handleInstallLocalVoiceModel()}
+              disabled={voiceInstallingLocalLlm || (!localLlmRuntime.installActionAvailable && !localLlmRuntime.modelReady)}
+            >
+              <Icon name={voiceInstallingLocalLlm ? "hourglass_top" : "memory"} size={14} />
+              {voiceInstallingLocalLlm
+                ? "Installing Local AI…"
+                : localLlmRuntime.modelReady
+                  ? "Reinstall Local AI"
+                  : localLlmRuntime.installActionAvailable
+                    ? "Install Local AI Helper"
+                    : "Local AI Helper Missing"}
+            </button>
+            <button
               className="mv-btn mv-btn--primary mv-btn--sm"
               onClick={() => void handleSaveVoiceBible()}
               disabled={!voiceBibleDirty}
@@ -1781,23 +1859,31 @@ export function MVSettings() {
               </div>
             </div>
             <div className="mv-settings-field" style={{ maxWidth: 360 }}>
-              <span className="mv-settings-field-label">Ollama Rerank</span>
+              <span className="mv-settings-field-label">LLM Runtime</span>
               <div className="mv-settings-hint">
-                {voiceBibleSettings.semanticMode === "ollama"
+                {voiceBibleSettings.semanticMode === "local"
                   ? voiceSemanticReady
-                    ? "Configured Ollama embedding model is reachable."
-                    : "Configured Ollama model is not ready; lexical matching will be used."
-                  : "Lexical-only mode is active."}
+                    ? "Local llama.cpp helper is ready in the Rust backend."
+                    : localLlmRuntime.installActionAvailable
+                      ? "Install the local GGUF helper to enable the Local provider."
+                      : "Local helper is not installed yet. Place the GGUF in Downloads or copy it to the expected path."
+                  : voiceBibleSettings.semanticMode === "ollama"
+                    ? voiceSemanticReady
+                      ? "Configured Ollama model is reachable."
+                      : "Configured Ollama model is not ready; lexical matching will be used."
+                    : "LLM assistance is off. Matching stays lexical-only."}
               </div>
             </div>
             <div className="mv-settings-field" style={{ maxWidth: 360 }}>
-              <span className="mv-settings-field-label">Ollama Normalizer</span>
+              <span className="mv-settings-field-label">Provider Notes</span>
               <div className="mv-settings-hint">
-                {voiceBibleSettings.semanticMode !== "ollama"
-                  ? "Disabled while lexical-only mode is active."
-                  : voiceBibleSettings.ollamaNormalizerModel?.trim()
-                    ? "Uses the configured chat model to rewrite noisy speech like “John 3-1 go to verse 5” into a clean reference."
-                    : "Optional. Add a chat/instruct Ollama model to rewrite malformed spoken references before matching."}
+                {voiceBibleSettings.semanticMode === "local"
+                  ? "Uses Qwen2.5-1.5B GGUF through llama.cpp in the Tauri backend. Ollama remains optional."
+                  : voiceBibleSettings.semanticMode === "ollama"
+                    ? voiceBibleSettings.ollamaNormalizerModel?.trim()
+                      ? "Uses the configured Ollama chat model to rewrite noisy speech and lightly rerank candidate matches."
+                      : "Optional. Add a chat or instruct Ollama model to rewrite malformed spoken references before matching."
+                    : "Whisper still handles transcription. Turning the provider off only disables LLM cleanup and reranking."}
               </div>
             </div>
           </div>

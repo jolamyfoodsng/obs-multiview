@@ -1,13 +1,14 @@
 {
   "name": "obs-church-studio",
   "private": true,
-  "version": "0.33.0",
+  "version": "0.34.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
+    "sync:local-llm-model": "node scripts/sync-local-llm-model.cjs",
     "version:patch": "npm version patch --no-git-tag-version && node scripts/sync-version.cjs",
     "version:minor": "npm version minor --no-git-tag-version && node scripts/sync-version.cjs",
     "version:major": "npm version major --no-git-tag-version && node scripts/sync-version.cjs",

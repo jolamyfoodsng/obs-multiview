@@ -7,7 +7,7 @@ export type VoiceBibleStatus =
   | "error";
 
 export type VoiceBibleAudioSourceMode = "system-mic" | "obs-input";
-export type VoiceBibleSemanticMode = "ollama" | "lexical-only";
+export type VoiceBibleSemanticMode = "off" | "ollama" | "local";
 export type VoiceBibleModel = "large-v3";
 
 export interface VoiceBibleSettings {

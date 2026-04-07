@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { getLocalLlmRuntimeStatus } from "./localLlm";
 import { getByKey, putRecord, STORES } from "./db";
 import { obsService } from "./obsService";
 import type {
@@ -13,7 +14,7 @@ const VOICE_BIBLE_SETTINGS_KEY = "voice-bible-settings";
 export const DEFAULT_VOICE_BIBLE_SETTINGS: VoiceBibleSettings = {
   audioSourceMode: "system-mic",
   sttModel: "large-v3",
-  semanticMode: "ollama",
+  semanticMode: "off",
   ollamaBaseUrl: "http://127.0.0.1:11434",
   ollamaModel: "qwen3-embedding:4b",
   ollamaNormalizerModel: "qwen2.5:3b",
@@ -29,7 +30,9 @@ const OBS_AUDIO_INPUT_KINDS = new Set([
 
 function normalizeVoiceBibleSettings(
   raw?: Partial<VoiceBibleSettings> | null,
+  fallbackSemanticMode: VoiceBibleSettings["semanticMode"] = DEFAULT_VOICE_BIBLE_SETTINGS.semanticMode,
 ): VoiceBibleSettings {
+  const semanticModeCandidate = raw?.semanticMode as string | undefined;
   return {
     audioSourceMode:
       raw?.audioSourceMode === "obs-input" ? "obs-input" : "system-mic",
@@ -43,7 +46,13 @@ function normalizeVoiceBibleSettings(
         : undefined,
     sttModel: "large-v3",
     semanticMode:
-      raw?.semanticMode === "lexical-only" ? "lexical-only" : "ollama",
+      semanticModeCandidate === "local"
+        ? "local"
+        : semanticModeCandidate === "ollama"
+          ? "ollama"
+          : semanticModeCandidate === "off" || semanticModeCandidate === "lexical-only"
+            ? "off"
+            : fallbackSemanticMode,
     ollamaBaseUrl:
       typeof raw?.ollamaBaseUrl === "string" && raw.ollamaBaseUrl.trim()
         ? raw.ollamaBaseUrl
@@ -64,7 +73,12 @@ export async function getVoiceBibleSettings(): Promise<VoiceBibleSettings> {
     STORES.APP_SETTINGS,
     VOICE_BIBLE_SETTINGS_KEY,
   ).catch(() => undefined);
-  return normalizeVoiceBibleSettings(raw);
+  if (raw) {
+    return normalizeVoiceBibleSettings(raw);
+  }
+
+  const localStatus = await getLocalLlmRuntimeStatus().catch(() => null);
+  return normalizeVoiceBibleSettings(undefined, localStatus?.modelReady ? "local" : "off");
 }
 
 export async function saveVoiceBibleSettings(

@@ -1,0 +1,7 @@
+[env]
+LIBCLANG_PATH = "C:\\Program Files\\LLVM\\bin"
+CLANG_PATH = "C:\\Program Files\\LLVM\\bin\\clang.exe"
+CMAKE = 'C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe'
+
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "link-arg=/FORCE:MULTIPLE"]

@@ -7,6 +7,7 @@ import {
 } from "../bible/bibleData";
 import { BOOK_CHAPTERS } from "../dock/dockTypes";
 import { parseBibleSearch, type BibleSearchResult } from "../dock/bibleSearchParser";
+import { generateLocalLlmText } from "./localLlm";
 import type {
   VoiceBibleCandidate,
   VoiceBibleContextPayload,
@@ -194,6 +195,7 @@ const SPOKEN_BOOK_TOKEN_ALIASES = new Map<string, string>([
   ["phileman", "philemon"],
   ["zekariah", "zechariah"],
 ]);
+const LOCAL_RERANK_LIMIT = 6;
 
 function normalizeReferenceSpeech(value: string): string {
   return value
@@ -714,6 +716,38 @@ function sanitizeGeneratedJson(value: string): string {
   return trimmed;
 }
 
+async function generateWithLocalLlm(
+  systemPrompt: string,
+  prompt: string,
+  maxTokens: number,
+  logLabel: string,
+): Promise<string | null> {
+  try {
+    const response = await generateLocalLlmText({
+      systemPrompt,
+      prompt,
+      maxTokens,
+    });
+    const trimmed = response.trim();
+    return trimmed || null;
+  } catch (err) {
+    console.warn(`[voiceBibleMatcher] ${logLabel} failed:`, err);
+    return null;
+  }
+}
+
+function parseRankedCandidateIndexes(
+  value: string,
+  candidateCount: number,
+): number[] {
+  const matches = value.match(/\d+/g) ?? [];
+  const parsed = matches
+    .map((match) => Number.parseInt(match, 10) - 1)
+    .filter((index) => Number.isFinite(index) && index >= 0 && index < candidateCount);
+
+  return parsed.filter((index, position) => parsed.indexOf(index) === position);
+}
+
 function looksLikeEmbeddingModel(model: string): boolean {
   return EMBEDDING_MODEL_PATTERN.test(model);
 }
@@ -910,6 +944,71 @@ async function normalizeVoiceCommandWithOllama(
   } finally {
     window.clearTimeout(timer);
   }
+}
+
+async function normalizeVoiceCommandWithLocalLlm(
+  transcript: string,
+  context: VoiceBibleContextPayload,
+  options?: OllamaNormalizationOptions,
+): Promise<string | null> {
+  const fastMode = Boolean(options?.fastMode);
+  const currentReference =
+    context.selectedBook && context.selectedChapter
+      ? context.selectedVerse
+        ? `${context.selectedBook} ${context.selectedChapter}:${context.selectedVerse}`
+        : `${context.selectedBook} ${context.selectedChapter}`
+      : "none";
+
+  const prompt = fastMode
+    ? [
+        "Fix this noisy Bible navigation transcript.",
+        "Return ONLY one command.",
+        "Allowed outputs: <Book> <Chapter>:<Verse> | <Book> <Chapter> | go to verse <N> | chapter <N> | next verse | previous verse | use <TRANSLATION> | NONE",
+        `Current reference: ${currentReference}`,
+        `Current translation: ${context.translation.toUpperCase()}`,
+        `Available translations: ${context.availableTranslations.map((item) => item.value.toUpperCase()).join(", ")}`,
+        `Transcript: ${transcript}`,
+      ].join("\n")
+    : [
+        "Rewrite noisy Bible voice transcripts into one canonical command.",
+        "Return ONLY the command. Do not explain anything.",
+        "Allowed outputs:",
+        "- <Book> <Chapter>:<Verse>",
+        "- <Book> <Chapter>",
+        "- go to verse <N>",
+        "- chapter <N>",
+        "- next verse",
+        "- previous verse",
+        "- use <TRANSLATION>",
+        "- NONE",
+        "",
+        "Examples:",
+        "john 3-1 go to verse 5 -> John 3:5",
+        "matthew 4-7 no go to verse 9 -> Matthew 4:9",
+        "1 john 4 by 7 -> 1 John 4:7",
+        "1 john 4 by 7 next verse -> 1 John 4:8",
+        "let us go to genesis 10 verse 1 -> Genesis 10:1",
+        "go to verse 7 -> go to verse 7",
+        "use niv -> use NIV",
+        "",
+        `Current reference: ${currentReference}`,
+        `Current translation: ${context.translation.toUpperCase()}`,
+        `Available translations: ${context.availableTranslations.map((item) => item.value.toUpperCase()).join(", ")}`,
+        `Transcript: ${transcript}`,
+      ].join("\n");
+
+  const response = await generateWithLocalLlm(
+    "You normalize noisy Bible navigation speech into one exact command. Return only the command or NONE.",
+    prompt,
+    fastMode ? 18 : 24,
+    "Local command normalization",
+  );
+
+  const command = sanitizeGeneratedCommand(response ?? "");
+  if (!command || /^none$/i.test(command)) {
+    return null;
+  }
+  return command;
 }
 
 function resolvePlannedTranslation(
@@ -1151,6 +1250,57 @@ async function planVoiceCommandWithOllama(
   }
 }
 
+async function planVoiceCommandWithLocalLlm(
+  transcript: string,
+  context: VoiceBibleContextPayload,
+): Promise<VoiceBibleResult | null> {
+  const currentReference =
+    context.selectedBook && context.selectedChapter
+      ? context.selectedVerse
+        ? `${context.selectedBook} ${context.selectedChapter}:${context.selectedVerse}`
+        : `${context.selectedBook} ${context.selectedChapter}`
+      : "none";
+
+  const prompt = [
+    "Convert the spoken Bible navigation transcript into ONE final structured JSON command.",
+    "Return ONLY minified JSON.",
+    "Schema:",
+    '{"action":"stage-verse|set-chapter|set-translation|none","book":string|null,"chapter":number|null,"verse":number|null,"translation":string|null,"relativeVerseDelta":number|null,"relativeChapterDelta":number|null}',
+    "Rules:",
+    "- Extract a Bible reference from anywhere in the sentence.",
+    "- Apply repeated relative navigation to the final result.",
+    "- 'next page' means the same as 'next verse'.",
+    "- 'previous page' means the same as 'previous verse'.",
+    "- If there is an absolute reference plus relative moves, keep the base reference and use relativeVerseDelta.",
+    "- For relative-only commands, use the current reference as the base.",
+    "- If the user asks for a translation change, set action to set-translation.",
+    "- If the request cannot be understood, return {\"action\":\"none\",\"book\":null,\"chapter\":null,\"verse\":null,\"translation\":null,\"relativeVerseDelta\":null,\"relativeChapterDelta\":null}.",
+    "Examples:",
+    'Let us go to Genesis 10 verse 1 next page next page -> {"action":"stage-verse","book":"Genesis","chapter":10,"verse":1,"translation":null,"relativeVerseDelta":2,"relativeChapterDelta":null}',
+    '1 John 4 by 7 next verse -> {"action":"stage-verse","book":"1 John","chapter":4,"verse":7,"translation":null,"relativeVerseDelta":1,"relativeChapterDelta":null}',
+    'next verse -> {"action":"stage-verse","book":null,"chapter":null,"verse":null,"translation":null,"relativeVerseDelta":1,"relativeChapterDelta":null}',
+    'use NIV -> {"action":"set-translation","book":null,"chapter":null,"verse":null,"translation":"NIV","relativeVerseDelta":null,"relativeChapterDelta":null}',
+    "",
+    `Current reference: ${currentReference}`,
+    `Current translation: ${context.translation.toUpperCase()}`,
+    `Available translations: ${context.availableTranslations.map((item) => item.value.toUpperCase()).join(", ")}`,
+    `Transcript: ${transcript}`,
+  ].join("\n");
+
+  const response = await generateWithLocalLlm(
+    "You convert spoken Bible navigation requests into strict JSON. Return only minified JSON.",
+    prompt,
+    120,
+    "Local command planner",
+  );
+  const plan = parsePlannedCommand(response ?? "");
+  if (!plan) {
+    return null;
+  }
+
+  return resolvePlannedVoiceCommand(plan, transcript, context);
+}
+
 async function normalizeVoiceQuoteQueryWithOllama(
   transcript: string,
   context: VoiceBibleContextPayload,
@@ -1233,6 +1383,58 @@ async function normalizeVoiceQuoteQueryWithOllama(
   } finally {
     window.clearTimeout(timer);
   }
+}
+
+async function normalizeVoiceQuoteQueryWithLocalLlm(
+  transcript: string,
+  context: VoiceBibleContextPayload,
+  options?: OllamaNormalizationOptions,
+): Promise<string | null> {
+  const fastMode = Boolean(options?.fastMode);
+  const currentReference =
+    context.selectedBook && context.selectedChapter
+      ? context.selectedVerse
+        ? `${context.selectedBook} ${context.selectedChapter}:${context.selectedVerse}`
+        : `${context.selectedBook} ${context.selectedChapter}`
+      : "none";
+
+  const prompt = fastMode
+    ? [
+        "Correct this noisy Bible quote fragment into a scripture search query.",
+        "Return ONLY the corrected query or NONE.",
+        "Prefer wording likely to appear in a Bible verse.",
+        `Current reference: ${currentReference}`,
+        `Current translation: ${context.translation.toUpperCase()}`,
+        `Transcript: ${transcript}`,
+      ].join("\n")
+    : [
+        "Rewrite a noisy spoken Bible quote fragment into a corrected scripture-search query.",
+        "Return ONLY the corrected query text. Do not add punctuation or explanations.",
+        "Fix obvious speech-to-text mistakes, missing grammar, and near-sounding words.",
+        "Prefer wording that is likely to appear in a Bible verse.",
+        "If the fragment is unusable, return NONE.",
+        "",
+        "Examples:",
+        "reverse the captivity of zion -> turned again the captivity of zion",
+        "for god so loved word -> for god so loved the world",
+        "the valley of dry bonus -> valley of dry bones",
+        "",
+        `Current reference: ${currentReference}`,
+        `Current translation: ${context.translation.toUpperCase()}`,
+        `Transcript: ${transcript}`,
+      ].join("\n");
+
+  const response = await generateWithLocalLlm(
+    "You rewrite noisy spoken Bible quotes into short scripture search text. Return only the corrected query or NONE.",
+    prompt,
+    fastMode ? 20 : 32,
+    "Local quote normalization",
+  );
+  const query = sanitizeGeneratedCommand(response ?? "");
+  if (!query || /^none$/i.test(query)) {
+    return null;
+  }
+  return query;
 }
 
 function dedupeScoredCandidates(candidates: ScoredCandidate[]): ScoredCandidate[] {
@@ -1543,6 +1745,62 @@ async function maybeSemanticRerank(
   }
 }
 
+async function maybeLocalSemanticRerank(
+  transcript: string,
+  candidates: ScoredCandidate[],
+  settings: VoiceBibleSettings,
+): Promise<ScoredCandidate[]> {
+  if (settings.semanticMode !== "local" || candidates.length < 2) {
+    return candidates;
+  }
+
+  const scopedCandidates = candidates.slice(0, LOCAL_RERANK_LIMIT);
+  const prompt = [
+    "Rank the Bible verse candidates from best to worst for the spoken search query.",
+    "Return ONLY a comma-separated list of candidate numbers in descending match order.",
+    "Use each number at most once. Do not add any commentary.",
+    "",
+    `Query: ${transcript}`,
+    "Candidates:",
+    ...scopedCandidates.map((candidate, index) =>
+      `${index + 1}. ${candidate.entry.book} ${candidate.entry.chapter}:${candidate.entry.verse}-${candidate.entry.endVerse} | ${candidate.entry.text}`,
+    ),
+  ].join("\n");
+
+  const response = await generateWithLocalLlm(
+    "You rerank Bible verse candidates. Return only candidate numbers in best-to-worst order.",
+    prompt,
+    32,
+    "Local candidate rerank",
+  );
+  const rankedIndexes = parseRankedCandidateIndexes(response ?? "", scopedCandidates.length);
+
+  if (rankedIndexes.length === 0) {
+    return candidates;
+  }
+
+  const rankMap = new Map<number, number>();
+  rankedIndexes.forEach((candidateIndex, order) => {
+    rankMap.set(candidateIndex, 1 - order / Math.max(1, rankedIndexes.length));
+  });
+
+  const reranked = candidates.map((candidate, index) => {
+    const semanticScore = rankMap.get(index);
+    if (semanticScore === undefined) {
+      return candidate;
+    }
+
+    return {
+      ...candidate,
+      semanticScore,
+      score: candidate.lexicalScore * 0.72 + semanticScore * 0.28,
+    };
+  });
+
+  reranked.sort(compareScoredCandidates);
+  return reranked;
+}
+
 export async function resolveVoiceBibleIntent(
   transcript: string,
   context: VoiceBibleContextPayload,
@@ -1560,7 +1818,11 @@ export async function resolveVoiceBibleIntent(
 
   const plannedCommand = options?.fastInterim
     ? null
-    : await planVoiceCommandWithOllama(trimmed, context, settings);
+    : settings.semanticMode === "local"
+      ? await planVoiceCommandWithLocalLlm(trimmed, context)
+      : settings.semanticMode === "ollama"
+        ? await planVoiceCommandWithOllama(trimmed, context, settings)
+        : null;
   if (plannedCommand) {
     return {
       kind: "result",
@@ -1579,10 +1841,20 @@ export async function resolveVoiceBibleIntent(
   }
 
   const normalizedCommand = options?.fastInterim
-    ? await normalizeVoiceCommandWithOllama(trimmed, context, settings, {
-        fastMode: true,
-      })
-    : await normalizeVoiceCommandWithOllama(trimmed, context, settings);
+    ? settings.semanticMode === "local"
+      ? await normalizeVoiceCommandWithLocalLlm(trimmed, context, {
+          fastMode: true,
+        })
+      : settings.semanticMode === "ollama"
+        ? await normalizeVoiceCommandWithOllama(trimmed, context, settings, {
+            fastMode: true,
+          })
+        : null
+    : settings.semanticMode === "local"
+      ? await normalizeVoiceCommandWithLocalLlm(trimmed, context)
+      : settings.semanticMode === "ollama"
+        ? await normalizeVoiceCommandWithOllama(trimmed, context, settings)
+        : null;
   if (normalizedCommand) {
     const normalizedResult = await resolveStructuredCommand(normalizedCommand, trimmed, context);
     if (normalizedResult) {
@@ -1606,17 +1878,32 @@ export async function resolveVoiceBibleIntent(
   const selectedTranslation = context.translation.toUpperCase();
   const heuristicQuoteQuery = await normalizeQuoteHeuristics(trimmed, selectedTranslation);
   const normalizedQuoteQuery = options?.fastInterim
-    ? await normalizeVoiceQuoteQueryWithOllama(
-        heuristicQuoteQuery,
-        context,
-        settings,
-        { fastMode: true },
-      )
-    : await normalizeVoiceQuoteQueryWithOllama(
-        heuristicQuoteQuery,
-        context,
-        settings,
-      );
+    ? settings.semanticMode === "local"
+      ? await normalizeVoiceQuoteQueryWithLocalLlm(
+          heuristicQuoteQuery,
+          context,
+          { fastMode: true },
+        )
+      : settings.semanticMode === "ollama"
+        ? await normalizeVoiceQuoteQueryWithOllama(
+            heuristicQuoteQuery,
+            context,
+            settings,
+            { fastMode: true },
+          )
+        : null
+    : settings.semanticMode === "local"
+      ? await normalizeVoiceQuoteQueryWithLocalLlm(
+          heuristicQuoteQuery,
+          context,
+        )
+      : settings.semanticMode === "ollama"
+        ? await normalizeVoiceQuoteQueryWithOllama(
+            heuristicQuoteQuery,
+            context,
+            settings,
+          )
+        : null;
 
   const searchQueries = [trimmed];
   if (heuristicQuoteQuery && heuristicQuoteQuery !== trimmed) {
@@ -1665,7 +1952,9 @@ export async function resolveVoiceBibleIntent(
         : trimmed);
   const reranked = options?.fastInterim
     ? combined
-    : await maybeSemanticRerank(semanticQuery, combined, settings);
+    : settings.semanticMode === "local"
+      ? await maybeLocalSemanticRerank(semanticQuery, combined, settings)
+      : await maybeSemanticRerank(semanticQuery, combined, settings);
   const topCandidates = reranked.slice(0, 5);
 
   if (topCandidates.length === 0) {

@@ -15,6 +15,7 @@ import {
   prepareVoiceBibleModel,
   transcribeVoiceAudio,
 } from "./voiceBibleSettings";
+import { getLocalLlmRuntimeStatus } from "./localLlm";
 import type {
   VoiceBibleContextPayload,
   VoiceBibleSnapshot,
@@ -611,11 +612,15 @@ class VoiceBibleService {
     ]);
 
     const semanticReady =
-      settings?.semanticMode === "ollama" &&
-      settings.ollamaBaseUrl &&
-      settings.ollamaModel
-        ? await isOllamaModelReady(settings.ollamaBaseUrl, settings.ollamaModel)
-        : false;
+      settings?.semanticMode === "local"
+        ? await getLocalLlmRuntimeStatus()
+            .then((status: { modelReady: boolean }) => status.modelReady)
+            .catch(() => false)
+        : settings?.semanticMode === "ollama" &&
+            settings.ollamaBaseUrl &&
+            settings.ollamaModel
+          ? await isOllamaModelReady(settings.ollamaBaseUrl, settings.ollamaModel)
+          : false;
 
     this.snapshot = {
       ...this.snapshot,

@@ -10,6 +10,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DockStagedItem } from "../dockTypes";
 import { dockObsClient } from "../dockObsClient";
 import type { BibleTheme } from "../../bible/types";
+import { cleanupSermonSlideText } from "../../services/localLlm";
+import { getVoiceBibleSettings } from "../../services/voiceBibleSettings";
 import DockBibleThemePicker from "../components/DockBibleThemePicker";
 import Icon from "../DockIcon";
 
@@ -307,6 +309,7 @@ export default function DockSermonTab({ staged, onStage }: Props) {
   const [formError, setFormError] = useState("");
   const [actionError, setActionError] = useState("");
   const [sending, setSending] = useState(false);
+  const [slideCleanupPending, setSlideCleanupPending] = useState(false);
   const [showSlideSettings, setShowSlideSettings] = useState(false);
   const [overlayMode, setOverlayMode] = useState<OverlayMode>(() => viewPrefsRef.current.overlayMode);
   const [fullscreenTheme, setFullscreenTheme] = useState<BibleTheme | null>(null);
@@ -485,6 +488,32 @@ export default function DockSermonTab({ staged, onStage }: Props) {
     setSelectedSlideId(nextSlideId);
     setFormError("");
     setSlideModal(null);
+  }, [slideModal]);
+
+  const cleanupSlideModal = useCallback(async () => {
+    if (!slideModal) return;
+    const content = slideModal.content.trim();
+    if (!content) {
+      setFormError("Slide text is required.");
+      return;
+    }
+
+    setFormError("");
+    setSlideCleanupPending(true);
+    try {
+      const settings = await getVoiceBibleSettings();
+      const cleaned = await cleanupSermonSlideText(content, settings);
+      if (!cleaned.trim()) {
+        setFormError("The AI helper returned an empty result.");
+        return;
+      }
+      setSlideModal((current) => (current ? { ...current, content: cleaned } : current));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setFormError(message);
+    } finally {
+      setSlideCleanupPending(false);
+    }
   }, [slideModal]);
 
   const updateSelectedSlideFormatting = useCallback((patch: Partial<Pick<SermonSlide, "fontWeight" | "fontSizeDelta" | "lineHeight" | "uppercase">>) => {
@@ -984,6 +1013,14 @@ export default function DockSermonTab({ staged, onStage }: Props) {
               {formError && <div className="dock-dialog__error">{formError}</div>}
             </div>
             <div className="dock-dialog__footer">
+              <button
+                type="button"
+                className="dock-btn dock-btn--preview"
+                onClick={() => void cleanupSlideModal()}
+                disabled={slideCleanupPending}
+              >
+                {slideCleanupPending ? "Cleaning..." : "Clean Text"}
+              </button>
               <button type="button" className="dock-btn dock-btn--ghost" onClick={closeSlideModal}>Cancel</button>
               <button type="button" className="dock-btn dock-btn--primary" onClick={saveSlideModal}>
                 Save
