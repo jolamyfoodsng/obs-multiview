@@ -1623,6 +1623,23 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-height: 220px;
+  position: relative;
+}
+
+.verse-list-loading {
+  position: absolute;
+  inset: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: var(--b-text-3);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-align: center;
+  background: color-mix(in srgb, var(--b-surface) 94%, transparent);
 }
 
 .verse-card {
@@ -2284,7 +2301,7 @@
   border: none;
   /*  */
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background 0.12s ease, box-shadow 0.12s ease, filter 0.12s ease, color 0.12s ease;
   gap: 4px;
   position: relative;
   /* min-height: 0px; */
@@ -2340,22 +2357,21 @@
 
 /* Hover */
 .book-tile:hover {
-  filter: brightness(1.2);
-  transform: scale(1.04);
-  z-index: 2;
+  filter: brightness(1.08);
+  z-index: 1;
 }
 
 /* When a book IS selected, dim all non-selected books */
 .book-grid.has-active .book-tile:not(.active) {
   /* opacity: 0.4;
   filter: brightness(0.7) saturate(0.5); */
-  transition: all 0.25s ease;
+  transition: background 0.12s ease, filter 0.12s ease, color 0.12s ease;
 }
 
 .book-grid.has-active .book-tile:not(.active):hover {
   /* opacity: 0.85; */
   /* filter: brightness(1.1) saturate(0.8); */
-  transform: scale(1.06);
+  filter: brightness(1.04);
 }
 
 /* SELECTED book: DARKENED fill */
@@ -2401,17 +2417,9 @@
   max-width: 100%;
 }
 .book-tile.active {
-  filter: brightness(0.5);
-  box-shadow: 0 0 0 2px #fff, 0 0 16px rgba(255, 255, 255, 0.25);
-  transform: scale(1.06);
-  z-index: 3;
-  animation: book-select-pop 0.3s ease-out;
-}
-
-@keyframes book-select-pop {
-  0% { transform: scale(0.92); box-shadow: none; }
-  50% { transform: scale(1.1); }
-  100% { transform: scale(1.06); box-shadow: 0 0 0 2px #fff, 0 0 16px rgba(255, 255, 255, 0.25); }
+  filter: brightness(0.68);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.45);
+  z-index: 1;
 }
 
 .book-tile.active .book-tile-name {
@@ -2573,7 +2581,7 @@
   font-weight: 700;
   color: #fff;
   cursor: pointer;
-  transition: transform 0.12s, filter 0.12s, box-shadow 0.12s;
+  transition: background 0.12s ease, filter 0.12s ease, box-shadow 0.12s ease, color 0.12s ease;
   padding: 1px;
   min-height: 32px;
 }
@@ -2593,37 +2601,28 @@
 
 /* Hover: scale up subtly */
 .cv-tile:hover {
-  filter: brightness(0.85);
+  filter: brightness(0.92);
   z-index: 1;
-  transform: scale(1.05);
 }
 
 /* Non-selected tiles get dimmed when any tile in the same card is active */
 .cv-grid-body:has(.cv-tile.active) .cv-tile:not(.active):not(.nav) {
   /* opacity: 0.5;
   filter: brightness(0.65); */
-  transition: all 0.2s ease;
+  transition: background 0.12s ease, filter 0.12s ease, color 0.12s ease;
 }
 
 .cv-grid-body:has(.cv-tile.active) .cv-tile:not(.active):not(.nav):hover {
   /* opacity: 0.85;
   filter: brightness(0.8); */
-  transform: scale(1.05);
+  filter: brightness(0.92);
 }
 
 /* SELECTED tile: dramatic highlight with ring + scale + glow */
 .cv-tile.active {
-  filter: brightness(0.35);
-  box-shadow: 0 0 0 2px #fff, 0 0 14px rgba(255, 255, 255, 0.3);
-  transform: scale(1.08);
-  z-index: 2;
-  animation: cv-tile-pop 0.25s ease-out;
-}
-
-@keyframes cv-tile-pop {
-  0% { transform: scale(0.9); box-shadow: none; }
-  60% { transform: scale(1.12); }
-  100% { transform: scale(1.08); box-shadow: 0 0 0 2px #fff, 0 0 14px rgba(255, 255, 255, 0.3); }
+  filter: brightness(0.55);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
+  z-index: 1;
 }
 
 /* Category-colored tiles via parent data-cat */

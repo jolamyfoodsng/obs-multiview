@@ -271,19 +271,6 @@ function extractTranscriptWordTail(previousWords: string[], nextWords: string[])
   return nextWords;
 }
 
-function isVerseRowVisibleWithinContainer(
-  container: HTMLElement,
-  target: HTMLElement,
-): boolean {
-  const containerRect = container.getBoundingClientRect();
-  const targetRect = target.getBoundingClientRect();
-
-  return (
-    targetRect.top >= containerRect.top &&
-    targetRect.bottom <= containerRect.bottom
-  );
-}
-
 function isReferenceLikeBibleQuery(query: string): boolean {
   const trimmed = query.trim().toLowerCase();
   if (!trimmed) return false;
@@ -1737,14 +1724,8 @@ export default function DockBibleTab({
   useEffect(() => {
     const verseToReveal = pendingScrollVerseRef.current ?? selectedVerse;
     if (verseToReveal === null) return;
-    const container = verseGridRef.current;
-    if (!container) return;
 
     const frame = window.requestAnimationFrame(() => {
-      const target = container.querySelector<HTMLElement>(`[data-verse-row="${verseToReveal}"]`);
-      if (target && !isVerseRowVisibleWithinContainer(container, target)) {
-        target.scrollIntoView({ block: "nearest", behavior: "smooth" });
-      }
       setHighlightVerse(verseToReveal);
       pendingScrollVerseRef.current = null;
     });

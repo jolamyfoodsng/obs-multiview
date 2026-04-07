@@ -93,6 +93,10 @@
   overflow: hidden;
 }
 
+.worship-main--loading {
+  min-height: 0;
+}
+
 /* ═══════════════════════════════════════════════════════
    LEFT SIDEBAR — Song library
    ═══════════════════════════════════════════════════════ */
@@ -1816,7 +1820,8 @@
 /* ── Empty states ── */
 .worship-sidebar-empty,
 .worship-center-empty,
-.worship-import-empty {
+.worship-import-empty,
+.worship-loading-state {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1834,9 +1839,16 @@
 }
 .worship-sidebar-empty p,
 .worship-center-empty p,
-.worship-import-empty p {
+.worship-import-empty p,
+.worship-loading-state span {
   margin: 0;
   font-size: 12px;
+}
+
+.worship-loading-state {
+  min-height: 100%;
+  font-weight: 600;
+  color: var(--b-text-3, #616161);
 }
 
 /* Disabled primary button */

@@ -166,28 +166,31 @@ export default function VerseListPanel({
   onSelectVerse, onDoubleClickVerse, onToggleFavorite, onOpenLibrary,
 }: Props) {
   const [verses, setVerses] = useState<BibleVerse[]>([]);
-  const listRef = useRef<HTMLDivElement>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Load verses — re-fetches when book, chapter, or translation changes
   useEffect(() => {
-    if (!book || !chapter) { setVerses([]); return; }
+    if (!book || !chapter) {
+      setVerses([]);
+      setIsLoading(false);
+      return;
+    }
     let cancelled = false;
+    setIsLoading(true);
     getChapter(book, chapter, translation).then((passage) => {
-      if (!cancelled) setVerses(passage.verses);
+      if (!cancelled) {
+        setVerses(passage.verses);
+        setIsLoading(false);
+      }
     }).catch((err) => {
       console.error(`Failed to load ${book} ${chapter} (${translation}):`, err);
-      if (!cancelled) setVerses([]);
+      if (!cancelled) {
+        setVerses([]);
+        setIsLoading(false);
+      }
     });
     return () => { cancelled = true; };
   }, [book, chapter, translation]);
-
-  // Auto-scroll to selected verse
-  useEffect(() => {
-    if (selectedVerse && listRef.current) {
-      const el = listRef.current.querySelector(`[data-verse="${selectedVerse}"]`);
-      el?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-    }
-  }, [selectedVerse]);
 
   const isLive = useCallback((v: number) => liveVerseRange ? v >= liveVerseRange.start && v <= liveVerseRange.end : false, [liveVerseRange]);
 
@@ -225,7 +228,7 @@ export default function VerseListPanel({
       <div className="verse-panel-header">
         <div className="verse-panel-header-top">
           <span className="verse-panel-header-label">Now Displaying</span>
-          <span className="verse-panel-header-badge">{verses.length} verses</span>
+          <span className="verse-panel-header-badge">{isLoading ? "Loading..." : `${verses.length} verses`}</span>
         </div>
         <div className="verse-panel-title">{titleText}</div>
         <div className="verse-panel-controls">
@@ -234,8 +237,12 @@ export default function VerseListPanel({
       </div>
 
       {/* Verse cards */}
-      <div className="verse-list b-scroll" ref={listRef}>
-        {verses.map((v) => {
+      <div className={`verse-list b-scroll${isLoading ? " is-loading" : ""}`}>
+        {isLoading && verses.length === 0 ? (
+          <div className="verse-list-loading">
+            <span>Loading scriptures</span>
+          </div>
+        ) : verses.map((v) => {
           const isSel = selectedVerse === v.verse;
           const isSent = sentVerse === v.verse;
           const isLv = isLive(v.verse);

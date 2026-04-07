@@ -1131,8 +1131,24 @@ export function WorshipModule({
 
   if (!songsLoaded) {
     return (
-      <div className="worship-home" style={{ display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <span style={{ color: "var(--b-text-3)", fontSize: 14 }}>Loading worship library…</span>
+      <div className="worship-home">
+        <div className="worship-main worship-main--loading">
+          <aside className="worship-sidebar">
+            <div className="worship-loading-state">
+              <span>Loading worship library</span>
+            </div>
+          </aside>
+          <section className="worship-center">
+            <div className="worship-loading-state">
+              <span>Loading worship slides</span>
+            </div>
+          </section>
+          <aside className="worship-right">
+            <div className="worship-loading-state">
+              <span>Preparing preview</span>
+            </div>
+          </aside>
+        </div>
       </div>
     );
   }
