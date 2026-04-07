@@ -10,7 +10,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { DockStagedItem } from "../dockTypes";
 import { dockObsClient } from "../dockObsClient";
 import type { BibleTheme } from "../../bible/types";
-import { getVoiceBibleSettings } from "../../services/voiceBibleSettings";
 import DockBibleThemePicker from "../components/DockBibleThemePicker";
 import Icon from "../DockIcon";
 
@@ -26,6 +25,7 @@ interface SermonSlide {
   content: string;
   fontWeight?: "normal" | "bold";
   fontSizeDelta?: number;
+  lineHeight?: number;
   uppercase?: boolean;
   createdAt: number;
   updatedAt: number;
@@ -64,6 +64,7 @@ interface SlideModalState {
   content: string;
   fontWeight: "normal" | "bold";
   fontSizeDelta: number;
+  lineHeight?: number;
   uppercase: boolean;
 }
 
@@ -258,6 +259,15 @@ function fontSizeDeltaFromValue(value: number): number {
   return clampFontSizeDelta(Math.round(value) - 28);
 }
 
+function clampLineHeight(value: number): number {
+  return Math.max(1, Math.min(2.4, Number(value.toFixed(2))));
+}
+
+function slideLineHeightValue(slide: SermonSlide, theme: BibleTheme | null): number {
+  const themeLineHeight = theme?.settings?.lineHeight;
+  return clampLineHeight(slide.lineHeight ?? (typeof themeLineHeight === "number" && Number.isFinite(themeLineHeight) ? themeLineHeight : 1.35));
+}
+
 function getSlideStyleOverrides(slide: SermonSlide, theme: BibleTheme | null): Record<string, unknown> | null {
   const overrides: Record<string, unknown> = {};
   if (slide.fontWeight) {
@@ -266,6 +276,9 @@ function getSlideStyleOverrides(slide: SermonSlide, theme: BibleTheme | null): R
   }
   if (slide.uppercase) {
     overrides.textTransform = "uppercase";
+  }
+  if (typeof slide.lineHeight === "number") {
+    overrides.lineHeight = clampLineHeight(slide.lineHeight);
   }
 
   const delta = slide.fontSizeDelta ?? 0;
@@ -283,61 +296,6 @@ function getSlideStyleOverrides(slide: SermonSlide, theme: BibleTheme | null): R
   return Object.keys(overrides).length ? overrides : null;
 }
 
-function looksLikeEmbeddingModel(model: string): boolean {
-  return /\b(embed|embedding|bge|e5|nomic-embed|text-embedding)\b/i.test(model);
-}
-
-async function correctSermonSlideText(text: string): Promise<string> {
-  const settings = await getVoiceBibleSettings();
-  const baseUrl = settings.ollamaBaseUrl?.trim();
-  const model =
-    settings.ollamaNormalizerModel?.trim() ||
-    (settings.ollamaModel?.trim() && !looksLikeEmbeddingModel(settings.ollamaModel) ? settings.ollamaModel.trim() : "");
-
-  if (!baseUrl || !model || looksLikeEmbeddingModel(model)) {
-    throw new Error("No Ollama text model is configured for spelling correction.");
-  }
-
-  const controller = new AbortController();
-  const timeout = window.setTimeout(() => controller.abort(), 6000);
-  try {
-    const response = await fetch(`${baseUrl.replace(/\/$/, "")}/api/generate`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model,
-        stream: false,
-        prompt: [
-          "Correct spelling, casing, and punctuation in this sermon slide.",
-          "Keep the meaning and line breaks. Do not add commentary.",
-          "Return only the corrected text.",
-          "",
-          text,
-        ].join("\n"),
-        options: {
-          temperature: 0,
-          top_p: 0.05,
-          num_predict: Math.max(64, Math.min(320, Math.round(text.length * 1.35))),
-        },
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Spelling correction failed with ${response.status}`);
-    }
-
-    const payload = await response.json() as { response?: string };
-    const corrected = (payload.response || "")
-      .replace(/^```[a-z]*\s*/i, "")
-      .replace(/```$/i, "")
-      .trim();
-    return corrected || text;
-  } finally {
-    window.clearTimeout(timeout);
-  }
-}
-
 export default function DockSermonTab({ staged, onStage }: Props) {
   const clickTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const viewPrefsRef = useRef(loadViewPrefs());
@@ -349,7 +307,6 @@ export default function DockSermonTab({ staged, onStage }: Props) {
   const [formError, setFormError] = useState("");
   const [actionError, setActionError] = useState("");
   const [sending, setSending] = useState(false);
-  const [correctingSlideText, setCorrectingSlideText] = useState(false);
   const [showSlideSettings, setShowSlideSettings] = useState(false);
   const [overlayMode, setOverlayMode] = useState<OverlayMode>(() => viewPrefsRef.current.overlayMode);
   const [fullscreenTheme, setFullscreenTheme] = useState<BibleTheme | null>(null);
@@ -464,6 +421,7 @@ export default function DockSermonTab({ staged, onStage }: Props) {
       content: slide?.content ?? "",
       fontWeight: slide?.fontWeight ?? "bold",
       fontSizeDelta: slide?.fontSizeDelta ?? 0,
+      lineHeight: slide?.lineHeight,
       uppercase: Boolean(slide?.uppercase),
     });
   }, []);
@@ -495,6 +453,7 @@ export default function DockSermonTab({ staged, onStage }: Props) {
                 content,
                 fontWeight: slideModal.fontWeight,
                 fontSizeDelta: slideModal.fontSizeDelta,
+                lineHeight: slideModal.lineHeight,
                 uppercase: slideModal.uppercase,
                 updatedAt: now,
               }
@@ -514,6 +473,7 @@ export default function DockSermonTab({ staged, onStage }: Props) {
             content,
             fontWeight: slideModal.fontWeight,
             fontSizeDelta: slideModal.fontSizeDelta,
+            lineHeight: slideModal.lineHeight,
             uppercase: slideModal.uppercase,
             createdAt: now,
             updatedAt: now,
@@ -527,33 +487,7 @@ export default function DockSermonTab({ staged, onStage }: Props) {
     setSlideModal(null);
   }, [slideModal]);
 
-  const updateSlideModal = useCallback((updates: Partial<SlideModalState>) => {
-    setFormError("");
-    setSlideModal((current) => current ? { ...current, ...updates } : current);
-  }, []);
-
-  const handleCorrectSlideText = useCallback(async () => {
-    if (!slideModal || correctingSlideText) return;
-    const content = slideModal.content.trim();
-    if (!content) {
-      setFormError("Add slide text before checking spelling.");
-      return;
-    }
-
-    setCorrectingSlideText(true);
-    setFormError("");
-    try {
-      const corrected = await correctSermonSlideText(content);
-      setSlideModal((current) => current ? { ...current, content: corrected } : current);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Spelling correction failed.";
-      setFormError(message);
-    } finally {
-      setCorrectingSlideText(false);
-    }
-  }, [correctingSlideText, slideModal]);
-
-  const updateSelectedSlideFormatting = useCallback((patch: Partial<Pick<SermonSlide, "fontWeight" | "fontSizeDelta" | "uppercase">>) => {
+  const updateSelectedSlideFormatting = useCallback((patch: Partial<Pick<SermonSlide, "fontWeight" | "fontSizeDelta" | "lineHeight" | "uppercase">>) => {
     if (!activeItemId || !selectedSlideId) return;
     const now = Date.now();
     setItems((current) => current.map((item) => {
@@ -568,6 +502,9 @@ export default function DockSermonTab({ staged, onStage }: Props) {
               fontSizeDelta: typeof patch.fontSizeDelta === "number"
                 ? clampFontSizeDelta(patch.fontSizeDelta)
                 : slide.fontSizeDelta,
+              lineHeight: typeof patch.lineHeight === "number"
+                ? clampLineHeight(patch.lineHeight)
+                : slide.lineHeight,
               updatedAt: now,
             }
             : slide,
@@ -720,7 +657,11 @@ export default function DockSermonTab({ staged, onStage }: Props) {
             </div>
             <div className="dock-sermon-detail-head__actions">
               <button type="button" className="dock-lyric-card__action" onClick={() => openEditItemModal(activeItem)} aria-label="Edit sermon item">
-                <Icon name="edit" size={12} />
+                <Icon name="edit" size={16} />
+              </button>
+              <button type="button" className="dock-btn dock-btn--preview dock-btn--block" onClick={() => openSlideModal(activeItem)}>
+                <Icon name="add" size={14} />
+                {activeItem.type === "quote" ? "Add " : "Add"}
               </button>
               <button type="button" className="dock-lyric-card__action" onClick={() => deleteItem(activeItem.id)} aria-label="Delete sermon item">
                 <Icon name="close" size={12} />
@@ -764,6 +705,7 @@ export default function DockSermonTab({ staged, onStage }: Props) {
                       <div className="dock-sermon-slide__meta">{activeAttribution}</div>
                     )}
                   </div>
+
                   <div className="dock-lyric-card__actions">
                     <button
                       type="button"
@@ -842,6 +784,24 @@ export default function DockSermonTab({ staged, onStage }: Props) {
                 />
                 <span className="dock-sermon-size-readout">{slideFontSizeValue(selectedSlide)}px</span>
               </div>
+              <div className="dock-sermon-bottom-settings-row dock-sermon-bottom-settings-row--size">
+                <span className="dock-worship-inline-control__label">Line</span>
+                <input
+                  className="dock-theme-quick__range dock-sermon-size-slider"
+                  type="range"
+                  min={1}
+                  max={2.4}
+                  step={0.05}
+                  value={slideLineHeightValue(selectedSlide, activeTheme)}
+                  onChange={(event) =>
+                    updateSelectedSlideFormatting({
+                      lineHeight: clampLineHeight(Number(event.target.value)),
+                    })
+                  }
+                  aria-label="Selected cue line height"
+                />
+                <span className="dock-sermon-size-readout">{slideLineHeightValue(selectedSlide, activeTheme).toFixed(2)}</span>
+              </div>
             </div>
           )}
 
@@ -876,10 +836,7 @@ export default function DockSermonTab({ staged, onStage }: Props) {
           </div>
 
           <div className="dock-sermon-bottom-actions">
-            <button type="button" className="dock-btn dock-btn--preview dock-btn--block" onClick={() => openSlideModal(activeItem)}>
-              <Icon name="add" size={14} />
-              {activeItem.type === "quote" ? "Add Quote" : "Add Point"}
-            </button>
+
             <button
               type="button"
               className={`dock-sermon-bottom-settings-trigger${showSlideSettings ? " dock-sermon-bottom-settings-trigger--active" : ""}`}
@@ -1009,63 +966,6 @@ export default function DockSermonTab({ staged, onStage }: Props) {
               <div>
                 <div className="dock-dialog__eyebrow">{slideModal.mode === "edit" ? "Edit Slide" : "Add Slide"}</div>
                 <h2 id="dock-sermon-slide-title" className="dock-dialog__title">Sermon slide text</h2>
-              </div>
-              <div className="dock-sermon-slide-tools" aria-label="Slide text tools">
-                <button
-                  type="button"
-                  className={`dock-sermon-tool-button${slideModal.fontWeight === "bold" ? " dock-sermon-tool-button--active" : ""}`}
-                  onClick={() => updateSlideModal({ fontWeight: "bold" })}
-                  aria-label="Bold text"
-                  title="Bold"
-                >
-                  B
-                </button>
-                <button
-                  type="button"
-                  className={`dock-sermon-tool-button${slideModal.fontWeight === "normal" ? " dock-sermon-tool-button--active" : ""}`}
-                  onClick={() => updateSlideModal({ fontWeight: "normal" })}
-                  aria-label="Normal text"
-                  title="Normal"
-                >
-                  N
-                </button>
-                <button
-                  type="button"
-                  className="dock-sermon-tool-button"
-                  onClick={() => updateSlideModal({ fontSizeDelta: clampFontSizeDelta(slideModal.fontSizeDelta - 2) })}
-                  aria-label="Decrease font size"
-                  title="Decrease font size"
-                >
-                  A-
-                </button>
-                <button
-                  type="button"
-                  className="dock-sermon-tool-button"
-                  onClick={() => updateSlideModal({ fontSizeDelta: clampFontSizeDelta(slideModal.fontSizeDelta + 2) })}
-                  aria-label="Increase font size"
-                  title="Increase font size"
-                >
-                  A+
-                </button>
-                <button
-                  type="button"
-                  className={`dock-sermon-tool-button${slideModal.uppercase ? " dock-sermon-tool-button--active" : ""}`}
-                  onClick={() => updateSlideModal({ uppercase: !slideModal.uppercase })}
-                  aria-label="Toggle uppercase"
-                  title="Uppercase"
-                >
-                  AA
-                </button>
-                <button
-                  type="button"
-                  className="dock-sermon-tool-button dock-sermon-tool-button--icon"
-                  onClick={() => void handleCorrectSlideText()}
-                  disabled={correctingSlideText}
-                  aria-label="Check spelling with LLM"
-                  title="Check spelling"
-                >
-                  <Icon name={correctingSlideText ? "sync" : "preview"} size={12} />
-                </button>
               </div>
               <button type="button" className="dock-dialog__close" onClick={closeSlideModal} aria-label="Close sermon slide dialog">
                 <Icon name="close" size={14} />

@@ -2474,6 +2474,51 @@ class DockObsClient {
   }
 
   /**
+   * Load the bundled NoeAL Animated Lower Thirds browser source into OBS.
+   *
+   * The legacy control panel talks to this browser source with BroadcastChannel,
+   * so this method only provisions the correct page and scene visibility.
+   */
+  async loadAnimatedLowerThirdSource(live: boolean): Promise<void> {
+    const resources = getDockResources(live);
+    const target = await this.getTargetScene(live);
+    let sceneName = target.sceneName;
+    const studioMode = target.studioMode;
+    if (!sceneName) throw new Error("Could not determine the current OBS scene.");
+    if (!live) {
+      sceneName = await this.ensurePreviewTargetScene(sceneName);
+    }
+
+    const shouldEnable = live || (!live && (studioMode || sceneName !== target.sceneName));
+    const baseUrl = `${this.getOverlayBaseUrl()}/animated-lower-thirds/lower-thirds/browser-source.html`;
+    const sourceUrl = live ? baseUrl : `${baseUrl}?mode=preview`;
+
+    await this.clearAllOverlays(resources.ltSource, sceneName, resources);
+    await this.ensureOverlaySource(sceneName, resources.ltSource, undefined, undefined, shouldEnable);
+
+    try {
+      const oppositeResources = getDockResources(!live);
+      const { sceneName: oppositeScene } = await this.getTargetScene(!live);
+      if (oppositeScene) {
+        await this.hideOverlaySource(oppositeScene, oppositeResources.ltSource);
+      }
+    } catch { /* ignore legacy opposite-source cleanup failures */ }
+
+    if (live) {
+      await this.hideInOppositeScene(live, [resources.ltSource], [], false, sceneName, resources);
+    }
+
+    await this.setBrowserSourceUrl(resources.ltSource, sourceUrl, true, "");
+
+    if (!live) {
+      await this.ensureOverlaySource(sceneName, resources.ltSource, undefined, undefined, true);
+      await this.setCurrentPreviewScene(sceneName);
+    }
+
+    console.log(`[DockOBS] Animated Lower Thirds source → scene "${sceneName}" (${live ? "Program" : "Preview"})`);
+  }
+
+  /**
    * Push sermon quotes/points using the same general fullscreen/lower-third
    * theme structure as Bible and Worship, while keeping the existing LT source.
    */

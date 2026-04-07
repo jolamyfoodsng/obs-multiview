@@ -674,6 +674,75 @@
   margin-top: 6px;
 }
 
+.dock-animated-lt-legacy {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dock-animated-lt-legacy__setup {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid color-mix(in srgb, var(--dock-border) 90%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--dock-surface-alt) 78%, var(--dock-surface));
+}
+
+.dock-animated-lt-legacy__copy {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dock-animated-lt-legacy__status {
+  color: var(--dock-text-dim);
+  font-size: 10px;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dock-animated-lt-legacy__actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+  min-width: min(100%, 244px);
+}
+
+.dock-animated-lt-legacy__actions .dock-btn {
+  min-height: 32px;
+  padding-inline: 8px;
+  font-size: 11px;
+}
+
+.dock-animated-lt-legacy__error {
+  padding: 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--dock-red) 42%, var(--dock-border));
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--dock-red-soft) 48%, var(--dock-surface));
+  color: var(--dock-red);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.dock-animated-lt-legacy__frame {
+  display: block;
+  width: 100%;
+  min-height: 720px;
+  flex: 1 1 720px;
+  border: 1px solid color-mix(in srgb, var(--dock-border) 90%, transparent);
+  border-radius: 3px;
+  background: #1f2024;
+}
+
 .dock-animated-lt__slots {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1741,6 +1810,8 @@
 .dock-sermon-toolbar,
 .dock-sermon-detail-head {
   display: flex;
+  /* grid-template-columns: repeat(2, minmax(0, 1fr)); */
+
   align-items: center;
   justify-content: space-between;
   gap: 8px;
@@ -2095,57 +2166,8 @@
   gap: 6px;
 }
 
-.dock-sermon-view > .dock-btn--block {
+.dock-sermon-view>.dock-btn--block {
   width: 100%;
-}
-
-.dock-sermon-slide-tools {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 4px;
-  margin-left: auto;
-}
-
-.dock-sermon-tool-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 24px;
-  height: 24px;
-  padding: 0 5px;
-  border: 1px solid color-mix(in srgb, var(--dock-border) 88%, transparent);
-  border-radius: 3px;
-  background: color-mix(in srgb, var(--dock-surface-alt) 72%, transparent);
-  color: var(--dock-text-dim);
-  font-size: 10px;
-  font-weight: 800;
-  line-height: 1;
-  cursor: pointer;
-}
-
-.dock-sermon-tool-button:hover,
-.dock-sermon-tool-button:focus-visible {
-  border-color: color-mix(in srgb, var(--dock-accent) 38%, var(--dock-border));
-  background: color-mix(in srgb, var(--dock-surface-hover) 80%, var(--dock-surface));
-  color: var(--dock-text);
-  outline: none;
-}
-
-.dock-sermon-tool-button--active {
-  border-color: color-mix(in srgb, var(--dock-accent) 54%, var(--dock-border));
-  background: color-mix(in srgb, var(--dock-accent-soft) 70%, var(--dock-surface));
-  color: var(--dock-text);
-}
-
-.dock-sermon-tool-button:disabled {
-  cursor: wait;
-  opacity: 0.62;
-}
-
-.dock-sermon-tool-button--icon {
-  width: 24px;
-  padding: 0;
 }
 
 /* ── Pinned/Recent pills ── */
@@ -4506,7 +4528,7 @@
 .dock-dialog-field .dock-input,
 .dock-dialog .dock-search,
 .dock-dialog .dock-input {
-  width: 100%;
+  width: 95%;
 }
 
 .dock-dialog .dock-input {
@@ -5189,6 +5211,15 @@
 
   .dock-console-row--stretch {
     flex-direction: column;
+  }
+
+  .dock-animated-lt-legacy__setup {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .dock-animated-lt-legacy__actions {
+    min-width: 0;
   }
 
   .dock-bible-browser__summary {

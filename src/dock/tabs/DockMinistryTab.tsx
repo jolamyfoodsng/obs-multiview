@@ -99,7 +99,7 @@ export default function DockMinistryTab({ staged, onStage }: Props) {
         {activeSubTab === "animated-lt" && <DockAnimatedLTTab staged={staged} onStage={onStage} />}
       </section>
 
-      <section className="dock-console-panel dock-console-panel--deck dock-console-panel--deck-compact">
+      {/* <section className="dock-console-panel dock-console-panel--deck dock-console-panel--deck-compact">
         <div className="dock-console-action-row">
           <button
             type="button"
@@ -111,7 +111,7 @@ export default function DockMinistryTab({ staged, onStage }: Props) {
             Clear Lower Third
           </button>
         </div>
-      </section>
+      </section> */}
     </div>
   );
 }
