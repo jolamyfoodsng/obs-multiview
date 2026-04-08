@@ -14,6 +14,7 @@ import DockBibleTab from "./tabs/DockBibleTab";
 import DockMediaTab from "./tabs/DockMediaTab";
 import DockWorshipTab from "./tabs/DockWorshipTab";
 import DockPlannerTab from "./tabs/DockPlannerTab";
+import DockLiveToolsTab from "./tabs/DockLiveToolsTab";
 import { useAppTheme } from "../hooks/useAppTheme";
 import {
   type DockProductionSettingsPayload,
@@ -22,6 +23,7 @@ import {
 } from "../services/productionSettings";
 import type { VoiceBibleSnapshot } from "../services/voiceBibleTypes";
 import type { ServicePlannerSnapshot } from "../service-planner/types";
+import type { LiveToolsSnapshot } from "../live-tools/types";
 import { installDockTextShortcuts } from "./dockTextShortcuts";
 import "./dock.css";
 import "./dock-theme.css";
@@ -132,9 +134,9 @@ function normalizeProductionHistoryEntry(entry: DockProductionHistoryEntry): Doc
   const normalized: DockProductionHistoryEntry = entry.kind
     ? entry
     : {
-        ...entry,
-        kind: entry.item.type === "worship" ? "worship" : "bible",
-      };
+      ...entry,
+      kind: entry.item.type === "worship" ? "worship" : "bible",
+    };
 
   if (normalized.kind !== "worship") return normalized;
 
@@ -271,6 +273,7 @@ export default function DockPage() {
   );
   const [voiceBible, setVoiceBible] = useState<VoiceBibleSnapshot | null>(null);
   const [servicePlanner, setServicePlanner] = useState<ServicePlannerSnapshot | null>(null);
+  const [liveTools, setLiveTools] = useState<LiveToolsSnapshot | null>(null);
 
   useEffect(() => {
     saveDockShellPreferences({ activeTab });
@@ -393,10 +396,17 @@ export default function DockPage() {
           if (payload.servicePlanner) {
             setServicePlanner(payload.servicePlanner as ServicePlannerSnapshot);
           }
+          if (payload.liveTools) {
+            setLiveTools(payload.liveTools as LiveToolsSnapshot);
+          }
           break;
         }
         case "state:service-plans": {
           setServicePlanner(msg.payload as ServicePlannerSnapshot);
+          break;
+        }
+        case "state:live-tools": {
+          setLiveTools(msg.payload as LiveToolsSnapshot);
           break;
         }
         default:
@@ -639,28 +649,19 @@ export default function DockPage() {
       )}
 
       <div className="dock-content">
-        <nav className="dock-side-nav" aria-label="Dock sections">
-          {DOCK_TABS.map((tab) => (
-            <button
-              key={tab.id}
-              type="button"
-              className={`dock-side-nav__item${activeTab === tab.id ? " dock-side-nav__item--active" : ""}`}
-              onClick={() => setActiveTab(tab.id)}
-              aria-label={tab.label}
-              title={tab.label}
-            >
-              <Icon name={tab.icon} size={15} />
-              <span>{tab.label}</span>
-            </button>
-          ))}
-        </nav>
-
         <div className="dock-content-main">
           {activeTab === "planner" && (
             <DockPlannerTab
               staged={staged}
               onStage={handleStage}
               initialSnapshot={servicePlanner}
+            />
+          )}
+          {activeTab === "live" && (
+            <DockLiveToolsTab
+              staged={staged}
+              onStage={handleStage}
+              initialSnapshot={liveTools}
             />
           )}
           {activeTab === "ministry" && (
@@ -693,6 +694,22 @@ export default function DockPage() {
           )}
         </div>
       </div>
+
+      <nav className="dock-bottom-nav" aria-label="Dock sections">
+        {DOCK_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            type="button"
+            className={`dock-bottom-nav__item${activeTab === tab.id ? " dock-bottom-nav__item--active" : ""}`}
+            onClick={() => setActiveTab(tab.id)}
+            aria-label={tab.label}
+            title={tab.label}
+          >
+            <Icon name={tab.icon} size={14} />
+            {/* <span>{tab.label}</span> */}
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }

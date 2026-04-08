@@ -23,8 +23,9 @@ import UpdateModal from "./components/UpdateModal";
 import { checkForUpdate, type UpdateCheckResult } from "./services/updateService";
 import { initOverlayUrl } from "./services/overlayUrl";
 import { migrateFromLegacyDatabases } from "./services/db";
-import { getSettings } from "./multiview/mvStore";
+import { getSettings, MV_SETTINGS_UPDATED_EVENT, type MVSettings as MVSettingsType } from "./multiview/mvStore";
 import { applyBrandingSettingsToDom } from "./services/branding";
+import { ChurchProfileOnboardingModal } from "./components/ChurchProfileOnboardingModal";
 import { useAppTheme } from "./hooks/useAppTheme";
 import DevDashboard from "./pages/DevDashboard";
 import { dockBridge } from "./services/dockBridge";
@@ -40,8 +41,10 @@ import ProductionHomePage from "./pages/ProductionHomePage";
 import ProductionThemeSettingsPage from "./pages/ProductionThemeSettingsPage";
 import SpeechToScripturePage from "./pages/SpeechToScripturePage";
 import ServicePlannerPage from "./pages/ServicePlannerPage";
+import LiveToolsPage from "./pages/LiveToolsPage";
 import {
   getServicePlannerSnapshot,
+  importDockServicePlansFromUploads,
   saveServicePlan,
   syncServicePlansToDock,
 } from "./service-planner/servicePlannerStore";
@@ -53,6 +56,7 @@ import {
   saveWorshipDockSongSaveResult,
   type WorshipDockSongSavePayload,
 } from "./services/worshipDockInterop";
+import { getLiveToolsSnapshot, syncLiveToolsToDock } from "./live-tools/liveToolStore";
 import "./App.css";
 import "./multiview/mv.css";
 import "./bible/bible.css";
@@ -99,6 +103,10 @@ async function saveWorshipSongFromDockPayload(payload: WorshipDockSongSavePayloa
 function App() {
   // ── Global theme (dark/light) ──
   useAppTheme();
+  const [showChurchOnboarding, setShowChurchOnboarding] = useState(() => {
+    const settings = getSettings();
+    return !settings.churchProfileOnboardingCompleted;
+  });
 
   useEffect(() => {
     const s = getSettings();
@@ -127,12 +135,14 @@ function App() {
         const productionSettings = await buildDockProductionSettingsPayload().catch(() => undefined);
         const voiceBible = await voiceBibleService.refreshAvailability().catch(() => voiceBibleService.getSnapshot());
         const servicePlanner = await getServicePlannerSnapshot().catch(() => undefined);
+        const liveTools = await getLiveToolsSnapshot().catch(() => undefined);
         dockBridge.sendFullState({
           obsConnected: obsService.status === "connected",
           serviceStatus: svcStore.status,
           productionSettings,
           voiceBible,
           servicePlanner,
+          liveTools,
         });
       }
 
@@ -280,6 +290,17 @@ function App() {
       unsubVoiceBible();
     };
   }, []);
+
+  useEffect(() => {
+    const handleSettingsUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<MVSettingsType>).detail;
+      if (detail?.churchProfileOnboardingCompleted === false) {
+        setShowChurchOnboarding(true);
+      }
+    };
+    window.addEventListener(MV_SETTINGS_UPDATED_EVENT, handleSettingsUpdated);
+    return () => window.removeEventListener(MV_SETTINGS_UPDATED_EVENT, handleSettingsUpdated);
+  }, []);
   // ── Splash state ──
   const [splashVisible, setSplashVisible] = useState(true);
   const [resourcesReady, setResourcesReady] = useState(false);
@@ -321,7 +342,10 @@ function App() {
     syncSongsToDock().catch(() => {});
     syncInstalledTranslationsToDock().catch(() => {});
     syncProductionSettingsToDock().catch(() => {});
-    syncServicePlansToDock().catch(() => {});
+    syncLiveToolsToDock().catch(() => {});
+    importDockServicePlansFromUploads()
+      .then(() => syncServicePlansToDock())
+      .catch(() => {});
 
     // Rehydrate theme favorites from durable storage, then sync them to dock JSON.
     import("./services/favoriteThemes").then(({
@@ -422,13 +446,21 @@ function App() {
         />
       )}
 
-      {/* 3. Main app — only rendered when no update is blocking */}
-      {!splashVisible && !updateResult && (
+      {/* 3. First-launch church profile setup */}
+      {!splashVisible && !updateResult && showChurchOnboarding && (
+        <ChurchProfileOnboardingModal onComplete={() => setShowChurchOnboarding(false)} />
+      )}
+
+      {/* 4. Main app — only rendered when setup/update is not blocking */}
+      {!splashVisible && !updateResult && !showChurchOnboarding && (
         <OBSConnectGate>
           <LowerThirdProvider>
             <Routes>
               <Route element={<AppShell />}>
                 <Route index element={<ProductionHomePage />} />
+                <Route path="live-tools" element={<LiveToolsPage />} />
+                <Route path="live" element={<Navigate to="/live-tools" replace />} />
+                <Route path="service" element={<Navigate to="/live-tools" replace />} />
                 <Route path="resources" element={<BibleProvider><ResourcesPage /></BibleProvider>} />
                 <Route path="service-planner" element={<ServicePlannerPage />} />
                 <Route path="speech-to-scripture" element={<BibleProvider><SpeechToScripturePage /></BibleProvider>} />

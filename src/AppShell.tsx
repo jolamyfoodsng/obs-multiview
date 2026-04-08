@@ -110,6 +110,7 @@ function MenuDropdown({ def }: { def: MenuDropdownDef }) {
 const NAV_ITEMS: ReadonlyArray<{ to: string; icon: string; label: string; end?: boolean }> = [
   { to: "/", icon: "home", label: "Home", end: true },
   { to: "/service-planner", icon: "event_note", label: "Planner" },
+  { to: "/live-tools", icon: "bolt", label: "Live" },
   { to: "/resources", icon: "library_books", label: "Resources" },
   { to: "/speech-to-scripture", icon: "mic", label: "Speech" },
   { to: "/production/themes", icon: "palette", label: "Themes" },
@@ -128,6 +129,7 @@ export function AppShell() {
   const currentSectionLabel = useMemo(() => {
     if (location.pathname.startsWith("/resources")) return "Resources";
     if (location.pathname.startsWith("/service-planner")) return "Service Planner";
+    if (location.pathname.startsWith("/live-tools")) return "Live Tools";
     if (location.pathname.startsWith("/speech-to-scripture")) return "Speech to Scripture";
     if (location.pathname.startsWith("/production/themes")) return "Production Themes";
     if (location.pathname.startsWith("/settings")) return "Settings";
@@ -357,6 +359,22 @@ export function AppShell() {
       <main className="app-content">
         <Outlet />
       </main>
+
+      {!isServiceActive && !isEditorRoute && (
+        <nav className="app-bottomnav" aria-label="Primary sections">
+          {NAV_ITEMS.map((item) => (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={item.end ?? false}
+              className={({ isActive }) => `app-bottomnav__item${isActive ? " is-active" : ""}`}
+            >
+              <Icon name={item.icon} size={18} />
+              <span>{item.label}</span>
+            </NavLink>
+          ))}
+        </nav>
+      )}
 
       {/* ── End Service Confirmation ── */}
       {showEndConfirm && (

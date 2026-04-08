@@ -4096,6 +4096,140 @@
 			function_send();
 		}
 
+		function ocsNormalizeHexColor(value, fallback) {
+			if (typeof value !== "string") return fallback;
+			const trimmed = value.trim();
+			return /^#[0-9a-fA-F]{6}$/.test(trimmed) ? trimmed : fallback;
+		}
+
+		function ocsSetInputValue(id, value) {
+			if (typeof value !== "string") return;
+			const element = document.getElementById(id);
+			if (!element) return;
+			element.value = value;
+			localStorage.setItem(id, value);
+			if (element.jscolor && typeof element.jscolor.fromString === "function") {
+				element.jscolor.fromString(value.replace("#", ""));
+			}
+		}
+
+		function ocsSetTextValue(id, value) {
+			const element = document.getElementById(id);
+			if (!element) return;
+			const next = typeof value === "string" ? value : "";
+			element.textContent = next;
+			localStorage.setItem(id, next);
+		}
+
+		function ocsSetLogoValue(id, value) {
+			if (typeof value !== "string" || !value.trim()) return;
+			const element = document.getElementById(id);
+			if (!element) return;
+			element.setAttribute("src", value.trim());
+			localStorage.setItem(id, value.trim());
+		}
+
+		function ocsNormalizeSpeakers(value) {
+			if (!Array.isArray(value)) return [];
+			const seen = {};
+			const speakers = [];
+			value.forEach(function (item) {
+				if (!item || typeof item !== "object") return;
+				const name = typeof item.name === "string" ? item.name.trim() : "";
+				const role = typeof item.role === "string" ? item.role.trim() :
+					typeof item.position === "string" ? item.position.trim() :
+					typeof item.info === "string" ? item.info.trim() :
+					typeof item.title === "string" ? item.title.trim() : "";
+				const key = name.toLowerCase();
+				if (!key || seen[key]) return;
+				seen[key] = true;
+				speakers.push({ name, role });
+			});
+			return speakers;
+		}
+
+		function ocsApplyChurchProfile(profile) {
+			const speakers = ocsNormalizeSpeakers(profile && profile.speakers);
+			const branding = profile && typeof profile.branding === "object" ? profile.branding : {};
+			const primary = ocsNormalizeHexColor(branding.brandColor, "#2563eb");
+			const secondary = ocsNormalizeHexColor(branding.brandSecondaryColor, "#222222");
+			const logoUrl = typeof branding.logoUrl === "string" ? branding.logoUrl.trim() : "";
+			const signature = JSON.stringify({
+				speakers,
+				primary,
+				secondary,
+				logoUrl,
+			});
+
+			if (localStorage.getItem("ocs-animated-lt-profile-signature") === signature) {
+				return;
+			}
+
+			for (let alt = 1; alt <= 4; alt++) {
+				ocsSetInputValue("alt-" + alt + "-style-color-1", primary);
+				ocsSetInputValue("alt-" + alt + "-style-color-2", secondary);
+				ocsSetInputValue("alt-" + alt + "-style-color-3", primary);
+				ocsSetInputValue("alt-" + alt + "-style-color-4", secondary);
+				ocsSetInputValue("alt-" + alt + "-name-color", default_name_color);
+				ocsSetInputValue("alt-" + alt + "-info-color", default_info_color);
+
+				if (logoUrl) {
+					ocsSetLogoValue("alt-" + alt + "-logo-default", logoUrl);
+					ocsSetLogoValue("alt-" + alt + "-logo-preview", logoUrl);
+				}
+
+				for (let slot = 1; slot <= 10; slot++) {
+					const speaker = speakers[slot - 1];
+					ocsSetTextValue("alt-" + alt + "-name-" + slot, speaker ? speaker.name : "");
+					ocsSetTextValue("alt-" + alt + "-info-" + slot, speaker ? speaker.role : "");
+					ocsSetTextValue("alt-" + alt + "-logo-" + slot, logoUrl ? logoUrl : "default");
+				}
+
+				if (speakers[0]) {
+					ocsSetInputValue("alt-" + alt + "-name", speakers[0].name);
+					ocsSetInputValue("alt-" + alt + "-info", speakers[0].role);
+				}
+			}
+
+			localStorage.setItem("ocs-animated-lt-profile-signature", signature);
+			refreshData();
+		}
+
+		async function ocsLoadChurchProfileFromServer() {
+			const profile = { speakers: [], branding: {} };
+
+			try {
+				const speakersResponse = await fetch("/uploads/dock-speakers.json", { cache: "no-store" });
+				if (speakersResponse.ok) {
+					profile.speakers = await speakersResponse.json();
+				}
+			} catch (err) {
+				// Profile sync is optional; ignore missing dock JSON.
+			}
+
+			try {
+				const brandingResponse = await fetch("/uploads/dock-branding.json", { cache: "no-store" });
+				if (brandingResponse.ok) {
+					const branding = await brandingResponse.json();
+					const logoFileName = typeof branding.brandLogoFileName === "string" ? branding.brandLogoFileName.trim() : "";
+					profile.branding = {
+						brandColor: branding.brandColor,
+						brandSecondaryColor: branding.brandSecondaryColor,
+						churchName: branding.churchName,
+						mainPastorName: branding.mainPastorName,
+						logoUrl: logoFileName ? "/uploads/" + encodeURIComponent(logoFileName) : "",
+					};
+					if ((!profile.speakers || profile.speakers.length === 0) && branding.mainPastorName) {
+						profile.speakers = [{ name: branding.mainPastorName, role: "Lead Pastor" }];
+					}
+				}
+			} catch (err) {
+				// Profile sync is optional; ignore missing dock JSON.
+			}
+
+			ocsApplyChurchProfile(profile);
+		}
+
 		function checkUpdates() {
 			checkHotkeys();
 			updateHotkeys();
@@ -4108,6 +4242,7 @@
 		refreshData();
 		checkSwitches();
 		saveData();
+		ocsLoadChurchProfileFromServer().catch(function () { });
 		setInterval(() => checkUpdates(), 200);
 
 		// Wait document to be ready to do some stuff
@@ -4141,16 +4276,54 @@
 			return function_send();
 		}
 
+		function ocsClearLowerThird(alt) {
+			var sectionSwitch = $('#lower-thirds-switch' + alt);
+			if (!sectionSwitch.length) return null;
+			if (sectionSwitch.is(':checked')) {
+				sectionSwitch.prop('checked', false).change();
+			}
+			refreshData();
+			return function_send();
+		}
+
+		function ocsClearAllLowerThirds() {
+			for (var alt = 1; alt <= 4; alt++) {
+				var sectionSwitch = $('#lower-thirds-switch' + alt);
+				if (sectionSwitch.length && sectionSwitch.is(':checked')) {
+					sectionSwitch.prop('checked', false).change();
+				}
+			}
+			var masterSwitch = $('#lower-thirds-masterswitch');
+			if (masterSwitch.length && masterSwitch.is(':checked')) {
+				masterSwitch.prop('checked', false).change();
+			}
+			refreshData();
+			return function_send();
+		}
+
 		window.addEventListener('message', function (event) {
 			var payload = event.data || {};
-				if (payload.type !== 'ocs:animated-lt-source-loaded') return;
-				var alt = parseInt(payload.alt, 10);
-				if (!alt) return;
-				var live = payload.live === true;
-				setTimeout(function () {
-					ocsActivateLowerThird(alt, live);
-				}, 40);
-			});
+			if (payload.type === 'ocs:animated-lt-profile-sync') {
+				ocsApplyChurchProfile(payload);
+				return;
+			}
+			if (payload.type === 'ocs:animated-lt-clear') {
+				if (payload.all) {
+					ocsClearAllLowerThirds();
+					return;
+				}
+				var clearAlt = parseInt(payload.alt, 10);
+				if (clearAlt) ocsClearLowerThird(clearAlt);
+				return;
+			}
+			if (payload.type !== 'ocs:animated-lt-source-loaded') return;
+			var alt = parseInt(payload.alt, 10);
+			if (!alt) return;
+			var live = payload.live === true;
+			setTimeout(function () {
+				ocsActivateLowerThird(alt, live);
+			}, 40);
+		});
 
 	</script>
 

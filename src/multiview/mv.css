@@ -2303,6 +2303,13 @@
   gap: 8px;
 }
 
+.mv-settings-color-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  max-width: 560px;
+}
+
 .mv-settings-color-input {
   width: 32px;
   height: 32px;

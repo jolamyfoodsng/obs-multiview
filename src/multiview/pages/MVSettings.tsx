@@ -477,6 +477,21 @@ export function MVSettings() {
     });
   }, [update]);
 
+  const handleMainPastorNameChange = useCallback((name: string) => {
+    const patch: Partial<MVSettingsType> = { mainPastorName: name };
+    const hasSpeakerProfiles = compactSpeakerProfiles(speakerProfiles).length > 0;
+    if (!hasSpeakerProfiles) {
+      const seededProfiles = name.trim()
+        ? [{ name, role: "Lead Pastor" }]
+        : [{ ...EMPTY_SPEAKER_PROFILE }];
+      const compact = compactSpeakerProfiles(seededProfiles);
+      setSpeakerProfiles(seededProfiles);
+      patch.pastorSpeakers = compact;
+      patch.pastorNames = compact.map((profile) => profile.name).join("\n");
+    }
+    update(patch);
+  }, [speakerProfiles, update]);
+
   const handleSpeakerProfileNameChange = useCallback((index: number, name: string) => {
     const next = speakerProfiles.map((profile, profileIndex) => (
       profileIndex === index ? { ...profile, name } : profile
@@ -549,10 +564,12 @@ export function MVSettings() {
   const handleResetBrandingSettings = () => {
     update({
       churchName: DEFAULT_SETTINGS.churchName,
+      mainPastorName: DEFAULT_SETTINGS.mainPastorName,
       pastorNames: DEFAULT_SETTINGS.pastorNames,
       pastorSpeakers: DEFAULT_SETTINGS.pastorSpeakers,
       lowerThirdDefaultDurationSec: DEFAULT_SETTINGS.lowerThirdDefaultDurationSec,
       brandColor: DEFAULT_SETTINGS.brandColor,
+      brandSecondaryColor: DEFAULT_SETTINGS.brandSecondaryColor,
       brandLogoPath: DEFAULT_SETTINGS.brandLogoPath,
       socialWebsite: DEFAULT_SETTINGS.socialWebsite,
       socialInstagram: DEFAULT_SETTINGS.socialInstagram,
@@ -565,6 +582,10 @@ export function MVSettings() {
     setBrandLogoStatus(null);
     setBrandLogoStatusType("ok");
   };
+
+  const handleResetChurchOnboarding = useCallback(() => {
+    update({ churchProfileOnboardingCompleted: false });
+  }, [update]);
 
   const handleBrandLogoUpload = useCallback(
     async (e: ChangeEvent<HTMLInputElement>) => {
@@ -1366,6 +1387,16 @@ export function MVSettings() {
                 onChange={(e) => update({ churchName: e.target.value })}
               />
             </label>
+            <label className="mv-settings-field">
+              <span className="mv-settings-field-label">Main Pastor Name</span>
+              <input
+                className="mv-input"
+                type="text"
+                placeholder="Pastor name"
+                value={settings.mainPastorName}
+                onChange={(e) => handleMainPastorNameChange(e.target.value)}
+              />
+            </label>
             <div className="mv-settings-field">
               <span className="mv-settings-field-label">Pastors / Speakers</span>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
@@ -1465,24 +1496,45 @@ export function MVSettings() {
             />
           </div>
 
-          <label className="mv-settings-field" style={{ maxWidth: 300, marginTop: 12 }}>
-            <span className="mv-settings-field-label">Brand Color</span>
-            <div className="mv-settings-color-row">
-              <input
-                type="color"
-                className="mv-settings-color-input"
-                value={settings.brandColor}
-                onChange={(e) => update({ brandColor: e.target.value })}
-              />
-              <input
-                type="text"
-                className="mv-input mv-input--sm"
-                value={settings.brandColor}
-                onChange={(e) => update({ brandColor: e.target.value })}
-                style={{ flex: 1, fontFamily: "monospace" }}
-              />
-            </div>
-          </label>
+          <div className="mv-settings-color-grid" style={{ marginTop: 12 }}>
+            <label className="mv-settings-field">
+              <span className="mv-settings-field-label">Primary Color</span>
+              <div className="mv-settings-color-row">
+                <input
+                  type="color"
+                  className="mv-settings-color-input"
+                  value={settings.brandColor}
+                  onChange={(e) => update({ brandColor: e.target.value })}
+                />
+                <input
+                  type="text"
+                  className="mv-input mv-input--sm"
+                  value={settings.brandColor}
+                  onChange={(e) => update({ brandColor: e.target.value })}
+                  style={{ flex: 1, fontFamily: "monospace" }}
+                />
+              </div>
+            </label>
+            <label className="mv-settings-field">
+              <span className="mv-settings-field-label">Secondary Color</span>
+              <div className="mv-settings-color-row">
+                <input
+                  type="color"
+                  className="mv-settings-color-input"
+                  value={settings.brandSecondaryColor || DEFAULT_SETTINGS.brandColor}
+                  onChange={(e) => update({ brandSecondaryColor: e.target.value })}
+                />
+                <input
+                  type="text"
+                  className="mv-input mv-input--sm"
+                  value={settings.brandSecondaryColor}
+                  placeholder="Optional"
+                  onChange={(e) => update({ brandSecondaryColor: e.target.value })}
+                  style={{ flex: 1, fontFamily: "monospace" }}
+                />
+              </div>
+            </label>
+          </div>
         </section>
 
         <section className="mv-settings-section">
@@ -1543,6 +1595,29 @@ export function MVSettings() {
               {brandLogoStatus}
             </p>
           )}
+        </section>
+
+        <section className="mv-settings-section">
+          <h2 className="mv-settings-heading">
+            <Icon name="rocket" size={18} style={{ verticalAlign: "text-bottom" }} />
+            {" "}First-Launch Setup
+          </h2>
+          <p className="mv-settings-desc">
+            Reopen the short church profile setup flow if you want to guide a new operator through the basics.
+          </p>
+          <div className="mv-settings-row">
+            <button
+              type="button"
+              className="mv-btn mv-btn--outline mv-btn--sm"
+              onClick={handleResetChurchOnboarding}
+            >
+              <Icon name="restart_alt" size={14} />
+              Reset Onboarding
+            </button>
+            <span className="mv-settings-hint" style={{ marginTop: 0 }}>
+              Current state: {settings.churchProfileOnboardingCompleted ? "Completed" : "Ready to reopen"}
+            </span>
+          </div>
         </section>
 
         <section className="mv-settings-section">

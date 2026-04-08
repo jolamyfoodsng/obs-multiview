@@ -53,7 +53,7 @@ import { openDB, type IDBPDatabase } from "idb";
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 export const CENTRAL_DB_NAME = "obs-church-studio";
-export const CENTRAL_DB_VERSION = 2;
+export const CENTRAL_DB_VERSION = 3;
 
 // All object-store names in one place:
 export const STORES = {
@@ -86,6 +86,9 @@ export const STORES = {
 
   // Service Planner
   SERVICE_PLANS: "service_plans",
+
+  // Live service flow tools
+  LIVE_TOOL_TEMPLATES: "live_tool_templates",
 } as const;
 
 export type StoreName = (typeof STORES)[keyof typeof STORES];
@@ -180,6 +183,14 @@ export function getCentralDb(): Promise<IDBPDatabase> {
             plans.createIndex("serviceDate", "serviceDate");
             plans.createIndex("updatedAt", "updatedAt");
             plans.createIndex("status", "status");
+          }
+        }
+
+        if (oldVersion < 3) {
+          if (!db.objectStoreNames.contains(STORES.LIVE_TOOL_TEMPLATES)) {
+            const liveTools = db.createObjectStore(STORES.LIVE_TOOL_TEMPLATES, { keyPath: "id" });
+            liveTools.createIndex("moment", "moment");
+            liveTools.createIndex("updatedAt", "updatedAt");
           }
         }
       },

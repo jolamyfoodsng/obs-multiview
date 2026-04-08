@@ -66,6 +66,7 @@ export type DockStateType =
   | "state:worship-song-save-result"
   | "state:service-plans"
   | "state:service-plan-save-result"
+  | "state:live-tools"
   | "state:media-data"
   | "state:voice-bible-status"
   | "state:voice-bible-result"

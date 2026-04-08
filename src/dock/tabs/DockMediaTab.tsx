@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { dockObsClient } from "../dockObsClient";
+import { dockObsClient, type DockAudioInputSource, type DockMediaSendOptions } from "../dockObsClient";
 import { dockClient } from "../../services/dockBridge";
 import type { DockStagedItem } from "../dockTypes";
 import type { MediaItem } from "../../library/libraryTypes";
@@ -40,8 +40,16 @@ interface ActiveMediaTargets {
   program: DockMediaEntry | null;
 }
 
+interface DockMediaPreference {
+  videoMuted?: boolean;
+  imageAudioInputName?: string | null;
+}
+
+type DockMediaPreferences = Record<string, DockMediaPreference>;
+
 const VIDEO_EXTENSIONS = new Set(["mp4", "webm", "mov", "avi", "mkv", "wmv", "flv"]);
 const IMAGE_EXTENSIONS = new Set(["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp"]);
+const MEDIA_PREFS_STORAGE_KEY = "ocs-dock-media-preferences-v1";
 
 /** Determine icon for file type */
 function getFileIcon(kind: DockMediaKind): string {
@@ -59,11 +67,28 @@ function isMediaFile(name: string): boolean {
   return getUploadMediaKind(name) !== null;
 }
 
+function loadMediaPreferences(): DockMediaPreferences {
+  try {
+    const stored = localStorage.getItem(MEDIA_PREFS_STORAGE_KEY);
+    if (!stored) return {};
+    const parsed = JSON.parse(stored);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return parsed as DockMediaPreferences;
+  } catch {
+    return {};
+  }
+}
+
 export default function DockMediaTab({ staged: _staged, onStage: _onStage }: Props) {
   const [activeKind, setActiveKind] = useState<DockMediaKind>("video");
   const [uploadedFiles, setUploadedFiles] = useState<string[]>([]);
   const [uploadsLoading, setUploadsLoading] = useState(false);
   const [sendingFile, setSendingFile] = useState<string | null>(null);
+  const [mediaPrefs, setMediaPrefs] = useState<DockMediaPreferences>(() => loadMediaPreferences());
+  const [openOptionsKey, setOpenOptionsKey] = useState<string | null>(null);
+  const [audioSources, setAudioSources] = useState<DockAudioInputSource[]>([]);
+  const [audioLoading, setAudioLoading] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
   const [activeTargets, setActiveTargets] = useState<ActiveMediaTargets>({
     preview: null,
     program: null,
@@ -79,6 +104,48 @@ export default function DockMediaTab({ staged: _staged, onStage: _onStage }: Pro
     return () => {
       mountedRef.current = false;
     };
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(MEDIA_PREFS_STORAGE_KEY, JSON.stringify(mediaPrefs));
+    } catch {
+      // Dock preferences are convenience-only; ignore storage failures.
+    }
+  }, [mediaPrefs]);
+
+  const updateMediaPreference = useCallback((entryKey: string, patch: DockMediaPreference) => {
+    setMediaPrefs((prev) => ({
+      ...prev,
+      [entryKey]: {
+        ...prev[entryKey],
+        ...patch,
+      },
+    }));
+  }, []);
+
+  const loadAudioSources = useCallback(async () => {
+    if (!dockObsClient.isConnected) {
+      setAudioSources([]);
+      setAudioError("Connect OBS to list audio input sources.");
+      return;
+    }
+
+    setAudioLoading(true);
+    setAudioError(null);
+    try {
+      const sources = await dockObsClient.listAudioInputSources();
+      setAudioSources(sources);
+      if (sources.length === 0) {
+        setAudioError("No OBS audio input capture sources found.");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Could not load audio input sources.";
+      setAudioError(message);
+      setAudioSources([]);
+    } finally {
+      setAudioLoading(false);
+    }
   }, []);
 
   // Fetch uploads directory path on mount (with retries for startup timing)
@@ -186,7 +253,7 @@ export default function DockMediaTab({ staged: _staged, onStage: _onStage }: Pro
   // ── Play uploaded media via OBS — send to Preview or Go Live ──
 
   const playMedia = useCallback(
-    async (fileName: string, live: boolean): Promise<boolean> => {
+    async (fileName: string, live: boolean, options?: DockMediaSendOptions): Promise<boolean> => {
       if (!dockObsClient.isConnected) {
         console.warn("[DockMediaTab] Not connected to OBS");
         return false;
@@ -215,7 +282,7 @@ export default function DockMediaTab({ staged: _staged, onStage: _onStage }: Pro
         const sep = dir.includes("\\") ? "\\" : "/";
         const filePath = `${dir}${sep}${fileName}`;
         console.log("[DockMediaTab] Sending media to OBS:", filePath, "live:", live);
-        await dockObsClient.pushMedia(filePath, fileName, live);
+        await dockObsClient.pushMedia(filePath, fileName, live, options);
         return true;
       } catch (err) {
         console.warn("[DockMediaTab] Play media failed:", err);
@@ -230,7 +297,7 @@ export default function DockMediaTab({ staged: _staged, onStage: _onStage }: Pro
   // ── Play library media item via OBS ──
 
   const playLibraryMedia = useCallback(
-    async (item: MediaItem, live: boolean): Promise<boolean> => {
+    async (item: MediaItem, live: boolean, options?: DockMediaSendOptions): Promise<boolean> => {
       if (!dockObsClient.isConnected) return false;
 
       setSendingFile(`library:${item.id}`);
@@ -263,7 +330,7 @@ export default function DockMediaTab({ staged: _staged, onStage: _onStage }: Pro
           throw new Error("Cannot resolve media to a local file path");
         }
 
-        await dockObsClient.pushMedia(filePath, item.name, live);
+        await dockObsClient.pushMedia(filePath, item.name, live, options);
         return true;
       } catch (err) {
         console.warn("[DockMediaTab] Play library media failed:", err);
@@ -321,13 +388,63 @@ export default function DockMediaTab({ staged: _staged, onStage: _onStage }: Pro
     }
   }, [activeKind, imageEntries.length, videoEntries.length]);
 
+  const getEntryPrefs = useCallback(
+    (entry: DockMediaEntry): DockMediaPreference => mediaPrefs[entry.key] ?? {},
+    [mediaPrefs],
+  );
+
+  const getEntrySendOptions = useCallback(
+    (entry: DockMediaEntry): DockMediaSendOptions => {
+      const prefs = getEntryPrefs(entry);
+      if (entry.kind === "video") {
+        return { muted: prefs.videoMuted ?? true };
+      }
+      return { imageAudioInputName: prefs.imageAudioInputName || null };
+    },
+    [getEntryPrefs],
+  );
+
+  const toggleVideoMute = useCallback(
+    async (entry: DockMediaEntry) => {
+      const currentMuted = getEntryPrefs(entry).videoMuted ?? true;
+      const nextMuted = !currentMuted;
+      updateMediaPreference(entry.key, { videoMuted: nextMuted });
+
+      const updates: Promise<void>[] = [];
+      if (activeTargets.preview?.key === entry.key) {
+        updates.push(dockObsClient.setMediaVideoMuted(false, nextMuted));
+      }
+      if (activeTargets.program?.key === entry.key) {
+        updates.push(dockObsClient.setMediaVideoMuted(true, nextMuted));
+      }
+      if (updates.length > 0) {
+        await Promise.all(updates);
+      }
+    },
+    [activeTargets.preview, activeTargets.program, getEntryPrefs, updateMediaPreference],
+  );
+
+  const toggleEntryOptions = useCallback(
+    (entry: DockMediaEntry) => {
+      setOpenOptionsKey((current) => {
+        const next = current === entry.key ? null : entry.key;
+        if (next && entry.kind === "image") {
+          void loadAudioSources();
+        }
+        return next;
+      });
+    },
+    [loadAudioSources],
+  );
+
   const handleSendEntry = useCallback(
     async (entry: DockMediaEntry, live: boolean) => {
       let success = false;
+      const options = getEntrySendOptions(entry);
       if (entry.uploadFile) {
-        success = await playMedia(entry.uploadFile, live);
+        success = await playMedia(entry.uploadFile, live, options);
       } else if (entry.libraryItem) {
-        success = await playLibraryMedia(entry.libraryItem, live);
+        success = await playLibraryMedia(entry.libraryItem, live, options);
       }
 
       if (!success) return;
@@ -338,7 +455,7 @@ export default function DockMediaTab({ staged: _staged, onStage: _onStage }: Pro
         setActiveTargets((prev) => ({ ...prev, preview: entry }));
       }
     },
-    [playLibraryMedia, playMedia]
+    [getEntrySendOptions, playLibraryMedia, playMedia]
   );
 
   const clearPreview = useCallback(async () => {
@@ -390,10 +507,27 @@ export default function DockMediaTab({ staged: _staged, onStage: _onStage }: Pro
           : isPreviewTarget
             ? "Preview"
             : "";
+      const prefs = getEntryPrefs(entry);
+      const videoMuted = prefs.videoMuted ?? true;
+      const selectedAudioInput = prefs.imageAudioInputName || "";
+      const isOptionsOpen = openOptionsKey === entry.key;
+      const selectedAudioMissing = Boolean(
+        selectedAudioInput && !audioSources.some((source) => source.inputName === selectedAudioInput),
+      );
+      const metaParts = [
+        entry.originLabel,
+        entry.mimeLabel,
+        entry.kind === "video" ? (videoMuted ? "Muted" : "Audio on") : null,
+        entry.kind === "image" && selectedAudioInput ? `Audio: ${selectedAudioInput}` : null,
+      ].filter(Boolean);
       return (
         <div
           key={entry.key}
-          className={`dock-media-row${isPlaying ? " dock-media-row--playing" : ""}`}
+          className={[
+            "dock-media-row",
+            isPlaying ? "dock-media-row--playing" : "",
+            isOptionsOpen ? "dock-media-row--options-open" : "",
+          ].filter(Boolean).join(" ")}
         >
           <div className="dock-media-row__main">
             {entry.thumbnailUrl ? (
@@ -410,13 +544,24 @@ export default function DockMediaTab({ staged: _staged, onStage: _onStage }: Pro
             <div className="dock-media-row__body">
               <div className="dock-media-row__title">{entry.name}</div>
               <div className="dock-media-row__meta">
-                {entry.originLabel}
-                {entry.mimeLabel ? ` · ${entry.mimeLabel}` : ""}
+                {metaParts.join(" · ")}
               </div>
             </div>
             {isPlaying && <span className="dock-media-row__state">{stateLabel}</span>}
           </div>
           <div className="dock-hover-actions dock-media-row__actions">
+            {entry.kind === "video" && (
+              <button
+                type="button"
+                className={`dock-hover-actions__btn dock-media-row__icon-action${videoMuted ? " dock-media-row__icon-action--muted" : ""}`}
+                disabled={isSending}
+                aria-label={`${videoMuted ? "Unmute" : "Mute"} ${entry.name}`}
+                title={videoMuted ? "Muted by default. Click to unmute." : "Audio on. Click to mute."}
+                onClick={() => void toggleVideoMute(entry)}
+              >
+                <Icon name={videoMuted ? "volume_off" : "volume_up"} size={12} />
+              </button>
+            )}
             <button
               type="button"
               className="dock-btn dock-btn--preview dock-btn--compact dock-media-row__action"
@@ -437,11 +582,95 @@ export default function DockMediaTab({ staged: _staged, onStage: _onStage }: Pro
             >
               Program
             </button>
+            <button
+              type="button"
+              className="dock-hover-actions__btn dock-media-row__icon-action"
+              aria-label={`Show more media options for ${entry.name}`}
+              aria-expanded={isOptionsOpen}
+              title="More media options"
+              onClick={() => toggleEntryOptions(entry)}
+            >
+              <Icon name="more_horiz" size={13} />
+            </button>
           </div>
+          {isOptionsOpen && (
+            <div className="dock-media-row__options">
+              {entry.kind === "video" ? (
+                <>
+                  <div className="dock-media-row__options-head">
+                    <span>Video audio</span>
+                    <button
+                      type="button"
+                      className={`dock-media-row__toggle${!videoMuted ? " dock-media-row__toggle--active" : ""}`}
+                      disabled={isSending}
+                      onClick={() => void toggleVideoMute(entry)}
+                    >
+                      <Icon name={videoMuted ? "volume_off" : "volume_up"} size={12} />
+                      {videoMuted ? "Muted" : "Unmuted"}
+                    </button>
+                  </div>
+                  <div className="dock-media-row__hint">
+                    Videos stay muted by default so graphics changes do not accidentally bring audio live.
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="dock-media-row__options-head">
+                    <span>Image audio input</span>
+                    <button
+                      type="button"
+                      className="dock-media-row__refresh-audio"
+                      onClick={() => void loadAudioSources()}
+                      disabled={audioLoading}
+                    >
+                      {audioLoading ? "Loading" : "Refresh"}
+                    </button>
+                  </div>
+                  <select
+                    className="dock-media-row__select"
+                    value={selectedAudioInput}
+                    onChange={(event) => {
+                      updateMediaPreference(entry.key, {
+                        imageAudioInputName: event.target.value || null,
+                      });
+                    }}
+                    onFocus={() => void loadAudioSources()}
+                    disabled={audioLoading}
+                    aria-label={`Audio input to attach when showing ${entry.name}`}
+                  >
+                    <option value="">No audio attached</option>
+                    {selectedAudioMissing && <option value={selectedAudioInput}>{selectedAudioInput}</option>}
+                    {audioSources.map((source) => (
+                      <option key={source.inputName} value={source.inputName}>
+                        {source.inputName}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="dock-media-row__hint">
+                    {audioError || "Selected mic is copied into the media scene when you send this image."}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       );
     },
-    [activeTargets.preview, activeTargets.program, handleSendEntry, sendingFile]
+    [
+      activeTargets.preview,
+      activeTargets.program,
+      audioError,
+      audioLoading,
+      audioSources,
+      getEntryPrefs,
+      handleSendEntry,
+      loadAudioSources,
+      openOptionsKey,
+      sendingFile,
+      toggleEntryOptions,
+      toggleVideoMute,
+      updateMediaPreference,
+    ]
   );
 
   // ── Render ──

@@ -5,6 +5,8 @@ import type { DockStagedItem } from "../dockTypes";
 import Icon from "../DockIcon";
 import {
   createServicePlanItem,
+  isServicePlan,
+  isServicePlannerSnapshot,
   type ServicePlan,
   type ServicePlanItem,
   type ServicePlannerSnapshot,
@@ -16,10 +18,88 @@ interface DockPlannerTabProps {
   initialSnapshot?: ServicePlannerSnapshot | null;
 }
 
-function isPlannerSnapshot(value: unknown): value is ServicePlannerSnapshot {
-  if (!value || typeof value !== "object") return false;
-  const candidate = value as Partial<ServicePlannerSnapshot>;
-  return Array.isArray(candidate.plans);
+interface LegacyDockPlanItem {
+  id?: string;
+  type?: string;
+  label?: string;
+  details?: string;
+  completed?: boolean;
+  meta?: Record<string, unknown>;
+}
+
+interface LegacyDockPlan {
+  id?: string;
+  name?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  items?: LegacyDockPlanItem[];
+}
+
+function legacyPlanToSnapshot(plans: LegacyDockPlan[]): ServicePlannerSnapshot {
+  const now = Date.now();
+  const nextPlans: ServicePlan[] = plans.map((plan, planIndex) => {
+    const items = Array.isArray(plan.items) ? plan.items.map((item, itemIndex) => {
+      const type = item.type === "bible" || item.type === "worship" || item.type === "media" || item.type === "sermon"
+        ? item.type
+        : "sermon";
+      return createServicePlanItem({
+        id: item.id ?? `legacy-cue-${planIndex}-${itemIndex}`,
+        type,
+        sourceKind: "manual",
+        label: item.label?.trim() || type,
+        subtitle: item.details?.trim() || "",
+        payloadSnapshot: {
+          ...(item.meta ?? {}),
+          ...(type === "sermon" ? { text: item.details || item.label || "", itemType: "point", overlayMode: "lower-third" } : {}),
+          ...(type === "worship" ? { sectionText: item.details || "", sectionLabel: item.label || "Worship", songTitle: item.label || "Worship", overlayMode: "lower-third" } : {}),
+          ...(type === "bible" ? { referenceLabel: item.label || "Bible", verseText: item.details || "", translation: "KJV", overlayMode: "fullscreen" } : {}),
+        },
+      });
+    }) : [];
+
+    return {
+      id: plan.id ?? `legacy-plan-${planIndex}`,
+      title: plan.name?.trim() || "Legacy Service Plan",
+      serviceDate: plan.createdAt ? plan.createdAt.slice(0, 10) : new Date().toISOString().slice(0, 10),
+      status: planIndex === 0 ? "active" : "draft",
+      items,
+      selectedItemId: items[0]?.id,
+      completedItemIds: items
+        .filter((_, itemIndex) => Boolean(plan.items?.[itemIndex]?.completed))
+        .map((item) => item.id),
+      createdAt: plan.createdAt ? new Date(plan.createdAt).getTime() : now,
+      updatedAt: plan.updatedAt ? new Date(plan.updatedAt).getTime() : now,
+    };
+  });
+
+  return {
+    plans: nextPlans,
+    activePlan: nextPlans.find((plan) => plan.status === "active") ?? nextPlans[0] ?? null,
+  };
+}
+
+function normalizePlannerPayload(value: unknown): ServicePlannerSnapshot | null {
+  if (isServicePlannerSnapshot(value)) {
+    return {
+      plans: value.plans.filter(isServicePlan),
+      activePlan: value.activePlan && isServicePlan(value.activePlan) ? value.activePlan : value.plans[0] ?? null,
+    };
+  }
+  if (Array.isArray(value)) {
+    return legacyPlanToSnapshot(value as LegacyDockPlan[]);
+  }
+  return null;
+}
+
+async function loadPlannerSnapshotFromUploads(): Promise<ServicePlannerSnapshot | null> {
+  try {
+    const response = await fetch(`/uploads/dock-service-plans.json?_=${Date.now()}`, { cache: "no-store" });
+    if (!response.ok) return null;
+    const payload = await response.json() as unknown;
+    return normalizePlannerPayload(payload);
+  } catch {
+    return null;
+  }
 }
 
 function planDateLabel(date: string): string {
@@ -62,9 +142,15 @@ export default function DockPlannerTab({ staged: _staged, onStage, initialSnapsh
 
   useEffect(() => {
     dockClient.sendCommand({ type: "request-service-plans", timestamp: Date.now() });
+    void loadPlannerSnapshotFromUploads().then((payload) => {
+      if (!payload) return;
+      setSnapshot(payload);
+      setActivePlanId((current) => current || payload.activePlan?.id || payload.plans[0]?.id || "");
+    });
     const unsub = dockClient.onState((msg: DockStateMessage) => {
-      if (msg.type !== "state:service-plans" || !isPlannerSnapshot(msg.payload)) return;
-      const payload = msg.payload as ServicePlannerSnapshot;
+      if (msg.type !== "state:service-plans") return;
+      const payload = normalizePlannerPayload(msg.payload);
+      if (!payload) return;
       setSnapshot(payload);
       setActivePlanId((current) => current || payload.activePlan?.id || payload.plans[0]?.id || "");
     });
@@ -251,7 +337,14 @@ export default function DockPlannerTab({ staged: _staged, onStage, initialSnapsh
           <button
             type="button"
             className="dock-btn dock-btn--preview dock-btn--block"
-            onClick={() => dockClient.sendCommand({ type: "request-service-plans", timestamp: Date.now() })}
+            onClick={() => {
+              dockClient.sendCommand({ type: "request-service-plans", timestamp: Date.now() });
+              void loadPlannerSnapshotFromUploads().then((payload) => {
+                if (!payload) return;
+                setSnapshot(payload);
+                setActivePlanId((current) => current || payload.activePlan?.id || payload.plans[0]?.id || "");
+              });
+            }}
           >
             Refresh planner
           </button>
@@ -291,6 +384,12 @@ export default function DockPlannerTab({ staged: _staged, onStage, initialSnapsh
           </div>
         </div>
         <div className="dock-planner-now__actions">
+          <button type="button" onClick={() => selectedCue && sendCue(selectedCue, false)} disabled={!selectedCue || sending}>
+            Preview
+          </button>
+          <button type="button" onClick={() => selectedCue && sendCue(selectedCue, true)} disabled={!selectedCue || sending}>
+            Program
+          </button>
           <button type="button" onClick={() => moveSelection(-1)} disabled={selectedIndex <= 0}>
             Prev
           </button>

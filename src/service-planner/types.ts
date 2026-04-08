@@ -69,6 +69,23 @@ export function createServicePlan(partial: Partial<ServicePlan> = {}): ServicePl
   };
 }
 
+export function isServicePlan(value: unknown): value is ServicePlan {
+  if (!value || typeof value !== "object") return false;
+  const plan = value as Partial<ServicePlan>;
+  return Boolean(
+    typeof plan.id === "string" &&
+    typeof plan.title === "string" &&
+    typeof plan.serviceDate === "string" &&
+    Array.isArray(plan.items),
+  );
+}
+
+export function isServicePlannerSnapshot(value: unknown): value is ServicePlannerSnapshot {
+  if (!value || typeof value !== "object") return false;
+  const snapshot = value as Partial<ServicePlannerSnapshot>;
+  return Array.isArray(snapshot.plans);
+}
+
 export function createServicePlanItem(
   input: Omit<ServicePlanItem, "id" | "createdAt" | "updatedAt"> & Partial<Pick<ServicePlanItem, "id" | "createdAt" | "updatedAt">>,
 ): ServicePlanItem {

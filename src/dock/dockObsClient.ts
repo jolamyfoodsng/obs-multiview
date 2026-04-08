@@ -37,6 +37,7 @@ import {
   isUserSelectableObsScene,
   normalizeDockStageBaseScene,
 } from "../services/dockSceneNames";
+import type { LiveToolOverlayPayload, LiveToolTemplate } from "../live-tools/types";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -53,6 +54,16 @@ export interface DockLTThemeRef {
   css: string;
 }
 
+export interface DockAudioInputSource {
+  inputName: string;
+  inputKind: string;
+}
+
+export interface DockMediaSendOptions {
+  muted?: boolean;
+  imageAudioInputName?: string | null;
+}
+
 /** Source names the dock creates as overlays in the user's scenes */
 const DOCK_LT_SOURCE = "⛪ OCS Lower Third";
 const DOCK_ANIMATED_LT_SOURCE = "⛪ OCS Animated Lower Thirds";
@@ -67,8 +78,16 @@ const DOCK_PREVIEW_TICKER_SOURCE = "⛪ OCS Preview Ticker";
 /** Media player source for playing uploaded/library media */
 const DOCK_MEDIA_VIDEO_SOURCE = "⛪ OCS Media Video";
 const DOCK_MEDIA_IMAGE_SOURCE = "⛪ OCS Media Image";
+const DOCK_MEDIA_IMAGE_AUDIO_SOURCE = "⛪ OCS Media Image Audio";
 const DOCK_PREVIEW_MEDIA_VIDEO_SOURCE = "⛪ OCS Preview Media Video";
 const DOCK_PREVIEW_MEDIA_IMAGE_SOURCE = "⛪ OCS Preview Media Image";
+const DOCK_PREVIEW_MEDIA_IMAGE_AUDIO_SOURCE = "⛪ OCS Preview Media Image Audio";
+const DOCK_LIVE_TOOL_SOURCE = "⛪ OCS Live Tools";
+const DOCK_PREVIEW_LIVE_TOOL_SOURCE = "⛪ OCS Preview Live Tools";
+const DOCK_LIVE_TOOL_MEDIA_VIDEO_SOURCE = "⛪ OCS Live Tools Media Video";
+const DOCK_LIVE_TOOL_MEDIA_IMAGE_SOURCE = "⛪ OCS Live Tools Media Image";
+const DOCK_PREVIEW_LIVE_TOOL_MEDIA_VIDEO_SOURCE = "⛪ OCS Preview Live Tools Media Video";
+const DOCK_PREVIEW_LIVE_TOOL_MEDIA_IMAGE_SOURCE = "⛪ OCS Preview Live Tools Media Image";
 /** Background source placed BEHIND fullscreen overlays to prevent flash/twitch between slides */
 const DOCK_FS_BG_SOURCE = "⛪ OCS Fullscreen BG";
 const DOCK_PREVIEW_FS_BG_SOURCE = "⛪ OCS Preview Fullscreen BG";
@@ -90,6 +109,7 @@ interface DockResourceNames {
   tickerSource: string;
   mediaVideoSource: string;
   mediaImageSource: string;
+  mediaImageAudioSource: string;
   fsBgSource: string;
   fsTargetBgPrefix: string;
   bibleScene: string;
@@ -104,6 +124,7 @@ const LIVE_DOCK_RESOURCES: DockResourceNames = {
   tickerSource: DOCK_TICKER_SOURCE,
   mediaVideoSource: DOCK_MEDIA_VIDEO_SOURCE,
   mediaImageSource: DOCK_MEDIA_IMAGE_SOURCE,
+  mediaImageAudioSource: DOCK_MEDIA_IMAGE_AUDIO_SOURCE,
   fsBgSource: DOCK_FS_BG_SOURCE,
   fsTargetBgPrefix: DOCK_FS_TARGET_BG_PREFIX,
   bibleScene: DOCK_BIBLE_SCENE,
@@ -118,6 +139,7 @@ const PREVIEW_DOCK_RESOURCES: DockResourceNames = {
   tickerSource: DOCK_PREVIEW_TICKER_SOURCE,
   mediaVideoSource: DOCK_PREVIEW_MEDIA_VIDEO_SOURCE,
   mediaImageSource: DOCK_PREVIEW_MEDIA_IMAGE_SOURCE,
+  mediaImageAudioSource: DOCK_PREVIEW_MEDIA_IMAGE_AUDIO_SOURCE,
   fsBgSource: DOCK_PREVIEW_FS_BG_SOURCE,
   fsTargetBgPrefix: DOCK_PREVIEW_FS_TARGET_BG_PREFIX,
   bibleScene: DOCK_PREVIEW_BIBLE_SCENE,
@@ -744,6 +766,9 @@ class DockObsClient {
       LIVE_DOCK_RESOURCES.fsBgSource,
       LIVE_DOCK_RESOURCES.bibleScene,
       LIVE_DOCK_RESOURCES.worshipScene,
+      DOCK_LIVE_TOOL_SOURCE,
+      DOCK_LIVE_TOOL_MEDIA_VIDEO_SOURCE,
+      DOCK_LIVE_TOOL_MEDIA_IMAGE_SOURCE,
       PREVIEW_DOCK_RESOURCES.ltSource,
       PREVIEW_DOCK_RESOURCES.bibleSource,
       PREVIEW_DOCK_RESOURCES.worshipSource,
@@ -753,6 +778,9 @@ class DockObsClient {
       PREVIEW_DOCK_RESOURCES.fsBgSource,
       PREVIEW_DOCK_RESOURCES.bibleScene,
       PREVIEW_DOCK_RESOURCES.worshipScene,
+      DOCK_PREVIEW_LIVE_TOOL_SOURCE,
+      DOCK_PREVIEW_LIVE_TOOL_MEDIA_VIDEO_SOURCE,
+      DOCK_PREVIEW_LIVE_TOOL_MEDIA_IMAGE_SOURCE,
     ]);
 
     return (
@@ -3319,13 +3347,359 @@ class DockObsClient {
   // ── Media playback ──
 
   /**
+   * Push a church-service Live Tool to Preview or Program.
+   */
+  async pushLiveTool(tool: LiveToolTemplate, live: boolean): Promise<void> {
+    if (tool.kind === "scene" && tool.sceneName) {
+      await this.switchSceneForTarget(tool.sceneName, live);
+      return;
+    }
+
+    if (tool.kind === "scene") {
+      throw new Error("Choose an OBS scene in the app before using this tool.");
+    }
+
+    if (tool.kind === "safety-action") {
+      await this.runLiveToolSafetyAction(tool, live);
+      return;
+    }
+
+    if (tool.kind === "media-loop" && tool.backgroundMediaPath) {
+      await this.pushLiveToolMedia(tool, live);
+      return;
+    }
+
+    await this.pushLiveToolOverlay(tool, live);
+  }
+
+  private getLiveToolSources(live: boolean) {
+    return live
+      ? {
+        overlaySource: DOCK_LIVE_TOOL_SOURCE,
+        videoSource: DOCK_LIVE_TOOL_MEDIA_VIDEO_SOURCE,
+        imageSource: DOCK_LIVE_TOOL_MEDIA_IMAGE_SOURCE,
+      }
+      : {
+        overlaySource: DOCK_PREVIEW_LIVE_TOOL_SOURCE,
+        videoSource: DOCK_PREVIEW_LIVE_TOOL_MEDIA_VIDEO_SOURCE,
+        imageSource: DOCK_PREVIEW_LIVE_TOOL_MEDIA_IMAGE_SOURCE,
+      };
+  }
+
+  private buildLiveToolOverlayUrl(tool: LiveToolTemplate): string {
+    const payload: LiveToolOverlayPayload = {
+      kind: tool.kind,
+      label: tool.label,
+      title: tool.title,
+      subtitle: tool.subtitle,
+      body: tool.body,
+      cta: tool.cta,
+      durationSeconds: tool.durationSeconds,
+      backgroundColor: tool.backgroundColor,
+      backgroundMediaUrl: tool.backgroundMediaUrl,
+      lowerThird: tool.kind === "lower-third",
+      timestamp: Date.now(),
+    };
+    return `${this.getOverlayBaseUrl()}/live-tool-overlay.html#data=${encodeURIComponent(JSON.stringify(payload))}`;
+  }
+
+  private async getResolvedLiveToolScene(live: boolean): Promise<string> {
+    if (!live) {
+      try {
+        await this.call("SetStudioModeEnabled", { studioModeEnabled: true });
+        await this.sleep(150);
+        const preview = await this.call("GetCurrentPreviewScene") as {
+          currentPreviewSceneName?: string;
+          sceneName?: string;
+        };
+        const previewSceneName = preview.currentPreviewSceneName || preview.sceneName || "";
+        const normalizedPreviewSceneName = await this.normalizePreviewTargetScene(previewSceneName);
+        if (!normalizedPreviewSceneName) throw new Error("Could not determine the current Preview scene.");
+        return this.ensurePreviewTargetScene(normalizedPreviewSceneName);
+      } catch (err) {
+        throw new Error(err instanceof Error ? err.message : "Could not prepare OBS Preview.");
+      }
+    }
+
+    const target = await this.getTargetScene(live);
+    if (!target.sceneName) throw new Error("Could not determine the current OBS scene.");
+    return target.sceneName;
+  }
+
+  private async switchSceneForTarget(sceneName: string, live: boolean): Promise<void> {
+    if (live) {
+      await this.call("SetCurrentProgramScene", { sceneName });
+      return;
+    }
+
+    try {
+      await this.call("SetStudioModeEnabled", { studioModeEnabled: true });
+      await this.sleep(150);
+    } catch {
+      // Continue and let OBS report the preview failure if Studio Mode is unavailable.
+    }
+    await this.setCurrentPreviewScene(sceneName);
+  }
+
+  private async pushLiveToolOverlay(tool: LiveToolTemplate, live: boolean): Promise<void> {
+    const sources = this.getLiveToolSources(live);
+    const sceneName = await this.getResolvedLiveToolScene(live);
+    await this.hideMediaSourceWithAnimation(sceneName, sources.videoSource);
+    await this.hideMediaSourceWithAnimation(sceneName, sources.imageSource);
+    await this.ensureOverlaySource(sceneName, sources.overlaySource, undefined, undefined, true);
+    await this.setBrowserSourceUrl(sources.overlaySource, this.buildLiveToolOverlayUrl(tool), false);
+  }
+
+  private async pushLiveToolMedia(tool: LiveToolTemplate, live: boolean): Promise<void> {
+    const sources = this.getLiveToolSources(live);
+    const sceneName = await this.getResolvedLiveToolScene(live);
+    const fileName = tool.backgroundMediaName || tool.backgroundMediaPath || tool.label;
+    const ext = fileName.split(".").pop()?.toLowerCase() || "";
+    const isImage = ["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "avif"].includes(ext);
+
+    await this.hideOverlaySource(sceneName, sources.overlaySource);
+    if (isImage) {
+      await this.hideMediaSourceWithAnimation(sceneName, sources.videoSource);
+      const sceneItemId = await this._ensureNativeMediaSource(
+        sceneName,
+        sources.imageSource,
+        "image_source",
+        { file: tool.backgroundMediaPath },
+        true,
+      );
+      await this.animateMediaSceneItem(sceneName, sceneItemId, "in");
+      return;
+    }
+
+    await this.hideMediaSourceWithAnimation(sceneName, sources.imageSource);
+    const sceneItemId = await this._ensureNativeMediaSource(
+      sceneName,
+      sources.videoSource,
+      "ffmpeg_source",
+      {
+        local_file: tool.backgroundMediaPath,
+        looping: true,
+        is_local_file: true,
+        restart_on_activate: true,
+      },
+      true,
+    );
+    try {
+      await this.call("TriggerMediaInputAction", {
+        inputName: sources.videoSource,
+        mediaAction: "OBS_WEBSOCKET_MEDIA_INPUT_ACTION_RESTART",
+      });
+    } catch { /* ignore */ }
+    await this.animateMediaSceneItem(sceneName, sceneItemId, "in");
+  }
+
+  private async runLiveToolSafetyAction(tool: LiveToolTemplate, live: boolean): Promise<void> {
+    if (tool.action === "safe-scene" && tool.sceneName) {
+      await this.switchSceneForTarget(tool.sceneName, live);
+      return;
+    }
+
+    if (tool.action === "mute-mic" && tool.sourceName) {
+      await this.call("SetInputMute", {
+        inputName: tool.sourceName,
+        inputMuted: true,
+      });
+      return;
+    }
+
+    if (tool.action === "mute-mic") {
+      throw new Error("Choose a mic source in the app before using Mute Mic.");
+    }
+
+    if (tool.action === "hide-overlays") {
+      const sceneName = await this.getResolvedLiveToolScene(live);
+      const resp = await this.call("GetSceneItemList", { sceneName }) as {
+        sceneItems: Array<{ sourceName: string; sceneItemId: number }>;
+      };
+      await Promise.all(resp.sceneItems.map(async (item) => {
+        if (!item.sourceName.includes("OCS")) return;
+        try {
+          await this.call("SetSceneItemEnabled", {
+            sceneName,
+            sceneItemId: item.sceneItemId,
+            sceneItemEnabled: false,
+          });
+        } catch { /* ignore */ }
+      }));
+      return;
+    }
+
+    if (tool.action === "safe-scene") {
+      throw new Error("Choose a safe OBS scene in the app before using Safe Scene.");
+    }
+
+    await this.pushLiveToolOverlay(tool, live);
+  }
+
+  async clearLiveToolTarget(live: boolean): Promise<void> {
+    const sources = this.getLiveToolSources(live);
+    const sceneName = await this.getResolvedLiveToolScene(live);
+    await this.hideOverlaySource(sceneName, sources.overlaySource);
+    await this.hideMediaSourceWithAnimation(sceneName, sources.videoSource);
+    await this.hideMediaSourceWithAnimation(sceneName, sources.imageSource);
+  }
+
+  async clearLiveTools(): Promise<void> {
+    await Promise.all([
+      this.clearLiveToolTarget(false),
+      this.clearLiveToolTarget(true),
+    ]);
+  }
+
+  private isAudioInputCaptureKind(inputKind: string): boolean {
+    const kind = inputKind.toLowerCase();
+    if (kind.includes("output_capture") || kind.includes("ffmpeg") || kind.includes("browser")) {
+      return false;
+    }
+    return (
+      kind.includes("input_capture") ||
+      kind.includes("audio_input") ||
+      kind.includes("audioinput") ||
+      kind === "coreaudio_input_capture" ||
+      kind === "wasapi_input_capture" ||
+      kind === "pulse_input_capture" ||
+      kind === "alsa_input_capture"
+    );
+  }
+
+  async listAudioInputSources(): Promise<DockAudioInputSource[]> {
+    const resp = await this.call("GetInputList") as {
+      inputs: Array<{ inputName: string; inputKind: string }>;
+    };
+    return resp.inputs
+      .filter((input) => this.isAudioInputCaptureKind(input.inputKind))
+      .filter((input) => !input.inputName.includes("Media Image Audio"))
+      .map((input) => ({
+        inputName: input.inputName,
+        inputKind: input.inputKind,
+      }))
+      .sort((a, b) => a.inputName.localeCompare(b.inputName));
+  }
+
+  async setMediaVideoMuted(live: boolean, muted: boolean): Promise<void> {
+    const resources = getDockResources(live);
+    try {
+      await this.call("SetInputMute", {
+        inputName: resources.mediaVideoSource,
+        inputMuted: muted,
+      });
+    } catch {
+      // The source may not exist yet; the preference will apply on next send.
+    }
+  }
+
+  private async _ensureSceneInputSource(
+    sceneName: string,
+    sourceName: string,
+    inputKind: string,
+    inputSettings: Record<string, unknown>,
+    enable: boolean,
+  ): Promise<number> {
+    let inputExists = false;
+    try {
+      const inputs = await this.call("GetInputList") as {
+        inputs: Array<{ inputName: string; inputKind: string }>;
+      };
+      const existing = inputs.inputs.find((input) => input.inputName === sourceName);
+      if (existing) {
+        inputExists = true;
+        if (existing.inputKind === inputKind) {
+          await this.call("SetInputSettings", {
+            inputName: sourceName,
+            inputSettings,
+          });
+        } else {
+          try { await this.call("RemoveInput", { inputName: sourceName }); } catch { /* ignore */ }
+          inputExists = false;
+        }
+      }
+    } catch { /* ignore */ }
+
+    const resp = await this.call("GetSceneItemList", { sceneName }) as {
+      sceneItems: Array<{ sourceName: string; sceneItemId: number }>;
+    };
+    let sceneItem = resp.sceneItems.find((item) => item.sourceName === sourceName);
+
+    if (!sceneItem) {
+      if (inputExists) {
+        const created = await this.call("CreateSceneItem", {
+          sceneName,
+          sourceName,
+          sceneItemEnabled: enable,
+        }) as { sceneItemId: number };
+        sceneItem = { sourceName, sceneItemId: created.sceneItemId };
+      } else {
+        const created = await this.call("CreateInput", {
+          sceneName,
+          inputName: sourceName,
+          inputKind,
+          inputSettings,
+          sceneItemEnabled: enable,
+        }) as { sceneItemId: number };
+        sceneItem = { sourceName, sceneItemId: created.sceneItemId };
+      }
+    }
+
+    try {
+      await this.call("SetSceneItemEnabled", {
+        sceneName,
+        sceneItemId: sceneItem.sceneItemId,
+        sceneItemEnabled: enable,
+      });
+    } catch { /* ignore */ }
+
+    return sceneItem.sceneItemId;
+  }
+
+  private async attachMediaImageAudioSource(
+    sceneName: string,
+    resources: DockResourceNames,
+    audioInputName: string,
+  ): Promise<void> {
+    const inputs = await this.call("GetInputList") as {
+      inputs: Array<{ inputName: string; inputKind: string }>;
+    };
+    const source = inputs.inputs.find((input) => input.inputName === audioInputName);
+    if (!source || !this.isAudioInputCaptureKind(source.inputKind)) {
+      throw new Error(`"${audioInputName}" is not an OBS audio input capture source.`);
+    }
+
+    const current = await this.call("GetInputSettings", { inputName: audioInputName }) as {
+      inputKind?: string;
+      inputSettings?: Record<string, unknown>;
+    };
+
+    const inputKind = current.inputKind || source.inputKind;
+    await this._ensureSceneInputSource(
+      sceneName,
+      resources.mediaImageAudioSource,
+      inputKind,
+      current.inputSettings || {},
+      true,
+    );
+
+    try {
+      await this.call("SetInputMute", {
+        inputName: resources.mediaImageAudioSource,
+        inputMuted: false,
+      });
+    } catch { /* ignore */ }
+  }
+
+  /**
    * Push a media file to OBS using native sources (ffmpeg_source for video,
    * image_source for images) instead of a browser source.
    * @param filePath  Absolute local file path (e.g. ~/Documents/OBSChurchStudio/uploads/video.mp4)
    * @param fileName  Human-readable name for logging
    * @param live      false = Preview scene, true = Program scene (Go Live)
+   * @param options   Audio behavior for video mute and image-linked mic/audio input.
    */
-  async pushMedia(filePath: string, fileName: string, live: boolean): Promise<void> {
+  async pushMedia(filePath: string, fileName: string, live: boolean, options: DockMediaSendOptions = {}): Promise<void> {
     const resources = getDockResources(live);
     const target = await this.getTargetScene(live);
     let sceneName = target.sceneName;
@@ -3344,17 +3718,34 @@ class DockObsClient {
       // ── Image: use image_source ──
       // Hide video source if it was previously active
       await this.hideMediaSourceWithAnimation(sceneName, resources.mediaVideoSource);
+      try {
+        await this.call("SetInputMute", {
+          inputName: resources.mediaVideoSource,
+          inputMuted: true,
+        });
+      } catch { /* ignore */ }
 
       const sceneItemId = await this._ensureNativeMediaSource(
         sceneName, resources.mediaImageSource, "image_source",
         { file: filePath },
         shouldEnable,
       );
+      if (options.imageAudioInputName) {
+        try {
+          await this.attachMediaImageAudioSource(sceneName, resources, options.imageAudioInputName);
+        } catch (err) {
+          console.warn("[DockOBS] Could not attach image audio input:", err);
+          await this.hideOverlaySource(sceneName, resources.mediaImageAudioSource);
+        }
+      } else {
+        await this.hideOverlaySource(sceneName, resources.mediaImageAudioSource);
+      }
       await this.animateMediaSceneItem(sceneName, sceneItemId, "in");
     } else {
       // ── Video / Audio: use ffmpeg_source ──
       // Hide image source if it was previously active
       await this.hideMediaSourceWithAnimation(sceneName, resources.mediaImageSource);
+      await this.hideOverlaySource(sceneName, resources.mediaImageAudioSource);
 
       const sceneItemId = await this._ensureNativeMediaSource(
         sceneName, resources.mediaVideoSource, "ffmpeg_source",
@@ -3366,6 +3757,12 @@ class DockObsClient {
         },
         shouldEnable,
       );
+      try {
+        await this.call("SetInputMute", {
+          inputName: resources.mediaVideoSource,
+          inputMuted: options.muted ?? true,
+        });
+      } catch { /* ignore */ }
 
       // Restart video playback (source may already exist with old media)
       try {
@@ -3502,6 +3899,7 @@ class DockObsClient {
       for (const src of [resources.mediaVideoSource, resources.mediaImageSource]) {
         await this.hideMediaSourceWithAnimation(resolvedScene, src);
       }
+      await this.hideOverlaySource(resolvedScene, resources.mediaImageAudioSource);
     } catch { /* ignore */ }
   }
 

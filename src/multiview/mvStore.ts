@@ -407,10 +407,13 @@ export interface MVSettings {
   // ── Service Hub Defaults ──
   lowerThirdDefaultDurationSec: number;
   brandColor: string;
+  brandSecondaryColor: string;
   churchName: string;
+  mainPastorName: string;
   pastorNames: string;
   pastorSpeakers: SpeakerProfileSetting[];
   brandLogoPath: string;
+  churchProfileOnboardingCompleted: boolean;
   socialWebsite: string;
   socialInstagram: string;
   socialFacebook: string;
@@ -454,10 +457,13 @@ export const DEFAULT_SETTINGS: MVSettings = {
 
   lowerThirdDefaultDurationSec: 10,
   brandColor: "#2563eb",
+  brandSecondaryColor: "",
   churchName: "",
+  mainPastorName: "",
   pastorNames: "",
   pastorSpeakers: [],
   brandLogoPath: "",
+  churchProfileOnboardingCompleted: false,
   socialWebsite: "",
   socialInstagram: "",
   socialFacebook: "",
@@ -511,7 +517,13 @@ export function updateSettings(patch: Partial<MVSettings>): MVSettings {
   }
 
   // Sync branding settings to dock data file (fire-and-forget)
-  if (patch.brandLogoPath !== undefined || patch.brandColor !== undefined || patch.churchName !== undefined) {
+  if (
+    patch.brandLogoPath !== undefined ||
+    patch.brandColor !== undefined ||
+    patch.brandSecondaryColor !== undefined ||
+    patch.churchName !== undefined ||
+    patch.mainPastorName !== undefined
+  ) {
     syncBrandingToDock(updated).catch(() => {});
   }
 
@@ -554,7 +566,9 @@ export async function syncBrandingToDock(settings: MVSettings): Promise<void> {
         brandLogoPath: settings.brandLogoPath,
         brandLogoFileName: logoFileName,
         brandColor: settings.brandColor,
+        brandSecondaryColor: settings.brandSecondaryColor,
         churchName: settings.churchName,
+        mainPastorName: settings.mainPastorName,
       }),
     });
   } catch (err) {
