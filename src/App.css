@@ -127,8 +127,7 @@ body {
 }
 
 :where(h1, h2, h3, h4, h5, h6),
-:where(
-  .app-page__title,
+:where(.app-page__title,
   .app-surface__title,
   .dash-hero-title,
   .dash-section-heading h3,
@@ -178,8 +177,7 @@ body {
   .bible-settings-section-title,
   .bible-library-header h2,
   .bible-library-confirm-header h3,
-  .bible-library-import-info h3
-) {
+  .bible-library-import-info h3) {
   font-family: var(--font-heading);
 }
 
@@ -3396,6 +3394,7 @@ input[type="radio"] {
 /* ── Shortcuts modal tabs ── */
 .shortcuts-modal-tabs {
   display: flex;
+  min-height: 60px;
   gap: 0;
   padding: 0 18px;
   border-bottom: 1px solid var(--b-border, #2C2C2C);
@@ -3918,6 +3917,7 @@ input[type="radio"] {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .app-topnav-tab,
   .app-topnav-theme-btn,
   .app-topnav-icon-btn,

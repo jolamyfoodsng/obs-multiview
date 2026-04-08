@@ -66,9 +66,6 @@ function createProductionHistoryEntry(item: DockStagedItem): DockProductionHisto
     const identityParts = [
       song.id,
       label,
-      data.sectionIdx,
-      sectionLabel,
-      sectionText,
     ].map((part) => String(part ?? "").trim()).filter(Boolean);
 
     return {
@@ -130,10 +127,29 @@ function isProductionHistoryEntry(value: unknown): value is DockProductionHistor
 }
 
 function normalizeProductionHistoryEntry(entry: DockProductionHistoryEntry): DockProductionHistoryEntry {
-  if (entry.kind) return entry;
+  const normalized: DockProductionHistoryEntry = entry.kind
+    ? entry
+    : {
+        ...entry,
+        kind: entry.item.type === "worship" ? "worship" : "bible",
+      };
+
+  if (normalized.kind !== "worship") return normalized;
+
+  const data = getProductionStageData(normalized.item);
+  const song = data.song && typeof data.song === "object" ? (data.song as Record<string, unknown>) : {};
+  const label = typeof song.title === "string" && song.title.trim()
+    ? song.title.trim()
+    : normalized.label.trim();
+  const identityParts = [
+    song.id,
+    label,
+  ].map((part) => String(part ?? "").trim()).filter(Boolean);
+
   return {
-    ...entry,
-    kind: entry.item.type === "worship" ? "worship" : "bible",
+    ...normalized,
+    id: `worship:${identityParts.join("|") || label || normalized.id.replace(/^worship:/, "")}`,
+    label: label || normalized.label,
   };
 }
 
@@ -143,10 +159,12 @@ function loadProductionHistoryEntries(key: string): DockProductionHistoryEntry[]
     if (!raw) return [];
     const parsed = JSON.parse(raw) as unknown;
     if (!Array.isArray(parsed)) return [];
-    return parsed
+    const normalized = parsed
       .filter(isProductionHistoryEntry)
       .map(normalizeProductionHistoryEntry)
+      .reduce<DockProductionHistoryEntry[]>((entries, entry) => upsertProductionHistoryEntry(entries, entry), [])
       .slice(0, DOCK_PRODUCTION_HISTORY_LIMIT);
+    return normalized;
   } catch {
     return [];
   }
@@ -550,6 +568,7 @@ export default function DockPage() {
             >
               <Icon name={currentProductionFavorite ? "star" : "star_border"} size={14} />
             </button>
+
             <button
               type="button"
               className="dock-shell-icon-btn dock-shell-icon-btn--theme"

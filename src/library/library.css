@@ -751,7 +751,7 @@
   display: inline-block;
   padding: 2px 8px;
   border-radius: 4px;
-  font-size: 10px;
+  font-size: 7px;
   font-weight: 700;
   background: var(--surface-overlay);
   color: var(--text-muted);

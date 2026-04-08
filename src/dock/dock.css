@@ -3490,7 +3490,7 @@
 .dock-shell-history-menu {
   position: absolute;
   top: calc(100% + 6px);
-  right: 0;
+  right: -90px;
   z-index: 220;
   width: min(300px, calc(100vw - 18px));
   max-height: min(70vh, 360px);
@@ -3872,6 +3872,7 @@
   color: var(--dock-text-dim);
   font-size: 11px;
   line-height: 1.45;
+  min-height: 25rem;
 }
 
 .dock-console-list {

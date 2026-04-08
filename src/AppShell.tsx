@@ -118,7 +118,7 @@ const NAV_ITEMS: ReadonlyArray<{ to: string; icon: string; label: string; end?: 
 export function AppShell() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [obsConnected, setObsConnected] = useState(obsService.status === "connected");
+  const [, setObsConnected] = useState(obsService.status === "connected");
   const { effective, setTheme } = useAppTheme();
   const svc = useServiceStore();
 
@@ -328,11 +328,7 @@ export function AppShell() {
         {!isServiceActive && (
           <div className="app-topnav-right">
             {/* OBS Status */}
-            <div className={`app-topnav-obs${obsConnected ? " is-connected" : ""}`} aria-live="polite">
-              <Icon name={obsConnected ? "link" : "link_off"} size={14} />
-              <span className="app-topnav-obs-dot" />
-              <span>{obsConnected ? "Connected" : "Disconnected"}</span>
-            </div>
+
 
             {/* Theme Toggle */}
             <button
@@ -449,18 +445,18 @@ export function AppShell() {
                     <div className="shortcuts-modal-section" key={cat}>
                       <h4>{
                         cat === "navigation" ? "Navigation" :
-                        cat === "file" ? "File" :
-                        cat === "edit" ? "Edit" :
-                        cat === "selection" ? "Selection" :
-                        cat === "view" ? "View & Zoom" :
-                        cat === "canvas" ? "Canvas & Grid" :
-                        cat === "slots" ? "Slots" :
-                        cat === "alignment" ? "Alignment" :
-                        cat === "bible" ? "Bible" :
-                        cat === "lowerthirds" ? "Lower Thirds" :
-                        cat === "quickmerge" ? "Quick Merge" :
-                        cat === "worship" ? "Speaker" :
-                        cat === "ticker" ? "Ticker" : cat
+                          cat === "file" ? "File" :
+                            cat === "edit" ? "Edit" :
+                              cat === "selection" ? "Selection" :
+                                cat === "view" ? "View & Zoom" :
+                                  cat === "canvas" ? "Canvas & Grid" :
+                                    cat === "slots" ? "Slots" :
+                                      cat === "alignment" ? "Alignment" :
+                                        cat === "bible" ? "Bible" :
+                                          cat === "lowerthirds" ? "Lower Thirds" :
+                                            cat === "quickmerge" ? "Quick Merge" :
+                                              cat === "worship" ? "Speaker" :
+                                                cat === "ticker" ? "Ticker" : cat
                       }</h4>
                       {items.map((s) => (
                         <div className="shortcuts-modal-row" key={s.id}>

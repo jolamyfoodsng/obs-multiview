@@ -1841,17 +1841,20 @@ export default function DockBibleTab({
               aria-label={voiceActionLabel}
               aria-pressed={voiceListening}
               title={voiceActionLabel}
-              style={voiceListening ? voiceMeterStyle : undefined}
+              style={voiceMeterStyle}
             >
-              <Icon name={voiceActionIcon} size={15} />
-              {voiceListening && (
+              {voiceListening || voiceBusy ? (
                 <span className="dock-search__voice-meter" aria-hidden="true">
                   <span className="dock-search__voice-meter-bar" />
                   <span className="dock-search__voice-meter-bar" />
                   <span className="dock-search__voice-meter-bar" />
                 </span>
+              ) : (
+                <Icon name={voiceActionIcon} size={14} />
               )}
             </button>
+
+
 
             {showDropdown && searchResults.length > 0 && (
               <div className="dock-search-dropdown">
@@ -2078,7 +2081,7 @@ export default function DockBibleTab({
             <div className="dock-console-placeholder">Loading {currentChapterLabel}…</div>
           )}
 
-          {!chapterLoading && activeChapterError && !activePassage?.verses.length && (
+          {chapterLoading && activeChapterError && !activePassage?.verses.length && (
             <div className="dock-action-error dock-action-error--console">
               <Icon name="warning" size={14} />
               <span style={{ flex: 1 }}>{activeChapterError}</span>

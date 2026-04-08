@@ -247,7 +247,7 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
   );
   const [overlayMode, setOverlayMode] = useState<OverlayMode>(productionDefaults.defaultMode);
   const [linesPerSlide, setLinesPerSlide] = useState<number>(2);
-  const [sending, setSending] = useState(false);
+  const [, setSending] = useState(false);
   const [actionError, setActionError] = useState("");
   const [songEditor, setSongEditor] = useState<DockSong | null>(null);
   const [songDraft, setSongDraft] = useState<DockSongDraft>({ title: "", artist: "", lyrics: "" });
@@ -958,11 +958,6 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
     [activeSectionIndex, isProgramLive, pushSection, selectedSong, visibleSectionIndexes],
   );
 
-  const handlePreviewCurrent = useCallback(async () => {
-    if (activeSectionIndex === null) return;
-    await pushSection(activeSectionIndex, false);
-  }, [activeSectionIndex, pushSection]);
-
   const handleGoLiveCurrent = useCallback(async () => {
     if (activeSectionIndex === null) return;
     await pushSection(activeSectionIndex, true);
@@ -1432,26 +1427,6 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
           )}
 
           <div className="dock-console-action-row dock-console-action-row--worship">
-            <div className="dock-console-action-pair">
-              <button
-                type="button"
-                className="dock-btn dock-btn--toolbar dock-btn--preview"
-                onClick={() => void handlePreviewCurrent()}
-                disabled={activeSectionIndex === null || sending}
-              >
-                <Icon name={sending ? "sync" : "preview"} size={16} />
-                {sending ? "Sending..." : "Send to Preview"}
-              </button>
-              <button
-                type="button"
-                className="dock-btn dock-btn--toolbar dock-btn--live"
-                onClick={() => void handleGoLiveCurrent()}
-                disabled={activeSectionIndex === null || sending}
-              >
-                <Icon name={sending ? "sync" : "cast"} size={16} />
-                {sending ? "Sending..." : "Go Live"}
-              </button>
-            </div>
             <button
               type="button"
               className="dock-btn dock-btn--toolbar dock-btn--danger dock-console-action-row__clear"

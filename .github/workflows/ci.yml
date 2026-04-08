@@ -51,8 +51,17 @@ jobs:
           workspaces: src-tauri
           cache-on-failure: true
 
+      - name: Cache local LLM model
+        uses: actions/cache@v4
+        with:
+          path: src-tauri/resources/models/llm/qwen2.5-1.5b-instruct-q4_k_m.gguf
+          key: local-llm-${{ runner.os }}-qwen2.5-1.5b-instruct-q4-k-m-6a1a2e
+
       - name: Install dependencies
         run: npm install
+
+      - name: Prepare bundled local LLM model
+        run: npm run sync:local-llm-model
 
       - name: Build Tauri app
         uses: tauri-apps/tauri-action@v0

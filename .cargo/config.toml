@@ -1,7 +1,19 @@
-[env]
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "link-arg=/FORCE:MULTIPLE"]
+
+[target.x86_64-pc-windows-msvc.env]
 LIBCLANG_PATH = "C:\\Program Files\\LLVM\\bin"
 CLANG_PATH = "C:\\Program Files\\LLVM\\bin\\clang.exe"
 CMAKE = 'C:\Program Files (x86)\Microsoft Visual Studio\18\BuildTools\Common7\IDE\CommonExtensions\Microsoft\CMake\CMake\bin\cmake.exe'
 
-[target.x86_64-pc-windows-msvc]
-rustflags = ["-C", "link-arg=/FORCE:MULTIPLE"]
+[target.aarch64-apple-darwin.env]
+LIBCLANG_PATH = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib"
+CLANG_PATH = "/usr/bin/clang"
+MACOSX_DEPLOYMENT_TARGET = "10.15"
+CMAKE_OSX_DEPLOYMENT_TARGET = "10.15"
+
+[target.x86_64-apple-darwin.env]
+LIBCLANG_PATH = "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib"
+CLANG_PATH = "/usr/bin/clang"
+MACOSX_DEPLOYMENT_TARGET = "10.15"
+CMAKE_OSX_DEPLOYMENT_TARGET = "10.15"
