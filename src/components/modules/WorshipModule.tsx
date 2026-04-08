@@ -15,7 +15,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { generateSlides } from "../../worship/slideEngine";
+import { formatLyricsFromSections, generateSlides, parseWorshipLyricSections } from "../../worship/slideEngine";
 import { archiveSong, getAllSongs, saveSong, syncSongsToDock } from "../../worship/worshipDb";
 import { worshipObsService } from "../../worship/worshipObsService";
 import {
@@ -410,6 +410,10 @@ export function WorshipModule({
 
   const songSlides: Slide[] = useMemo(
     () => (selectedSong ? generateSlides(selectedSong.lyrics, 2, false) : []),
+    [selectedSong]
+  );
+  const songLyricSections = useMemo(
+    () => (selectedSong ? parseWorshipLyricSections(selectedSong.lyrics, 2) : []),
     [selectedSong]
   );
 
@@ -829,6 +833,18 @@ export function WorshipModule({
     [pushToObs, isLive, layoutMode, checkServiceActive]
   );
 
+  const handleJumpToSongSection = useCallback(
+    async (slideIndex: number, sendLive = false) => {
+      setLiveSlideIndex(slideIndex);
+      if (sendLive) {
+        await sendSlideToObs(slideIndex);
+      } else if (isLive) {
+        await pushToObs(slideIndex, true, false);
+      }
+    },
+    [isLive, pushToObs, sendSlideToObs],
+  );
+
   // ── Controls ──
   const handlePrevSlide = useCallback(async () => {
     const next = Math.max(0, liveSlideIndex - 1);
@@ -936,10 +952,28 @@ export function WorshipModule({
 
   const saveEdit = useCallback(async () => {
     if (editingSlideIdx === null || !selectedSong) return;
-    const newSlides = songSlides.map((s, i) =>
-      i === editingSlideIdx ? { ...s, content: editText } : s
-    );
-    const newLyrics = newSlides.map((s) => s.content).join("\n\n");
+    const nextSections = songLyricSections.map((section) => {
+      if (
+        editingSlideIdx < section.startSlideIndex ||
+        editingSlideIdx >= section.startSlideIndex + section.slideCount
+      ) {
+        return section;
+      }
+
+      const localSlideIndex = editingSlideIdx - section.startSlideIndex;
+      const nextLines = [...section.lines];
+      const startLine = localSlideIndex * 2;
+      nextLines.splice(
+        startLine,
+        2,
+        ...editText
+          .split(/\r?\n/)
+          .map((line) => line.trim())
+          .filter(Boolean),
+      );
+      return { ...section, lines: nextLines };
+    });
+    const newLyrics = formatLyricsFromSections(nextSections);
     const updated: Song = {
       ...selectedSong,
       lyrics: newLyrics,
@@ -948,7 +982,7 @@ export function WorshipModule({
     await saveSong(updated);
     await reloadSongs();
     setEditingSlideIdx(null);
-  }, [editingSlideIdx, editText, selectedSong, songSlides, reloadSongs]);
+  }, [editingSlideIdx, editText, selectedSong, songLyricSections, reloadSongs]);
 
   // ── Archive song ──
   const handleArchiveSong = useCallback(
@@ -1478,6 +1512,28 @@ export function WorshipModule({
                     </button>
                   </div>
                 </div>
+
+                {songLyricSections.length > 1 && (
+                  <div className="worship-section-jumpbar" aria-label="Song section quick jumps">
+                    {songLyricSections.map((section) => {
+                      const isCurrent = liveSlideIndex >= section.startSlideIndex &&
+                        liveSlideIndex < section.startSlideIndex + section.slideCount;
+                      return (
+                        <button
+                          key={section.id}
+                          type="button"
+                          className={`worship-section-jump${isCurrent ? " active" : ""} worship-section-jump--${section.type}`}
+                          onClick={() => void handleJumpToSongSection(section.startSlideIndex)}
+                          onDoubleClick={() => void handleJumpToSongSection(section.startSlideIndex, true)}
+                          title={`${section.label}: click selects, double-click sends to OBS`}
+                        >
+                          <span className="worship-section-jump-short">{section.shortLabel}</span>
+                          <span className="worship-section-jump-label">{section.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
 
                 <div className="worship-slides-list" ref={slideListRef}>
                   {songSlides.map((slide, index) => {

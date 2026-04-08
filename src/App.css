@@ -10522,3 +10522,348 @@ input[type="radio"] {
     width: 100%;
   }
 }
+/* ── Service Planner ── */
+.service-planner-page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 100%;
+  padding: 24px;
+  background: var(--bg, #f5f7fb);
+  color: var(--text, #111827);
+}
+
+.service-planner-page .app-section-kicker {
+  margin: 0 0 4px;
+  color: var(--text-muted, #667085);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.service-planner-page .app-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--border, #d6dbe5);
+  border-radius: 4px;
+  background: var(--surface, #fff);
+  color: var(--text, #111827);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.service-planner-page .app-button--primary {
+  border-color: var(--primary, #2563eb);
+  background: var(--primary, #2563eb);
+  color: #fff;
+}
+
+.service-planner-page .app-button--secondary,
+.service-planner-page .app-button--ghost {
+  background: transparent;
+}
+
+.service-planner-page .app-button--danger {
+  border-color: color-mix(in srgb, #dc2626 38%, var(--border, #d6dbe5));
+  color: #b42318;
+}
+
+.service-planner-hero,
+.service-planner-list,
+.service-planner-detail,
+.service-planner-add,
+.service-cue-card,
+.service-planner-empty {
+  border: 1px solid var(--border, #d6dbe5);
+  border-radius: 6px;
+  background: var(--surface, #fff);
+}
+
+.service-planner-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 20px 24px;
+}
+
+.service-planner-hero h1,
+.service-planner-section-head h2 {
+  margin: 0;
+  font-family: var(--font-heading, "Oswald", sans-serif);
+  line-height: 1.08;
+}
+
+.service-planner-hero h1 {
+  font-size: clamp(28px, 4vw, 44px);
+}
+
+.service-planner-hero p {
+  max-width: 760px;
+  margin: 8px 0 0;
+  color: var(--text-muted, #667085);
+}
+
+.service-planner-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 1fr);
+  gap: 16px;
+  min-height: 0;
+}
+
+.service-planner-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-self: start;
+  padding: 12px;
+}
+
+.service-planner-list__header,
+.service-planner-section-head,
+.service-planner-editor__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.service-planner-list__header {
+  color: var(--text-muted, #667085);
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.service-plan-row {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border, #d6dbe5);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.service-plan-row:hover,
+.service-plan-row--active {
+  border-color: color-mix(in srgb, var(--primary, #2563eb) 55%, var(--border, #d6dbe5));
+  background: color-mix(in srgb, var(--primary, #2563eb) 6%, var(--surface, #fff));
+}
+
+.service-plan-row__title {
+  font-weight: 900;
+}
+
+.service-plan-row__meta,
+.service-planner-section-head > span,
+.service-cue-card__topline,
+.service-planner-empty span {
+  color: var(--text-muted, #667085);
+  font-size: 13px;
+}
+
+.service-planner-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 14px;
+}
+
+.service-planner-editor {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) 180px 150px auto;
+  gap: 12px;
+  align-items: end;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border, #d6dbe5);
+}
+
+.service-planner-editor label,
+.service-planner-add label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-muted, #667085);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.service-planner-editor input,
+.service-planner-editor select,
+.service-planner-add input,
+.service-planner-add select,
+.service-planner-add textarea,
+.service-cue-card input,
+.service-cue-card textarea {
+  width: 100%;
+  border: 1px solid var(--border, #d6dbe5);
+  border-radius: 4px;
+  background: var(--input-bg, #fff);
+  color: var(--text, #111827);
+  font: inherit;
+}
+
+.service-planner-editor input,
+.service-planner-editor select,
+.service-planner-add input,
+.service-planner-add select,
+.service-cue-card input {
+  min-height: 38px;
+  padding: 0 10px;
+}
+
+.service-planner-add textarea,
+.service-cue-card textarea {
+  padding: 10px;
+  resize: vertical;
+}
+
+.service-planner-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 380px);
+  gap: 16px;
+  align-items: start;
+}
+
+.service-planner-cues,
+.service-planner-add {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.service-planner-add {
+  position: sticky;
+  top: 88px;
+  padding: 14px;
+}
+
+.service-planner-add__row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.service-cue-card {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) 74px;
+  gap: 12px;
+  padding: 12px;
+}
+
+.service-cue-card--editing {
+  border-color: color-mix(in srgb, var(--primary, #2563eb) 60%, var(--border, #d6dbe5));
+}
+
+.service-cue-card__index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--primary, #2563eb) 10%, var(--surface, #fff));
+  color: var(--primary, #2563eb);
+  font-weight: 900;
+}
+
+.service-cue-card__body,
+.service-cue-card__actions {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.service-cue-card__topline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.service-cue-card__badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 7px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--primary, #2563eb) 10%, var(--surface, #fff));
+  color: var(--primary, #2563eb);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.service-cue-card__actions button {
+  min-height: 28px;
+  border: 1px solid var(--border, #d6dbe5);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text, #111827);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.service-cue-card__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.service-planner-empty {
+  display: grid;
+  gap: 8px;
+  padding: 18px;
+  color: var(--text-muted, #667085);
+}
+
+.service-planner-empty strong {
+  color: var(--text, #111827);
+}
+
+.service-planner-empty--large {
+  place-items: center;
+  min-height: 360px;
+  text-align: center;
+}
+
+.service-planner-inline-error,
+.service-planner-inline-status {
+  padding: 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.service-planner-inline-error {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.service-planner-inline-status {
+  background: color-mix(in srgb, var(--primary, #2563eb) 9%, var(--surface, #fff));
+  color: var(--primary, #2563eb);
+}
+
+@media (max-width: 1180px) {
+  .service-planner-layout,
+  .service-planner-workspace,
+  .service-planner-editor {
+    grid-template-columns: 1fr;
+  }
+
+  .service-planner-add {
+    position: static;
+  }
+}

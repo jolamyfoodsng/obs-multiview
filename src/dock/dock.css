@@ -308,9 +308,11 @@
 /* ── Tab content area (scrollable) ── */
 .dock-content {
   flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: 0px;
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  min-height: 0;
+  overflow: hidden;
+  padding: 0;
 }
 
 .dock-content::-webkit-scrollbar {
@@ -3630,12 +3632,55 @@
   line-height: 1.35;
 }
 
-.dock-content {
+.dock-content-main {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 2px;
   background: transparent;
+}
+
+.dock-side-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-height: 0;
+  padding: 6px 4px;
+  border-right: 1px solid color-mix(in srgb, var(--dock-border) 90%, transparent);
+  background: color-mix(in srgb, var(--dock-surface) 82%, var(--dock-bg));
+}
+
+.dock-side-nav__item {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-height: 44px;
+  padding: 4px 2px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--dock-text-dim);
+  font: inherit;
+  font-size: 8.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.dock-side-nav__item:hover {
+  color: var(--dock-text);
+  background: color-mix(in srgb, var(--dock-surface-hover) 54%, transparent);
+}
+
+.dock-side-nav__item--active {
+  color: #fff;
+  border-color: color-mix(in srgb, var(--dock-accent) 58%, var(--dock-border));
+  background: color-mix(in srgb, var(--dock-accent) 76%, black 24%);
 }
 
 .dock-module {
@@ -3786,6 +3831,19 @@
   align-items: stretch;
 }
 
+.dock-worship-clear-group {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  min-width: 0;
+}
+
+.dock-worship-clear-group__btn {
+  min-width: 0;
+  padding-inline: 6px;
+  font-size: 10px;
+}
+
 .dock-console-action-pair {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3794,7 +3852,8 @@
 }
 
 .dock-console-action-row__clear {
-  min-width: 84px;
+  min-width: 58px;
+  padding-inline: 8px;
 }
 
 .dock-console-grid {
@@ -4289,6 +4348,74 @@
 
 .dock-worship-workspace__empty {
   flex: 1 1 auto;
+}
+
+.dock-worship-jumpbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid color-mix(in srgb, var(--dock-border) 78%, transparent);
+}
+
+.dock-worship-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  max-width: 100%;
+  padding: 3px 6px;
+  border: 1px solid color-mix(in srgb, var(--dock-border) 88%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--dock-surface) 94%, black 6%);
+  color: var(--dock-text-dim);
+  cursor: pointer;
+  font: inherit;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.dock-worship-jump:hover {
+  border-color: color-mix(in srgb, var(--dock-green) 42%, var(--dock-border));
+  color: var(--dock-text);
+}
+
+.dock-worship-jump--active {
+  border-color: color-mix(in srgb, var(--dock-green) 62%, var(--dock-border));
+  background: color-mix(in srgb, var(--dock-green-soft) 70%, var(--dock-surface));
+  color: var(--dock-text);
+}
+
+.dock-worship-jump__short {
+  min-width: 16px;
+  color: var(--dock-green);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.dock-worship-jump__label {
+  max-width: 76px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.dock-worship-jump--chorus .dock-worship-jump__short {
+  color: #38bdf8;
+}
+
+.dock-worship-jump--bridge .dock-worship-jump__short {
+  color: #f59e0b;
+}
+
+.dock-worship-jump--pre-chorus .dock-worship-jump__short,
+.dock-worship-jump--tag .dock-worship-jump__short {
+  color: #c084fc;
 }
 
 .dock-console-control--compact {
@@ -4914,6 +5041,303 @@
   color: #fff;
   border-color: color-mix(in srgb, var(--dock-accent) 70%, var(--dock-border));
   background: color-mix(in srgb, var(--dock-accent) 86%, black 14%);
+}
+
+/* ── Service Planner ── */
+.dock-planner {
+  min-height: 100%;
+  gap: 6px;
+}
+
+.dock-planner-header,
+.dock-planner-now,
+.dock-planner-footer,
+.dock-planner-empty {
+  border: 1px solid color-mix(in srgb, var(--dock-border) 86%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--dock-surface) 94%, transparent);
+}
+
+.dock-planner-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 112px;
+  gap: 6px;
+  align-items: start;
+  padding: 8px;
+}
+
+.dock-planner-title {
+  margin-top: 1px;
+  color: var(--dock-text);
+  font-family: var(--dock-font-heading);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.dock-planner-meta,
+.dock-planner-now__meta,
+.dock-planner-cue__subtitle,
+.dock-planner-hint {
+  color: var(--dock-text-dim);
+  font-size: 10px;
+}
+
+.dock-planner-select,
+.dock-planner-quickadd input,
+.dock-planner-edit-form input,
+.dock-planner-edit-form textarea {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--dock-border) 94%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--dock-bg) 70%, var(--dock-surface));
+  color: var(--dock-text);
+  font: inherit;
+}
+
+.dock-planner-select,
+.dock-planner-quickadd input,
+.dock-planner-edit-form input {
+  min-height: 28px;
+  padding: 0 7px;
+}
+
+.dock-planner-edit-form textarea {
+  min-height: 76px;
+  padding: 7px;
+  resize: vertical;
+}
+
+.dock-planner-now {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+}
+
+.dock-planner-now__label {
+  color: var(--dock-accent);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.dock-planner-now__title {
+  overflow: hidden;
+  color: var(--dock-text);
+  font-size: 13px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dock-planner-now__actions {
+  display: flex;
+  gap: 4px;
+}
+
+.dock-planner-now__actions button,
+.dock-planner-quickadd button {
+  min-height: 27px;
+  padding: 0 8px;
+  border: 1px solid color-mix(in srgb, var(--dock-border) 92%, transparent);
+  border-radius: 3px;
+  background: var(--dock-surface-alt);
+  color: var(--dock-text);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.dock-planner-now__actions button:disabled,
+.dock-planner-quickadd button:disabled {
+  cursor: not-allowed;
+  opacity: 0.46;
+}
+
+.dock-planner-search {
+  margin: 0;
+}
+
+.dock-planner-cues {
+  display: grid;
+  gap: 6px;
+  min-height: 0;
+}
+
+.dock-planner-cue {
+  position: relative;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr) 26px;
+  gap: 6px;
+  align-items: center;
+  min-height: 66px;
+  padding: 7px;
+  border: 1px solid color-mix(in srgb, var(--dock-border) 92%, transparent);
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--dock-surface) 88%, transparent);
+  color: var(--dock-text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.dock-planner-cue:hover {
+  border-color: color-mix(in srgb, var(--dock-accent) 32%, var(--dock-border));
+  background: color-mix(in srgb, var(--dock-surface-hover) 58%, var(--dock-surface));
+}
+
+.dock-planner-cue--active {
+  border-color: color-mix(in srgb, var(--dock-accent) 72%, var(--dock-border));
+  background: color-mix(in srgb, var(--dock-accent-soft) 70%, var(--dock-surface));
+}
+
+.dock-planner-cue--done {
+  opacity: 0.72;
+}
+
+.dock-planner-cue__index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
+  background: var(--dock-surface-alt);
+  color: var(--dock-text-dim);
+  font-size: 10px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.dock-planner-cue__body,
+.dock-planner-cue__top {
+  display: flex;
+  min-width: 0;
+}
+
+.dock-planner-cue__body {
+  flex-direction: column;
+  gap: 3px;
+}
+
+.dock-planner-cue__top {
+  align-items: center;
+  gap: 4px;
+}
+
+.dock-planner-cue__type,
+.dock-planner-cue__done {
+  display: inline-flex;
+  align-items: center;
+  min-height: 16px;
+  padding: 0 5px;
+  border-radius: 3px;
+  background: var(--dock-surface-alt);
+  color: var(--dock-text-dim);
+  font-size: 8px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.dock-planner-cue__type--bible { color: #93c5fd; }
+.dock-planner-cue__type--worship { color: #86efac; }
+.dock-planner-cue__type--sermon { color: #f7c66a; }
+.dock-planner-cue__type--media { color: #c4b5fd; }
+
+.dock-planner-cue__done {
+  color: var(--dock-green);
+}
+
+.dock-planner-cue__title,
+.dock-planner-cue__subtitle {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dock-planner-cue__title {
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.dock-planner-cue__edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--dock-text-dim);
+  font: inherit;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.dock-planner-cue:hover .dock-planner-cue__edit,
+.dock-planner-cue__edit:focus-visible {
+  opacity: 1;
+}
+
+.dock-planner-footer {
+  margin-top: auto;
+  display: grid;
+  gap: 6px;
+  padding: 8px;
+}
+
+.dock-planner-quickadd {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px;
+}
+
+.dock-planner-sending {
+  color: var(--dock-text-dim);
+  font-size: 10px;
+}
+
+.dock-planner-empty {
+  display: grid;
+  gap: 6px;
+  place-items: center;
+  padding: 16px 12px;
+  color: var(--dock-text-dim);
+  text-align: center;
+}
+
+.dock-planner-empty--compact {
+  place-items: start;
+  padding: 10px;
+  text-align: left;
+}
+
+.dock-planner-empty__title {
+  color: var(--dock-text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.dock-planner-empty__body {
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.dock-planner-edit-form {
+  display: grid;
+  gap: 8px;
+}
+
+.dock-planner-edit-form label {
+  display: grid;
+  gap: 4px;
+  color: var(--dock-text-dim);
+  font-size: 10px;
+  font-weight: 800;
 }
 
 .dock-media-tabs {

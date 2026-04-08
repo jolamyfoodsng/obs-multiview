@@ -13,6 +13,7 @@ import DockMinistryTab from "./tabs/DockMinistryTab";
 import DockBibleTab from "./tabs/DockBibleTab";
 import DockMediaTab from "./tabs/DockMediaTab";
 import DockWorshipTab from "./tabs/DockWorshipTab";
+import DockPlannerTab from "./tabs/DockPlannerTab";
 import { useAppTheme } from "../hooks/useAppTheme";
 import {
   type DockProductionSettingsPayload,
@@ -20,6 +21,7 @@ import {
   loadDockProductionSettings,
 } from "../services/productionSettings";
 import type { VoiceBibleSnapshot } from "../services/voiceBibleTypes";
+import type { ServicePlannerSnapshot } from "../service-planner/types";
 import { installDockTextShortcuts } from "./dockTextShortcuts";
 import "./dock.css";
 import "./dock-theme.css";
@@ -249,7 +251,7 @@ export default function DockPage() {
   const shellPreferences = loadDockShellPreferences();
   const { effective, setTheme } = useAppTheme();
   const productionHistoryRef = useRef<HTMLDivElement | null>(null);
-  const [activeTab, setActiveTab] = useState<DockTab>(shellPreferences.activeTab ?? "bible");
+  const [activeTab, setActiveTab] = useState<DockTab>(shellPreferences.activeTab ?? "planner");
   const [obsConnected, setObsConnected] = useState(false);
   const [obsError, setObsError] = useState("");
   const [staged, setStaged] = useState<DockStagedItem | null>(() => loadDockStagedItem());
@@ -268,6 +270,7 @@ export default function DockPage() {
     getDefaultDockProductionSettings(),
   );
   const [voiceBible, setVoiceBible] = useState<VoiceBibleSnapshot | null>(null);
+  const [servicePlanner, setServicePlanner] = useState<ServicePlannerSnapshot | null>(null);
 
   useEffect(() => {
     saveDockShellPreferences({ activeTab });
@@ -387,6 +390,13 @@ export default function DockPage() {
           if (payload.voiceBible) {
             setVoiceBible(payload.voiceBible as VoiceBibleSnapshot);
           }
+          if (payload.servicePlanner) {
+            setServicePlanner(payload.servicePlanner as ServicePlannerSnapshot);
+          }
+          break;
+        }
+        case "state:service-plans": {
+          setServicePlanner(msg.payload as ServicePlannerSnapshot);
           break;
         }
         default:
@@ -629,47 +639,59 @@ export default function DockPage() {
       )}
 
       <div className="dock-content">
-        {activeTab === "ministry" && (
-          <DockMinistryTab
-            staged={staged}
-            onStage={handleStage}
-          />
-        )}
-        {activeTab === "bible" && (
-          <DockBibleTab
-            staged={staged}
-            onStage={handleStage}
-            productionDefaults={productionSettings.bible}
-            initialVoiceBible={voiceBible}
-            appConnected={appConnected}
-          />
-        )}
-        {activeTab === "worship" && (
-          <DockWorshipTab
-            staged={staged}
-            onStage={handleStage}
-            productionDefaults={productionSettings.worship}
-          />
-        )}
-        {activeTab === "media" && (
-          <DockMediaTab
-            staged={staged}
-            onStage={handleStage}
-          />
-        )}
-      </div>
+        <nav className="dock-side-nav" aria-label="Dock sections">
+          {DOCK_TABS.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              className={`dock-side-nav__item${activeTab === tab.id ? " dock-side-nav__item--active" : ""}`}
+              onClick={() => setActiveTab(tab.id)}
+              aria-label={tab.label}
+              title={tab.label}
+            >
+              <Icon name={tab.icon} size={15} />
+              <span>{tab.label}</span>
+            </button>
+          ))}
+        </nav>
 
-      <div className="dock-bottom-nav">
-        {DOCK_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            className={`dock-bottom-nav__item${activeTab === tab.id ? " dock-bottom-nav__item--active" : ""}`}
-            onClick={() => setActiveTab(tab.id)}
-          >
-            <span>{tab.label}</span>
-          </button>
-        ))}
+        <div className="dock-content-main">
+          {activeTab === "planner" && (
+            <DockPlannerTab
+              staged={staged}
+              onStage={handleStage}
+              initialSnapshot={servicePlanner}
+            />
+          )}
+          {activeTab === "ministry" && (
+            <DockMinistryTab
+              staged={staged}
+              onStage={handleStage}
+            />
+          )}
+          {activeTab === "bible" && (
+            <DockBibleTab
+              staged={staged}
+              onStage={handleStage}
+              productionDefaults={productionSettings.bible}
+              initialVoiceBible={voiceBible}
+              appConnected={appConnected}
+            />
+          )}
+          {activeTab === "worship" && (
+            <DockWorshipTab
+              staged={staged}
+              onStage={handleStage}
+              productionDefaults={productionSettings.worship}
+            />
+          )}
+          {activeTab === "media" && (
+            <DockMediaTab
+              staged={staged}
+              onStage={handleStage}
+            />
+          )}
+        </div>
       </div>
     </div>
   );

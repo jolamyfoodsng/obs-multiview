@@ -3019,77 +3019,90 @@ class DockObsClient {
   }
 
   /**
-   * Clear the worship lyrics overlay.
+   * Blank a worship resource so its overlay can animate out before removal.
+   */
+  private async blankWorshipResource(resources: DockResourceNames): Promise<void> {
+    const lastMode = this._lastOverlayMode[resources.worshipSource] ?? "lower-third";
+    try {
+      const cachedPayload = this._lastCssOverlayPacketBySource[resources.worshipSource];
+      const cachedBaseUrl = this._lastCssOverlayBaseUrlBySource[resources.worshipSource];
+      if (cachedPayload && cachedBaseUrl) {
+        const blankedPacket = {
+          ...cachedPayload,
+          live: false,
+          blanked: true,
+          timestamp: Date.now(),
+        };
+        const overlayCss = this.buildCssOverlayDataCss(
+          blankedPacket,
+          this._lastCssOverlayThemeCssBySource[resources.worshipSource] || "",
+        );
+        await this.call("SetInputSettings", {
+          inputName: resources.worshipSource,
+          inputSettings: { css: overlayCss },
+        });
+      } else {
+        const fallbackUrl = lastMode === "fullscreen"
+          ? this.buildWorshipFullscreenUrl("", "", "", "", false, true)
+          : this.buildBibleUrl(null, false, true, null, "lower-third");
+        const url = await this.buildBlankedOverlayUrlFromCurrentSource(resources.worshipSource, fallbackUrl);
+        await this.setBrowserSourceUrl(resources.worshipSource, url);
+      }
+    } catch { /* ignore */ }
+  }
+
+  private async removeWorshipResourceFromScene(resources: DockResourceNames, sceneName: string): Promise<void> {
+    await this.hideOverlaySource(sceneName, resources.worshipSource);
+    await this.hideFullscreenBg(sceneName, resources);
+    await this.hideSceneSource(sceneName, resources.worshipScene);
+    await this.removeSceneItemBySource(sceneName, resources.worshipSource);
+    await this.removeSceneItemBySource(sceneName, resources.worshipScene);
+    const targetBgSourceName = this.getTargetFullscreenBgSourceName(sceneName, resources);
+    await this.removeSceneItemBySource(sceneName, targetBgSourceName);
+    await this.removeInputIfExists(targetBgSourceName);
+    delete this._lastTargetBgSignature[targetBgSourceName];
+  }
+
+  private async removeWorshipResource(resources: DockResourceNames, sceneName: string): Promise<void> {
+    await this.removeWorshipResourceFromScene(resources, sceneName);
+    await this.removeSceneIfExists(resources.worshipScene);
+    await this.removeInputIfExists(resources.worshipSource);
+    await this.removeInputIfExists(resources.fsBgSource);
+    delete this._lastOverlayMode[resources.worshipSource];
+    delete this._lastFullscreenSourceSignature[resources.worshipSource];
+    delete this._lastCssOverlayPacketBySource[resources.worshipSource];
+    delete this._lastCssOverlayBaseUrlBySource[resources.worshipSource];
+    delete this._lastCssOverlayThemeCssBySource[resources.worshipSource];
+  }
+
+  /**
+   * Clear one Worship target without touching the other output.
+   * live=false clears Preview, live=true clears Program.
+   */
+  async clearWorshipLyricsTarget(live: boolean): Promise<void> {
+    const resources = getDockResources(live);
+    await this.blankWorshipResource(resources);
+
+    await new Promise((r) => setTimeout(r, FULLSCREEN_CLEAR_WAIT_MS));
+
+    try {
+      const { sceneName } = await this.getTargetScene(live);
+      if (!sceneName) return;
+      const resolvedScene = live ? sceneName : await this.ensurePreviewTargetScene(sceneName);
+      await this.removeWorshipResource(resources, resolvedScene);
+    } catch { /* ignore */ }
+
+    console.log(`[DockOBS] Worship lyrics ${live ? "Program" : "Preview"} cleared`);
+  }
+
+  /**
+   * Clear the worship lyrics overlay from Preview and Program.
    * Sends a blanked URL first (triggers exit animation), waits, then hides.
    * Uses the correct blank format (fullscreen vs lower-third) based on
    * what mode was last pushed.
    */
   async clearWorshipLyrics(): Promise<void> {
-    for (const resources of getAllDockResources()) {
-      const lastMode = this._lastOverlayMode[resources.worshipSource] ?? "lower-third";
-      try {
-        const cachedPayload = this._lastCssOverlayPacketBySource[resources.worshipSource];
-        const cachedBaseUrl = this._lastCssOverlayBaseUrlBySource[resources.worshipSource];
-        if (cachedPayload && cachedBaseUrl) {
-          const blankedPacket = {
-            ...cachedPayload,
-            live: false,
-            blanked: true,
-            timestamp: Date.now(),
-          };
-          const overlayCss = this.buildCssOverlayDataCss(
-            blankedPacket,
-            this._lastCssOverlayThemeCssBySource[resources.worshipSource] || "",
-          );
-          await this.call("SetInputSettings", {
-            inputName: resources.worshipSource,
-            inputSettings: { css: overlayCss },
-          });
-        } else {
-          const fallbackUrl = lastMode === "fullscreen"
-            ? this.buildWorshipFullscreenUrl("", "", "", "", false, true)
-            : this.buildBibleUrl(null, false, true, null, "lower-third");
-          const url = await this.buildBlankedOverlayUrlFromCurrentSource(resources.worshipSource, fallbackUrl);
-          await this.setBrowserSourceUrl(resources.worshipSource, url);
-        }
-      } catch { /* ignore */ }
-    }
-
-    // Wait for exit animation before hiding the source
-    await new Promise((r) => setTimeout(r, 800));
-
-    const scenes = new Set<string>();
-    try {
-      const { sceneName: progScene } = await this.getTargetScene(true);
-      if (progScene) scenes.add(progScene);
-    } catch { /* ignore */ }
-    try {
-      const { sceneName: prevScene } = await this.getTargetScene(false);
-      if (prevScene) scenes.add(prevScene);
-    } catch { /* ignore */ }
-
-    for (const resources of getAllDockResources()) {
-      for (const sceneName of scenes) {
-        await this.hideOverlaySource(sceneName, resources.worshipSource);
-        await this.hideFullscreenBg(sceneName, resources);
-        await this.hideSceneSource(sceneName, resources.worshipScene);
-        await this.removeSceneItemBySource(sceneName, resources.worshipSource);
-        await this.removeSceneItemBySource(sceneName, resources.worshipScene);
-        const targetBgSourceName = this.getTargetFullscreenBgSourceName(sceneName, resources);
-        await this.removeSceneItemBySource(sceneName, targetBgSourceName);
-        await this.removeInputIfExists(targetBgSourceName);
-        delete this._lastTargetBgSignature[targetBgSourceName];
-      }
-      await this.removeSceneIfExists(resources.worshipScene);
-      await this.removeInputIfExists(resources.worshipSource);
-      await this.removeInputIfExists(resources.fsBgSource);
-      delete this._lastOverlayMode[resources.worshipSource];
-      delete this._lastFullscreenSourceSignature[resources.worshipSource];
-      delete this._lastCssOverlayPacketBySource[resources.worshipSource];
-      delete this._lastCssOverlayBaseUrlBySource[resources.worshipSource];
-      delete this._lastCssOverlayThemeCssBySource[resources.worshipSource];
-    }
-
+    await Promise.all([this.clearWorshipLyricsTarget(false), this.clearWorshipLyricsTarget(true)]);
     console.log("[DockOBS] Worship lyrics cleared");
   }
 

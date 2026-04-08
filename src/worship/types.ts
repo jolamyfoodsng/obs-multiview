@@ -7,7 +7,17 @@ export interface Slide {
   label: string;
   content: string;
   isContinuation: boolean;
-  type: "verse" | "chorus" | "bridge" | "other";
+  type: "verse" | "chorus" | "bridge" | "tag" | "pre-chorus" | "intro" | "outro" | "other";
+}
+
+export interface LyricSection {
+  id: string;
+  label: string;
+  shortLabel: string;
+  type: Slide["type"];
+  lines: string[];
+  startSlideIndex: number;
+  slideCount: number;
 }
 
 export interface SongMetadata {

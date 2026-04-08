@@ -37,6 +37,9 @@ export type DockCommandType =
   | "worship:go-live"
   | "worship:clear-lyrics"
   | "worship:song-save"
+  // Service Planner
+  | "request-service-plans"
+  | "service-plan:save"
   // Voice Bible
   | "voice-bible:start"
   | "voice-bible:stop"
@@ -61,6 +64,8 @@ export type DockStateType =
   | "state:library-updated"
   | "state:songs-data"
   | "state:worship-song-save-result"
+  | "state:service-plans"
+  | "state:service-plan-save-result"
   | "state:media-data"
   | "state:voice-bible-status"
   | "state:voice-bible-result"

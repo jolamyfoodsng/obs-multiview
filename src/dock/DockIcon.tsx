@@ -95,6 +95,7 @@ const ICONS: Record<string, IconDef> = {
   edit_note: { component: SquarePen },
   error: { component: BadgeAlert },
   event: { component: CalendarDays },
+  event_note: { component: ClipboardList },
   fiber_manual_record: { component: Circle, fill: true, strokeWidth: 0 },
   format_quote: { component: Quote },
   fullscreen: { component: Maximize },

@@ -39,6 +39,13 @@ import ResourcesPage from "./pages/ResourcesPage";
 import ProductionHomePage from "./pages/ProductionHomePage";
 import ProductionThemeSettingsPage from "./pages/ProductionThemeSettingsPage";
 import SpeechToScripturePage from "./pages/SpeechToScripturePage";
+import ServicePlannerPage from "./pages/ServicePlannerPage";
+import {
+  getServicePlannerSnapshot,
+  saveServicePlan,
+  syncServicePlansToDock,
+} from "./service-planner/servicePlannerStore";
+import type { ServicePlan } from "./service-planner/types";
 import { buildDockProductionSettingsPayload, syncProductionSettingsToDock } from "./services/productionSettings";
 import { voiceBibleService } from "./services/voiceBibleService";
 import {
@@ -119,12 +126,52 @@ function App() {
       if (cmd.type === "request-state") {
         const productionSettings = await buildDockProductionSettingsPayload().catch(() => undefined);
         const voiceBible = await voiceBibleService.refreshAvailability().catch(() => voiceBibleService.getSnapshot());
+        const servicePlanner = await getServicePlannerSnapshot().catch(() => undefined);
         dockBridge.sendFullState({
           obsConnected: obsService.status === "connected",
           serviceStatus: svcStore.status,
           productionSettings,
           voiceBible,
+          servicePlanner,
         });
+      }
+
+      if (cmd.type === "request-service-plans") {
+        try {
+          const snapshot = await getServicePlannerSnapshot();
+          dockBridge.sendState({
+            type: "state:service-plans",
+            payload: snapshot,
+            timestamp: Date.now(),
+          });
+        } catch (err) {
+          console.warn("[App] Failed to send service plans to dock:", err);
+        }
+      }
+
+      if (cmd.type === "service-plan:save") {
+        try {
+          const plan = await saveServicePlan(cmd.payload as ServicePlan);
+          const snapshot = await getServicePlannerSnapshot();
+          dockBridge.sendState({
+            type: "state:service-plan-save-result",
+            payload: { commandId: cmd.commandId, ok: true, plan },
+            timestamp: Date.now(),
+          });
+          dockBridge.sendState({
+            type: "state:service-plans",
+            payload: snapshot,
+            timestamp: Date.now(),
+          });
+        } catch (err) {
+          const message = err instanceof Error ? err.message : String(err);
+          dockBridge.sendState({
+            type: "state:service-plan-save-result",
+            payload: { commandId: cmd.commandId, ok: false, error: message },
+            timestamp: Date.now(),
+          });
+          console.warn("[App] Failed to save service plan from dock:", err);
+        }
       }
 
       // Dock is requesting library data (songs) via BroadcastChannel
@@ -274,6 +321,7 @@ function App() {
     syncSongsToDock().catch(() => {});
     syncInstalledTranslationsToDock().catch(() => {});
     syncProductionSettingsToDock().catch(() => {});
+    syncServicePlansToDock().catch(() => {});
 
     // Rehydrate theme favorites from durable storage, then sync them to dock JSON.
     import("./services/favoriteThemes").then(({
@@ -382,6 +430,7 @@ function App() {
               <Route element={<AppShell />}>
                 <Route index element={<ProductionHomePage />} />
                 <Route path="resources" element={<BibleProvider><ResourcesPage /></BibleProvider>} />
+                <Route path="service-planner" element={<ServicePlannerPage />} />
                 <Route path="speech-to-scripture" element={<BibleProvider><SpeechToScripturePage /></BibleProvider>} />
                 <Route path="songs" element={<Navigate to="/resources?tab=worship" replace />} />
                 <Route path="bible-library" element={<Navigate to="/resources?tab=bible" replace />} />

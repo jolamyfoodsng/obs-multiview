@@ -17,7 +17,7 @@ import {
   postWorshipDockSongSaveCommand,
   type WorshipDockSongSavePayload,
 } from "../../services/worshipDockInterop";
-import { generateSlides } from "../../worship/slideEngine";
+import { generateSlides, parseWorshipLyricSections } from "../../worship/slideEngine";
 import type { Song } from "../../worship/types";
 import {
   formatOnlineLyricsSearchError,
@@ -273,6 +273,10 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
 
   const selectedSongSections = useMemo(
     () => (selectedSong ? parseLyricSections(selectedSong.lyrics, linesPerSlide) : []),
+    [linesPerSlide, selectedSong],
+  );
+  const selectedSongLyricSections = useMemo(
+    () => (selectedSong ? parseWorshipLyricSections(selectedSong.lyrics, linesPerSlide) : []),
     [linesPerSlide, selectedSong],
   );
   const visibleSectionIndexes = useMemo(
@@ -801,6 +805,17 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
     [pushSection],
   );
 
+  const handleJumpToLyricSection = useCallback(
+    (idx: number, live = false) => {
+      if (clickTimerRef.current) {
+        clearTimeout(clickTimerRef.current);
+        clickTimerRef.current = null;
+      }
+      void pushSection(idx, live);
+    },
+    [pushSection],
+  );
+
   const handleHideSection = useCallback(
     (idx: number) => {
       if (clickTimerRef.current) {
@@ -963,19 +978,44 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
     await pushSection(activeSectionIndex, true);
   }, [activeSectionIndex, pushSection]);
 
-  const handleClearLyrics = useCallback(() => {
-    setLiveIdx(null);
-    setPreviewIdx(null);
-    setSelectedIdx(null);
-    setActionError("");
-    onStage(null);
-    showToast("Worship cleared");
-    if (dockObsClient.isConnected) {
-      dockObsClient.clearWorshipLyrics().catch((err) =>
-        console.warn("[DockWorshipTab] clearWorshipLyrics failed:", err),
+  const handleClearLyricsTarget = useCallback(
+    (target: "preview" | "program" | "all") => {
+      setActionError("");
+      if (target === "preview" || target === "all") {
+        setPreviewIdx(null);
+      }
+      if (target === "program" || target === "all") {
+        setLiveIdx(null);
+      }
+      if (target === "all") {
+        setSelectedIdx(null);
+      }
+      if (
+        target === "all" ||
+        (target === "preview" && !isProgramLive) ||
+        (target === "program" && isProgramLive)
+      ) {
+        onStage(null);
+      }
+
+      const label = target === "all" ? "Worship cleared" : `Worship ${target} cleared`;
+      showToast(label);
+      if (!dockObsClient.isConnected) return;
+
+      const clearPromise = target === "all"
+        ? dockObsClient.clearWorshipLyrics()
+        : dockObsClient.clearWorshipLyricsTarget(target === "program");
+
+      clearPromise.catch((err) =>
+        console.warn(`[DockWorshipTab] clear worship ${target} failed:`, err),
       );
-    }
-  }, [onStage, showToast]);
+    },
+    [isProgramLive, onStage, showToast],
+  );
+
+  const handleClearLyrics = useCallback(() => {
+    handleClearLyricsTarget("all");
+  }, [handleClearLyricsTarget]);
 
   const handleSelectFullscreenTheme = useCallback((theme: BibleTheme) => {
     setSelectedFSTheme(theme);
@@ -1312,6 +1352,29 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
               </div>
             </div>
 
+            {selectedSongLyricSections.length > 1 && (
+              <div className="dock-worship-jumpbar" aria-label="Worship section quick jumps">
+                {selectedSongLyricSections.map((section) => {
+                  const isActive = activeSectionIndex !== null &&
+                    activeSectionIndex >= section.startSlideIndex &&
+                    activeSectionIndex < section.startSlideIndex + section.slideCount;
+                  return (
+                    <button
+                      key={section.id}
+                      type="button"
+                      className={`dock-worship-jump${isActive ? " dock-worship-jump--active" : ""} dock-worship-jump--${section.type}`}
+                      onClick={() => handleJumpToLyricSection(section.startSlideIndex, false)}
+                      onDoubleClick={() => handleJumpToLyricSection(section.startSlideIndex, true)}
+                      title={`${section.label}: click previews, double-click sends Program`}
+                    >
+                      <span className="dock-worship-jump__short">{section.shortLabel}</span>
+                      <span className="dock-worship-jump__label">{section.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             {selectedSongSections.length === 0 || visibleSectionIndexes.length === 0 ? (
               <div className="dock-empty dock-worship-workspace__empty">
                 <Icon name="lyrics" size={18} />
@@ -1427,14 +1490,34 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
           )}
 
           <div className="dock-console-action-row dock-console-action-row--worship">
+            <div className="dock-worship-clear-group" aria-label="Clear worship outputs">
+              <button
+                type="button"
+                className="dock-btn dock-btn--toolbar dock-btn--danger dock-worship-clear-group__btn"
+                onClick={() => handleClearLyricsTarget("preview")}
+                title="Clear Worship Preview only"
+              >
+                <Icon name="preview" size={13} />
+                Preview
+              </button>
+              <button
+                type="button"
+                className="dock-btn dock-btn--toolbar dock-btn--danger dock-worship-clear-group__btn"
+                onClick={() => handleClearLyricsTarget("program")}
+                title="Clear Worship Program only"
+              >
+                <Icon name="live_tv" size={13} />
+                Program
+              </button>
+            </div>
             <button
               type="button"
               className="dock-btn dock-btn--toolbar dock-btn--danger dock-console-action-row__clear"
               onClick={handleClearLyrics}
-              disabled={activeSectionIndex === null}
+              title="Clear Worship Preview and Program"
             >
               <Icon name="clear" size={16} />
-              Clear
+              All
             </button>
           </div>
 

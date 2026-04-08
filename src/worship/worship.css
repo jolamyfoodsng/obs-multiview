@@ -520,6 +520,63 @@
   white-space: pre-line;
 }
 
+.worship-section-jumpbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 16px 10px;
+  border-bottom: 1px solid var(--b-border, #2C2C2C);
+}
+
+.worship-section-jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 28px;
+  padding: 4px 8px;
+  border: 1px solid var(--b-border, #2C2C2C);
+  border-radius: var(--b-radius, 2px);
+  background: var(--b-surface, #1E1E1E);
+  color: var(--b-text-2, #9E9E9E);
+  cursor: pointer;
+  font: inherit;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.worship-section-jump:hover {
+  border-color: var(--b-text-3, #616161);
+  color: var(--b-text-1, #E0E0E0);
+}
+
+.worship-section-jump.active {
+  border-color: var(--b-green, #00E676);
+  background: rgba(0, 230, 118, 0.08);
+  color: var(--b-text-1, #E0E0E0);
+}
+
+.worship-section-jump-short {
+  min-width: 20px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--b-green, #00E676);
+}
+
+.worship-section-jump-label {
+  max-width: 92px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.worship-section-jump--chorus .worship-section-jump-short { color: #38bdf8; }
+.worship-section-jump--bridge .worship-section-jump-short { color: #f59e0b; }
+.worship-section-jump--tag .worship-section-jump-short,
+.worship-section-jump--pre-chorus .worship-section-jump-short { color: #c084fc; }
+
 /* ═══════════════════════════════════════════════════════
    RIGHT — Preview & controls
    ═══════════════════════════════════════════════════════ */
