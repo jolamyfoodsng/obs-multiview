@@ -215,6 +215,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
   font-size: clamp(28px, 2.2vw, 52px);
   font-weight: 700;
   line-height: 1.1;
+  padding-inline: 6px;
 }
 
 .role-line {
@@ -223,6 +224,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
   font-weight: 400;
   line-height: 1.2;
   opacity: .8;
+  padding-inline: 6px;
 }`,
 };
 

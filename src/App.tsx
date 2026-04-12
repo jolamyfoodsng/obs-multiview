@@ -40,8 +40,6 @@ import ResourcesPage from "./pages/ResourcesPage";
 import ProductionHomePage from "./pages/ProductionHomePage";
 import ProductionThemeSettingsPage from "./pages/ProductionThemeSettingsPage";
 import SpeechToScripturePage from "./pages/SpeechToScripturePage";
-import ServicePlannerPage from "./pages/ServicePlannerPage";
-import LiveToolsPage from "./pages/LiveToolsPage";
 import {
   getServicePlannerSnapshot,
   importDockServicePlansFromUploads,
@@ -466,11 +464,11 @@ function App() {
             <Routes>
               <Route element={<AppShell />}>
                 <Route index element={<ProductionHomePage />} />
-                <Route path="live-tools" element={<LiveToolsPage />} />
-                <Route path="live" element={<Navigate to="/live-tools" replace />} />
-                <Route path="service" element={<Navigate to="/live-tools" replace />} />
+                <Route path="live-tools" element={<Navigate to="/" replace />} />
+                <Route path="live" element={<Navigate to="/" replace />} />
+                <Route path="service" element={<Navigate to="/" replace />} />
                 <Route path="resources" element={<BibleProvider><ResourcesPage /></BibleProvider>} />
-                <Route path="service-planner" element={<ServicePlannerPage />} />
+                <Route path="service-planner" element={<Navigate to="/" replace />} />
                 <Route path="speech-to-scripture" element={<BibleProvider><SpeechToScripturePage /></BibleProvider>} />
                 <Route path="songs" element={<Navigate to="/resources?tab=worship" replace />} />
                 <Route path="bible-library" element={<Navigate to="/resources?tab=bible" replace />} />

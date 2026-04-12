@@ -1970,8 +1970,8 @@
 
 .dock-sermon-theme-row {
   display: grid;
-  grid-template-columns: auto auto minmax(0, 1fr);
-  align-items: center;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: stretch;
   gap: 6px;
   padding: 5px 6px;
   border: 1px solid color-mix(in srgb, var(--dock-border) 88%, transparent);
@@ -1979,7 +1979,26 @@
   background: color-mix(in srgb, var(--dock-surface-alt) 70%, var(--dock-surface));
 }
 
-.dock-sermon-theme-row .dock-bible-theme-picker {
+.dock-sermon-inline-control {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.dock-sermon-inline-control .dock-console-segmented,
+.dock-sermon-inline-control .dock-bible-theme-picker,
+.dock-sermon-inline-control .dock-theme-dropdown-trigger {
+  width: 100%;
+  min-width: 0;
+}
+
+.dock-sermon-inline-control .dock-theme-dropdown-trigger {
+  min-height: 28px;
+}
+
+.dock-sermon-inline-control--theme .dock-bible-theme-picker {
   min-width: 0;
 }
 
@@ -3874,6 +3893,10 @@
 
 .dock-console-segmented--compact {
   gap: 2px;
+}
+
+.dock-console-segmented--fill {
+  width: 100%;
 }
 
 .dock-console-segmented--grid-3 {

@@ -676,11 +676,16 @@ export default function DockBibleTab({
     }
   }, []);
 
-  const focusReference = useCallback((book: string, chapter: number, verse?: number | null) => {
+  const focusReference = useCallback((
+    book: string,
+    chapter: number,
+    verse?: number | null,
+    options?: { reveal?: boolean },
+  ) => {
     setSelectedBook(book);
     setSelectedChapter(chapter);
     setSelectedVerse(verse ?? null);
-    pendingScrollVerseRef.current = verse ?? null;
+    pendingScrollVerseRef.current = options?.reveal === false ? null : (verse ?? null);
   }, []);
 
   useEffect(() => {
@@ -797,10 +802,11 @@ export default function DockBibleTab({
         sendToProgram?: boolean;
         translation?: string;
         columnIndex?: number;
+        reveal?: boolean;
       },
     ) => {
       const effectiveTranslation = options?.translation ?? activeTranslation;
-      focusReference(book, chapter, verse);
+      focusReference(book, chapter, verse, { reveal: options?.reveal });
       if (typeof options?.columnIndex === "number") {
         setSelectedColumn(Math.min(Math.max(options.columnIndex, 0), QUICK_SELECT_VERSION_COUNT - 1));
       }
@@ -1503,6 +1509,12 @@ export default function DockBibleTab({
       return;
     }
 
+    if (isReferenceLikeBibleQuery(trimmed) && referenceResults.length > 0) {
+      setKeywordResults([]);
+      setIsKeywordSearching(false);
+      return;
+    }
+
     let cancelled = false;
     const timer = window.setTimeout(async () => {
       setIsKeywordSearching(true);
@@ -1522,13 +1534,13 @@ export default function DockBibleTab({
           setIsKeywordSearching(false);
         }
       }
-    }, 180);
+    }, 60);
 
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [activeTranslation, searchQuery]);
+  }, [activeTranslation, referenceResults.length, searchQuery]);
 
   const searchResults = useMemo<DockBibleSearchOption[]>(() => {
     const keywordMatches = keywordResults.map((result) => ({
@@ -1699,6 +1711,7 @@ export default function DockBibleTab({
         void stageVerse(selectedBook, selectedChapter, v, {
           translation: version,
           columnIndex,
+          reveal: false,
         });
       }, 220);
     },
@@ -1730,6 +1743,7 @@ export default function DockBibleTab({
         sendToProgram: true,
         translation: version,
         columnIndex,
+        reveal: false,
       });
     },
     [selectedBook, selectedChapter, stageVerse],
@@ -1852,22 +1866,26 @@ export default function DockBibleTab({
       sendToProgram: true,
       translation: activeTranslation,
       columnIndex: activeColumnIndex,
+      reveal: false,
     });
   }, [activeColumnIndex, activeTranslation, selectedBook, selectedChapter, selectedVerse, stageVerse]);
 
   useEffect(() => {
-    const verseToReveal = pendingScrollVerseRef.current ?? selectedVerse;
+    const pendingVerseToReveal = pendingScrollVerseRef.current;
+    const verseToReveal = pendingVerseToReveal ?? selectedVerse;
     if (verseToReveal === null) return;
 
     const frame = window.requestAnimationFrame(() => {
-      const verseRow = verseGridRef.current?.querySelector<HTMLElement>(
-        `[data-verse-row="${verseToReveal}"]`,
-      );
-      if (verseRow) {
-        verseRow.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-        });
+      if (pendingVerseToReveal !== null) {
+        const verseRow = verseGridRef.current?.querySelector<HTMLElement>(
+          `[data-verse-row="${verseToReveal}"]`,
+        );
+        if (verseRow) {
+          verseRow.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+        }
       }
       setHighlightVerse(verseToReveal);
       pendingScrollVerseRef.current = null;

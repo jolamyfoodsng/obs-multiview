@@ -824,33 +824,38 @@ export default function DockSermonTab({ staged, onStage }: Props) {
           )}
 
           <div className="dock-sermon-theme-row">
-            <span className="dock-worship-inline-control__label">Mode</span>
-            <div className="dock-console-segmented" role="group" aria-label="Sermon overlay mode">
-              <button
-                type="button"
-                className={overlayMode === "fullscreen" ? "active" : ""}
-                onClick={() => setOverlayMode("fullscreen")}
-              >
-                Full
-              </button>
-              <button
-                type="button"
-                className={overlayMode === "lower-third" ? "active" : ""}
-                onClick={() => setOverlayMode("lower-third")}
-              >
-                LT
-              </button>
+            <div className="dock-sermon-inline-control">
+              <span className="dock-worship-inline-control__label">Mode</span>
+              <div className="dock-console-segmented dock-console-segmented--fill" role="group" aria-label="Sermon overlay mode">
+                <button
+                  type="button"
+                  className={`dock-console-segmented__item${overlayMode === "fullscreen" ? " dock-console-segmented__item--active" : ""}`}
+                  onClick={() => setOverlayMode("fullscreen")}
+                >
+                  Full
+                </button>
+                <button
+                  type="button"
+                  className={`dock-console-segmented__item${overlayMode === "lower-third" ? " dock-console-segmented__item--active" : ""}`}
+                  onClick={() => setOverlayMode("lower-third")}
+                >
+                  LT
+                </button>
+              </div>
             </div>
-            <DockBibleThemePicker
-              selectedThemeId={activeTheme?.id ?? null}
-              onSelect={overlayMode === "fullscreen" ? setFullscreenTheme : setLowerThirdTheme}
-              label=""
-              templateType={activeThemeTemplate}
-              allowedCategories={["general"]}
-              browserTitle="Select General Theme"
-              sampleText={activeItem.type === "quote" ? "Quote" : "Point"}
-              sampleReference={activeItem.type === "quote" ? activeAttribution || "Speaker" : ""}
-            />
+            <div className="dock-sermon-inline-control dock-sermon-inline-control--theme">
+              <span className="dock-worship-inline-control__label">Theme</span>
+              <DockBibleThemePicker
+                selectedThemeId={activeTheme?.id ?? null}
+                onSelect={overlayMode === "fullscreen" ? setFullscreenTheme : setLowerThirdTheme}
+                label=""
+                templateType={activeThemeTemplate}
+                allowedCategories={["general"]}
+                browserTitle="Select General Theme"
+                sampleText={activeItem.type === "quote" ? "Quote" : "Point"}
+                sampleReference={activeItem.type === "quote" ? activeAttribution || "Speaker" : ""}
+              />
+            </div>
           </div>
 
           <div className="dock-sermon-bottom-actions">

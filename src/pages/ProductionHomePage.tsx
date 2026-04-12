@@ -135,16 +135,6 @@ export default function ProductionHomePage() {
                 </div>
               </Link>
 
-              <Link className="app-compact-item production-nav-card" to="/live-tools">
-                <div className="app-compact-item__icon">
-                  <Icon name="bolt" size={18} />
-                </div>
-                <div className="app-compact-item__copy">
-                  <h3>Live Tools</h3>
-                  <p>Countdowns, welcome loops, emergency screens, giving info, and service overlays.</p>
-                </div>
-              </Link>
-
               <Link className="app-compact-item production-nav-card" to="/production/themes">
                 <div className="app-compact-item__icon">
                   <Icon name="palette" size={18} />

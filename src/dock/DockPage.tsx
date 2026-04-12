@@ -14,7 +14,6 @@ import DockBibleTab from "./tabs/DockBibleTab";
 import DockMediaTab from "./tabs/DockMediaTab";
 import DockWorshipTab from "./tabs/DockWorshipTab";
 import DockPlannerTab from "./tabs/DockPlannerTab";
-import DockLiveToolsTab from "./tabs/DockLiveToolsTab";
 import { useAppTheme } from "../hooks/useAppTheme";
 import {
   type DockProductionSettingsPayload,
@@ -23,7 +22,6 @@ import {
 } from "../services/productionSettings";
 import type { VoiceBibleSnapshot } from "../services/voiceBibleTypes";
 import type { ServicePlannerSnapshot } from "../service-planner/types";
-import type { LiveToolsSnapshot } from "../live-tools/types";
 import { installDockTextShortcuts } from "./dockTextShortcuts";
 import "./dock.css";
 import "./dock-theme.css";
@@ -36,7 +34,15 @@ const DOCK_PRODUCTION_FAVORITES_KEY = "ocs-dock-production-favorites";
 const DOCK_PRODUCTION_HISTORY_LIMIT = 12;
 
 interface DockShellPreferences {
-  activeTab?: DockTab;
+  activeTab?: DockTab | "live";
+}
+
+function resolveDockTab(tab?: DockTab | "live" | null): DockTab {
+  if (tab === "live") return "ministry";
+  if (tab === "planner" || tab === "ministry" || tab === "bible" || tab === "worship" || tab === "media") {
+    return tab;
+  }
+  return "planner";
 }
 
 interface DockProductionHistoryEntry {
@@ -253,7 +259,7 @@ export default function DockPage() {
   const shellPreferences = loadDockShellPreferences();
   const { effective, setTheme } = useAppTheme();
   const productionHistoryRef = useRef<HTMLDivElement | null>(null);
-  const [activeTab, setActiveTab] = useState<DockTab>(shellPreferences.activeTab ?? "planner");
+  const [activeTab, setActiveTab] = useState<DockTab>(() => resolveDockTab(shellPreferences.activeTab));
   const [obsConnected, setObsConnected] = useState(false);
   const [obsError, setObsError] = useState("");
   const [staged, setStaged] = useState<DockStagedItem | null>(() => loadDockStagedItem());
@@ -273,7 +279,6 @@ export default function DockPage() {
   );
   const [voiceBible, setVoiceBible] = useState<VoiceBibleSnapshot | null>(null);
   const [servicePlanner, setServicePlanner] = useState<ServicePlannerSnapshot | null>(null);
-  const [liveTools, setLiveTools] = useState<LiveToolsSnapshot | null>(null);
 
   useEffect(() => {
     saveDockShellPreferences({ activeTab });
@@ -400,17 +405,10 @@ export default function DockPage() {
           if (payload.servicePlanner) {
             setServicePlanner(payload.servicePlanner as ServicePlannerSnapshot);
           }
-          if (payload.liveTools) {
-            setLiveTools(payload.liveTools as LiveToolsSnapshot);
-          }
           break;
         }
         case "state:service-plans": {
           setServicePlanner(msg.payload as ServicePlannerSnapshot);
-          break;
-        }
-        case "state:live-tools": {
-          setLiveTools(msg.payload as LiveToolsSnapshot);
           break;
         }
         default:
@@ -659,13 +657,6 @@ export default function DockPage() {
               staged={staged}
               onStage={handleStage}
               initialSnapshot={servicePlanner}
-            />
-          )}
-          {activeTab === "live" && (
-            <DockLiveToolsTab
-              staged={staged}
-              onStage={handleStage}
-              initialSnapshot={liveTools}
             />
           )}
           {activeTab === "ministry" && (
