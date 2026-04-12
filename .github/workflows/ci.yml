@@ -45,6 +45,11 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Setup LLVM
+        uses: KyleMayes/install-llvm-action@v2
+        with:
+          version: "18"
+
       - name: Cache Rust
         uses: swatinem/rust-cache@v2
         with:
@@ -58,7 +63,7 @@ jobs:
           key: local-llm-${{ runner.os }}-qwen2.5-1.5b-instruct-q4-k-m-6a1a2e
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Prepare bundled local LLM model
         run: npm run sync:local-llm-model
@@ -69,6 +74,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          LIBCLANG_PATH: ${{ env.LLVM_PATH }}/bin
         with:
           tauriScript: npx tauri
 
