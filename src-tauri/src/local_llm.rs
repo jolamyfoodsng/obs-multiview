@@ -106,82 +106,66 @@ fn resolve_dev_bundled_local_llm_model_path() -> Option<PathBuf> {
     is_valid_model_file(&candidate).then_some(candidate)
 }
 
+fn push_unique_path(candidates: &mut Vec<PathBuf>, path: PathBuf) {
+    if !candidates.iter().any(|candidate| candidate == &path) {
+        candidates.push(path);
+    }
+}
+
+fn push_model_candidates_for_root(candidates: &mut Vec<PathBuf>, root: &Path) {
+    for candidate in [
+        root.join("resources")
+            .join("models")
+            .join("llm")
+            .join(LOCAL_LLM_MODEL_FILE),
+        root.join("models")
+            .join("llm")
+            .join(LOCAL_LLM_MODEL_FILE),
+        root.join("_up_")
+            .join("resources")
+            .join("models")
+            .join("llm")
+            .join(LOCAL_LLM_MODEL_FILE),
+        root.join("_up_")
+            .join("models")
+            .join("llm")
+            .join(LOCAL_LLM_MODEL_FILE),
+    ] {
+        push_unique_path(candidates, candidate);
+    }
+}
+
 fn resolve_bundled_local_llm_model_path(resource_dir: Option<&Path>) -> Option<PathBuf> {
     let mut candidates: Vec<PathBuf> = Vec::new();
-    let mut push_candidate = |path: PathBuf| {
-        if !candidates.iter().any(|candidate| candidate == &path) {
-            candidates.push(path);
-        }
-    };
 
     let exe_dir = std::env::current_exe()
         .ok()
         .and_then(|path| path.parent().map(Path::to_path_buf));
 
     if let Some(resource_dir) = resource_dir {
-        push_candidate(
-            resource_dir
-                .join("resources")
-                .join("models")
-                .join("llm")
-                .join(LOCAL_LLM_MODEL_FILE),
-        );
-        push_candidate(
-            resource_dir
-                .join("models")
-                .join("llm")
-                .join(LOCAL_LLM_MODEL_FILE),
-        );
-        push_candidate(
-            resource_dir
-                .join("_up_")
-                .join("resources")
-                .join("models")
-                .join("llm")
-                .join(LOCAL_LLM_MODEL_FILE),
-        );
-        push_candidate(
-            resource_dir
-                .join("_up_")
-                .join("models")
-                .join("llm")
-                .join(LOCAL_LLM_MODEL_FILE),
-        );
+        let mut current = Some(resource_dir);
+        for _ in 0..=3 {
+            let Some(root) = current else {
+                break;
+            };
+            push_model_candidates_for_root(&mut candidates, root);
+            current = root.parent();
+        }
     }
 
     if let Some(exe_dir) = exe_dir {
-        push_candidate(
-            exe_dir
-                .join("resources")
-                .join("models")
-                .join("llm")
-                .join(LOCAL_LLM_MODEL_FILE),
-        );
-        push_candidate(
-            exe_dir
-                .join("models")
-                .join("llm")
-                .join(LOCAL_LLM_MODEL_FILE),
-        );
-        push_candidate(
-            exe_dir
-                .join("_up_")
-                .join("resources")
-                .join("models")
-                .join("llm")
-                .join(LOCAL_LLM_MODEL_FILE),
-        );
-        push_candidate(
-            exe_dir
-                .join("_up_")
-                .join("models")
-                .join("llm")
-                .join(LOCAL_LLM_MODEL_FILE),
-        );
+        let mut current = Some(exe_dir.as_path());
+        for _ in 0..=3 {
+            let Some(root) = current else {
+                break;
+            };
+            push_model_candidates_for_root(&mut candidates, root);
+            current = root.parent();
+        }
     }
 
     if let Some(dev_path) = resolve_dev_bundled_local_llm_model_path() {
-        push_candidate(dev_path);
+        push_unique_path(&mut candidates, dev_path);
     }
 
     candidates.into_iter().find(|path| is_valid_model_file(path))
