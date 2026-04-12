@@ -1,12 +1,12 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "OBS Church Studio",
-  "version": "0.47.0",
+  "version": "0.48.0",
   "identifier": "com.obschurchstudio.app",
   "build": {
-    "beforeDevCommand": "npm run sync:local-llm-model && npm run dev",
+    "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "npm run sync:local-llm-model && npm run build",
+    "beforeBuildCommand": "npm run build",
     "frontendDist": "../dist"
   },
   "app": {
@@ -38,8 +38,7 @@
       "../dist/pre-service-media.html",
       "../dist/dock.html",
       "../dist/assets/**/*",
-      "../dist/fonts/**/*",
-      "resources/models/llm/**/*"
+      "../dist/fonts/**/*"
     ],
     "macOS": {
       "minimumSystemVersion": "10.15"

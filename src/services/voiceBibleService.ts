@@ -9,13 +9,11 @@ import { resolveVoiceBibleIntent } from "./voiceBibleMatcher";
 import {
   getVoiceBibleRuntimeStatus,
   getVoiceBibleSettings,
-  isOllamaModelReady,
   listAudioInputDevices,
   listObsAudioInputs,
   prepareVoiceBibleModel,
   transcribeVoiceAudio,
 } from "./voiceBibleSettings";
-import { getLocalLlmRuntimeStatus } from "./localLlm";
 import type {
   VoiceBibleContextPayload,
   VoiceBibleSnapshot,
@@ -602,25 +600,13 @@ class VoiceBibleService {
   }
 
   async refreshAvailability(): Promise<VoiceBibleSnapshot> {
-    const [runtime, settings] = await Promise.all([
-      getVoiceBibleRuntimeStatus().catch(() => ({
-        modelReady: false,
-        modelName: "large-v3",
-        modelPath: null,
-      })),
-      getVoiceBibleSettings().catch(() => undefined),
-    ]);
+    const runtime = await getVoiceBibleRuntimeStatus().catch(() => ({
+      modelReady: false,
+      modelName: "large-v3",
+      modelPath: null,
+    }));
 
-    const semanticReady =
-      settings?.semanticMode === "local"
-        ? await getLocalLlmRuntimeStatus()
-            .then((status: { modelReady: boolean }) => status.modelReady)
-            .catch(() => false)
-        : settings?.semanticMode === "ollama" &&
-            settings.ollamaBaseUrl &&
-            settings.ollamaModel
-          ? await isOllamaModelReady(settings.ollamaBaseUrl, settings.ollamaModel)
-          : false;
+    const semanticReady = false;
 
     this.snapshot = {
       ...this.snapshot,

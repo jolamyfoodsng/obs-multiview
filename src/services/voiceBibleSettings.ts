@@ -1,5 +1,4 @@
 import { invoke } from "@tauri-apps/api/core";
-import { getLocalLlmRuntimeStatus } from "./localLlm";
 import { getByKey, putRecord, STORES } from "./db";
 import { obsService } from "./obsService";
 import type {
@@ -15,9 +14,9 @@ export const DEFAULT_VOICE_BIBLE_SETTINGS: VoiceBibleSettings = {
   audioSourceMode: "system-mic",
   sttModel: "large-v3",
   semanticMode: "off",
-  ollamaBaseUrl: "http://127.0.0.1:11434",
-  ollamaModel: "qwen3-embedding:4b",
-  ollamaNormalizerModel: "qwen2.5:3b",
+  ollamaBaseUrl: "",
+  ollamaModel: "",
+  ollamaNormalizerModel: "",
 };
 
 const OBS_AUDIO_INPUT_KINDS = new Set([
@@ -30,9 +29,7 @@ const OBS_AUDIO_INPUT_KINDS = new Set([
 
 function normalizeVoiceBibleSettings(
   raw?: Partial<VoiceBibleSettings> | null,
-  fallbackSemanticMode: VoiceBibleSettings["semanticMode"] = DEFAULT_VOICE_BIBLE_SETTINGS.semanticMode,
 ): VoiceBibleSettings {
-  const semanticModeCandidate = raw?.semanticMode as string | undefined;
   return {
     audioSourceMode:
       raw?.audioSourceMode === "obs-input" ? "obs-input" : "system-mic",
@@ -45,26 +42,10 @@ function normalizeVoiceBibleSettings(
         ? raw.obsInputName
         : undefined,
     sttModel: "large-v3",
-    semanticMode:
-      semanticModeCandidate === "local"
-        ? "local"
-        : semanticModeCandidate === "ollama"
-          ? "ollama"
-          : semanticModeCandidate === "off" || semanticModeCandidate === "lexical-only"
-            ? "off"
-            : fallbackSemanticMode,
-    ollamaBaseUrl:
-      typeof raw?.ollamaBaseUrl === "string" && raw.ollamaBaseUrl.trim()
-        ? raw.ollamaBaseUrl
-        : DEFAULT_VOICE_BIBLE_SETTINGS.ollamaBaseUrl,
-    ollamaModel:
-      typeof raw?.ollamaModel === "string" && raw.ollamaModel.trim()
-        ? raw.ollamaModel
-        : DEFAULT_VOICE_BIBLE_SETTINGS.ollamaModel,
-    ollamaNormalizerModel:
-      typeof raw?.ollamaNormalizerModel === "string" && raw.ollamaNormalizerModel.trim()
-        ? raw.ollamaNormalizerModel.trim()
-        : DEFAULT_VOICE_BIBLE_SETTINGS.ollamaNormalizerModel,
+    semanticMode: "off",
+    ollamaBaseUrl: "",
+    ollamaModel: "",
+    ollamaNormalizerModel: "",
   };
 }
 
@@ -73,12 +54,7 @@ export async function getVoiceBibleSettings(): Promise<VoiceBibleSettings> {
     STORES.APP_SETTINGS,
     VOICE_BIBLE_SETTINGS_KEY,
   ).catch(() => undefined);
-  if (raw) {
-    return normalizeVoiceBibleSettings(raw);
-  }
-
-  const localStatus = await getLocalLlmRuntimeStatus().catch(() => null);
-  return normalizeVoiceBibleSettings(undefined, localStatus?.modelReady ? "local" : "off");
+  return normalizeVoiceBibleSettings(raw);
 }
 
 export async function saveVoiceBibleSettings(
@@ -234,31 +210,4 @@ export async function listObsAudioInputs(): Promise<VoiceBibleObsInputOption[]> 
   );
 
   return results;
-}
-
-export async function isOllamaModelReady(
-  baseUrl: string,
-  model: string,
-): Promise<boolean> {
-  const controller = new AbortController();
-  const timer = window.setTimeout(() => controller.abort(), 1500);
-
-  try {
-    const response = await fetch(`${baseUrl.replace(/\/$/, "")}/api/tags`, {
-      signal: controller.signal,
-    });
-    if (!response.ok) return false;
-    const payload = await response.json() as {
-      models?: Array<{ model?: string; name?: string }>;
-    };
-    const target = model.trim().toLowerCase();
-    return (payload.models ?? []).some((entry) => {
-      const name = (entry.name ?? entry.model ?? "").toLowerCase();
-      return name === target;
-    });
-  } catch {
-    return false;
-  } finally {
-    window.clearTimeout(timer);
-  }
 }

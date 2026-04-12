@@ -81,19 +81,9 @@ jobs:
           workspaces: src-tauri
           cache-on-failure: true
 
-      # ── Local LLM bundle asset ──
-      - name: Cache local LLM model
-        uses: actions/cache@v4
-        with:
-          path: src-tauri/resources/models/llm/qwen2.5-1.5b-instruct-q4_k_m.gguf
-          key: local-llm-${{ runner.os }}-qwen2.5-1.5b-instruct-q4-k-m-6a1a2e
-
       # ── Install frontend deps ──
       - name: Install dependencies
         run: npm ci
-
-      - name: Prepare bundled local LLM model
-        run: npm run sync:local-llm-model
 
       # ── Quality gate: typecheck + web build before packaging ──
       - name: Validate frontend build
@@ -219,19 +209,9 @@ jobs:
           workspaces: src-tauri
           cache-on-failure: true
 
-      # ── Local LLM bundle asset ──
-      - name: Cache local LLM model
-        uses: actions/cache@v4
-        with:
-          path: src-tauri/resources/models/llm/qwen2.5-1.5b-instruct-q4_k_m.gguf
-          key: local-llm-${{ runner.os }}-qwen2.5-1.5b-instruct-q4-k-m-6a1a2e
-
       # ── Install frontend deps ──
       - name: Install dependencies
         run: npm ci
-
-      - name: Prepare bundled local LLM model
-        run: npm run sync:local-llm-model
 
       # ── Quality gate: typecheck + web build before packaging ──
       - name: Validate frontend build

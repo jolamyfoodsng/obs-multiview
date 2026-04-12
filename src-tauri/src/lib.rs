@@ -14,8 +14,6 @@
 // https://tauri.localhost) is NOT reachable by OBS/CEF, so we need a real
 // localhost server.
 
-mod local_llm;
-
 use scraper::{Html, Selector};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -2337,12 +2335,6 @@ pub fn run() {
                 .resource_dir()
                 .unwrap_or_else(|_| std::path::PathBuf::from("."));
 
-            match local_llm::seed_local_llm_model_from_bundle(&resource_dir) {
-                Ok(true) => println!("[Tauri] Local LLM model ready."),
-                Ok(false) => println!("[Tauri] No bundled local LLM model found."),
-                Err(error) => eprintln!("[Tauri] Failed to seed local LLM model: {}", error),
-            }
-
             let serve_dir = resolve_bundled_overlay_dir(&resource_dir)
                 .or_else(resolve_dev_public_dir)
                 .unwrap_or(resource_dir.clone());
@@ -2385,10 +2377,7 @@ pub fn run() {
             search_online_song_lyrics,
             get_voice_bible_runtime_status,
             prepare_voice_bible_model,
-            transcribe_voice_audio,
-            local_llm::get_local_llm_runtime_status,
-            local_llm::install_local_llm_model,
-            local_llm::generate_local_llm_text
+            transcribe_voice_audio
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
