@@ -13,6 +13,7 @@ use std::sync::{mpsc, OnceLock};
 
 const LOCAL_LLM_MODEL_FILE: &str = "qwen2.5-1.5b-instruct-q4_k_m.gguf";
 const LOCAL_LLM_MODEL_NAME: &str = "Qwen2.5-1.5B-Instruct Q4_K_M";
+const LOCAL_LLM_INSTALL_MARKER_FILE: &str = "install-state.json";
 const LOCAL_LLM_MIN_MODEL_BYTES: u64 = 1_000_000;
 const LOCAL_LLM_CONTEXT_SIZE: u32 = 2_048;
 const LOCAL_LLM_MAX_TOKENS: u32 = 160;
@@ -50,6 +51,11 @@ struct LocalLlmSession {
     model_path: PathBuf,
 }
 
+#[derive(Serialize, Deserialize)]
+struct LocalLlmInstallMarker {
+    model_file: String,
+}
+
 #[derive(Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct LocalLlmGenerationRequest {
@@ -79,6 +85,34 @@ fn local_llm_dir() -> Result<PathBuf, String> {
 
 fn local_llm_model_path() -> Result<PathBuf, String> {
     Ok(local_llm_dir()?.join(LOCAL_LLM_MODEL_FILE))
+}
+
+fn local_llm_install_marker_path() -> Result<PathBuf, String> {
+    Ok(local_llm_dir()?.join(LOCAL_LLM_INSTALL_MARKER_FILE))
+}
+
+fn has_local_llm_install_marker() -> bool {
+    let Ok(marker_path) = local_llm_install_marker_path() else {
+        return false;
+    };
+    let Ok(raw) = fs::read_to_string(marker_path) else {
+        return false;
+    };
+    serde_json::from_str::<LocalLlmInstallMarker>(&raw)
+        .map(|marker| marker.model_file == LOCAL_LLM_MODEL_FILE)
+        .unwrap_or(false)
+}
+
+fn write_local_llm_install_marker() {
+    let Ok(marker_path) = local_llm_install_marker_path() else {
+        return;
+    };
+    let Ok(raw) = serde_json::to_vec(&LocalLlmInstallMarker {
+        model_file: LOCAL_LLM_MODEL_FILE.to_string(),
+    }) else {
+        return;
+    };
+    let _ = fs::write(marker_path, raw);
 }
 
 fn is_valid_model_file(path: &Path) -> bool {
@@ -244,7 +278,14 @@ fn install_local_llm_from_path(source: &Path, target: &Path) -> Result<(), Strin
 
 fn ensure_local_llm_model_installed(resource_dir: Option<&Path>) -> Result<bool, String> {
     let target = local_llm_model_path()?;
+    let has_install_marker = has_local_llm_install_marker();
+
+    if has_install_marker && is_valid_model_file(&target) {
+        return Ok(true);
+    }
+
     if is_valid_model_file(&target) {
+        write_local_llm_install_marker();
         return Ok(true);
     }
 
@@ -256,7 +297,11 @@ fn ensure_local_llm_model_installed(resource_dir: Option<&Path>) -> Result<bool,
         install_local_llm_from_path(&source, &target)?;
     }
 
-    Ok(is_valid_model_file(&target))
+    let installed = is_valid_model_file(&target);
+    if installed {
+        write_local_llm_install_marker();
+    }
+    Ok(installed)
 }
 
 pub(crate) fn seed_local_llm_model_from_bundle(resource_dir: &Path) -> Result<bool, String> {
