@@ -16,7 +16,7 @@ type MinistrySubTab = "animated-lt" | "sermon" | "events";
 const DOCK_MINISTRY_PREFS_KEY = "ocs-dock-ministry-preferences";
 
 const SUB_TABS: { id: MinistrySubTab; label: string; icon: string }[] = [
-  { id: "animated-lt", label: "Animated LT", icon: "subtitles" },
+  { id: "animated-lt", label: "Speakers", icon: "person" },
   { id: "sermon", label: "Sermon", icon: "record_voice_over" },
   { id: "events", label: "Events", icon: "event" },
 ];

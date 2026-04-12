@@ -200,7 +200,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-
   gap: 18px;
   min-width: 420px;
   max-width: min(900px, calc(100vw - 80px));
-  padding: 20px 28px;
+  padding: 22px 42px;
 }
 
 .v-divider {
@@ -299,7 +299,7 @@ class DockObsClient {
   /** Load branding from the dock JSON file served by the overlay server */
   private async _loadBranding(): Promise<void> {
     try {
-      const res = await fetch(`${this.getOverlayBaseUrl()}/uploads/dock-branding.json`);
+      const res = await fetch(`${this.getOverlayBaseUrl()}/uploads/dock-branding.json?_=${Date.now()}`, { cache: "no-store" });
       if (!res.ok) return;
       const data = await res.json();
       this._brandingCache = {
@@ -311,6 +311,10 @@ class DockObsClient {
     } catch {
       // Branding file doesn't exist yet or server not ready — ignore
     }
+  }
+
+  async refreshBrandingCache(): Promise<void> {
+    await this._loadBranding();
   }
 
   /** Get the resolved logo URL for lower-third overlays */

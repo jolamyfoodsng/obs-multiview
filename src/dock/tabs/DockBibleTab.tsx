@@ -74,6 +74,7 @@ interface DockBiblePreferences {
   lowerThirdThemeId?: string;
   backgroundPreset?: DockBackgroundPreset;
   fullscreenQuickThemeSettings?: DockFullscreenQuickThemeSettings | null;
+  lowerThirdQuickThemeSettings?: DockFullscreenQuickThemeSettings | null;
   selectedBook?: string;
   selectedChapter?: number;
 }
@@ -378,6 +379,10 @@ export default function DockBibleTab({
     useState<DockFullscreenQuickThemeSettings | null>(null);
   const [fullscreenQuickThemeSettings, setFullscreenQuickThemeSettings] =
     useState<DockFullscreenQuickThemeSettings | null>(null);
+  const [savedLowerThirdQuickThemeSettings, setSavedLowerThirdQuickThemeSettings] =
+    useState<DockFullscreenQuickThemeSettings | null>(null);
+  const [lowerThirdQuickThemeSettings, setLowerThirdQuickThemeSettings] =
+    useState<DockFullscreenQuickThemeSettings | null>(null);
   const [chapterPassages, setChapterPassages] = useState<Array<BiblePassage | null>>(() => createEmptyPassages());
   const [chapterLoading, setChapterLoading] = useState(false);
   const [chapterErrors, setChapterErrors] = useState<string[]>(() => createEmptyErrors());
@@ -478,8 +483,13 @@ export default function DockBibleTab({
     const storedQuickSettings = sanitizeFullscreenQuickThemeSettings(
       prefs.fullscreenQuickThemeSettings,
     );
+    const storedLowerThirdQuickSettings = sanitizeFullscreenQuickThemeSettings(
+      prefs.lowerThirdQuickThemeSettings,
+    );
     setSavedFullscreenQuickThemeSettings(storedQuickSettings);
     setFullscreenQuickThemeSettings(storedQuickSettings);
+    setSavedLowerThirdQuickThemeSettings(storedLowerThirdQuickSettings);
+    setLowerThirdQuickThemeSettings(storedLowerThirdQuickSettings);
     setSelectedBook(initialBook);
     setSelectedChapter(initialBook ? initialChapter : null);
     setSelectedVerse(null);
@@ -531,12 +541,14 @@ export default function DockBibleTab({
       lowerThirdThemeId: selectedLowerThirdTheme.id,
       backgroundPreset,
       fullscreenQuickThemeSettings: savedFullscreenQuickThemeSettings,
+      lowerThirdQuickThemeSettings: savedLowerThirdQuickThemeSettings,
       selectedBook: selectedBook ?? undefined,
       selectedChapter: selectedChapter ?? undefined,
     });
   }, [
     activeTranslation,
     backgroundPreset,
+    savedLowerThirdQuickThemeSettings,
     columnTranslations,
     overlayMode,
     savedFullscreenQuickThemeSettings,
@@ -614,6 +626,20 @@ export default function DockBibleTab({
   const activeFullscreenQuickThemeSettings = useMemo(
     () => extractFullscreenQuickThemeSettings(effectiveSelectedBibleTheme.settings),
     [effectiveSelectedBibleTheme.settings],
+  );
+
+  const effectiveSelectedLowerThirdTheme = useMemo(
+    () =>
+      applyFullscreenQuickThemeSettings(
+        selectedLowerThirdTheme,
+        lowerThirdQuickThemeSettings,
+      ),
+    [lowerThirdQuickThemeSettings, selectedLowerThirdTheme],
+  );
+
+  const activeLowerThirdQuickThemeSettings = useMemo(
+    () => extractFullscreenQuickThemeSettings(effectiveSelectedLowerThirdTheme.settings),
+    [effectiveSelectedLowerThirdTheme.settings],
   );
 
   const fullscreenLiveOverrides = useMemo(
@@ -802,7 +828,7 @@ export default function DockBibleTab({
         bibleThemeSettings: (
           overlayMode === "fullscreen"
             ? effectiveSelectedBibleTheme.settings
-            : selectedLowerThirdTheme.settings
+            : effectiveSelectedLowerThirdTheme.settings
         ) as unknown as Record<string, unknown>,
         liveOverrides:
           overlayMode === "fullscreen"
@@ -853,8 +879,8 @@ export default function DockBibleTab({
       resolveVerseSelection,
       effectiveSelectedBibleTheme.id,
       effectiveSelectedBibleTheme.settings,
+      effectiveSelectedLowerThirdTheme.settings,
       selectedLowerThirdTheme.id,
-      selectedLowerThirdTheme.settings,
       activeTranslation,
       verseLineCount,
     ],
@@ -903,6 +929,54 @@ export default function DockBibleTab({
   }, [
     activeColumnIndex,
     activeFullscreenQuickThemeSettings,
+    activeTranslation,
+    stageVerse,
+    staged,
+  ]);
+
+  const handleSaveLowerThirdQuickThemeSettings = useCallback(async () => {
+    const nextSavedSettings = { ...activeLowerThirdQuickThemeSettings };
+    setSavedLowerThirdQuickThemeSettings(nextSavedSettings);
+
+    if (staged?.type !== "bible") {
+      return;
+    }
+
+    const data = (staged.data ?? null) as Record<string, unknown> | null;
+    if (!data) {
+      return;
+    }
+
+    const book = typeof data.book === "string" ? data.book : null;
+    const chapter = typeof data.chapter === "number" ? data.chapter : null;
+    const verse = typeof data.verse === "number" ? data.verse : null;
+    const translation =
+      typeof data.translation === "string" ? data.translation.toUpperCase() : activeTranslation;
+    const columnIndex =
+      typeof data.columnIndex === "number"
+        ? Math.min(Math.max(data.columnIndex, 0), QUICK_SELECT_VERSION_COUNT - 1)
+        : activeColumnIndex;
+
+    if (!book || !chapter || !verse) {
+      return;
+    }
+
+    await stageVerse(book, chapter, verse, {
+      sendToPreview: true,
+      translation,
+      columnIndex,
+    });
+
+    if (data._dockLive) {
+      await stageVerse(book, chapter, verse, {
+        sendToProgram: true,
+        translation,
+        columnIndex,
+      });
+    }
+  }, [
+    activeColumnIndex,
+    activeLowerThirdQuickThemeSettings,
     activeTranslation,
     stageVerse,
     staged,
@@ -980,6 +1054,66 @@ export default function DockBibleTab({
     selectedBook,
     selectedChapter,
     selectedVerse,
+    stageVerse,
+  ]);
+
+  const prevFullscreenQuickSettingsSignature = useRef(
+    JSON.stringify(activeFullscreenQuickThemeSettings),
+  );
+  useEffect(() => {
+    const nextSignature = JSON.stringify(activeFullscreenQuickThemeSettings);
+    if (prevFullscreenQuickSettingsSignature.current === nextSignature) return;
+    prevFullscreenQuickSettingsSignature.current = nextSignature;
+
+    if (overlayMode !== "fullscreen") return;
+    if (!selectedBook || !selectedChapter || !selectedVerse) return;
+
+    void stageVerse(selectedBook, selectedChapter, selectedVerse, {
+      sendToProgram: isProgramLive,
+      sendToPreview: staged?.type === "bible" && !isProgramLive,
+      translation: activeTranslation,
+      columnIndex: activeColumnIndex,
+    });
+  }, [
+    activeColumnIndex,
+    activeFullscreenQuickThemeSettings,
+    activeTranslation,
+    isProgramLive,
+    overlayMode,
+    selectedBook,
+    selectedChapter,
+    selectedVerse,
+    staged,
+    stageVerse,
+  ]);
+
+  const prevLowerThirdQuickSettingsSignature = useRef(
+    JSON.stringify(activeLowerThirdQuickThemeSettings),
+  );
+  useEffect(() => {
+    const nextSignature = JSON.stringify(activeLowerThirdQuickThemeSettings);
+    if (prevLowerThirdQuickSettingsSignature.current === nextSignature) return;
+    prevLowerThirdQuickSettingsSignature.current = nextSignature;
+
+    if (overlayMode !== "lower-third") return;
+    if (!selectedBook || !selectedChapter || !selectedVerse) return;
+
+    void stageVerse(selectedBook, selectedChapter, selectedVerse, {
+      sendToProgram: isProgramLive,
+      sendToPreview: staged?.type === "bible" && !isProgramLive,
+      translation: activeTranslation,
+      columnIndex: activeColumnIndex,
+    });
+  }, [
+    activeColumnIndex,
+    activeLowerThirdQuickThemeSettings,
+    activeTranslation,
+    isProgramLive,
+    overlayMode,
+    selectedBook,
+    selectedChapter,
+    selectedVerse,
+    staged,
     stageVerse,
   ]);
 
@@ -1726,6 +1860,15 @@ export default function DockBibleTab({
     if (verseToReveal === null) return;
 
     const frame = window.requestAnimationFrame(() => {
+      const verseRow = verseGridRef.current?.querySelector<HTMLElement>(
+        `[data-verse-row="${verseToReveal}"]`,
+      );
+      if (verseRow) {
+        verseRow.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      }
       setHighlightVerse(verseToReveal);
       pendingScrollVerseRef.current = null;
     });
@@ -2193,7 +2336,7 @@ export default function DockBibleTab({
             <div className="dock-console-control dock-console-control--mode-stack">
               <div>
 
-                <div className="dock-section-label" style={{ marginTop: 0 }}>Overlay Mode</div>
+                {/* <div className="dock-section-label" style={{ marginTop: 0 }}>Overlay Mode</div> */}
                 <div className="dock-console-segmented">
                   <button
                     className={`dock-console-segmented__item${overlayMode === "fullscreen" ? " dock-console-segmented__item--active" : ""}`}
@@ -2218,7 +2361,11 @@ export default function DockBibleTab({
                     label=""
                     templateType={activeThemePickerProps.templateType}
                     allowedCategories={["bible", "general"]}
-                    previewTheme={overlayMode === "fullscreen" ? effectiveSelectedBibleTheme : undefined}
+                    previewTheme={
+                      overlayMode === "fullscreen"
+                        ? effectiveSelectedBibleTheme
+                        : effectiveSelectedLowerThirdTheme
+                    }
                   />
                   {overlayMode === "fullscreen" ? (
                     <DockFullscreenThemeQuickSettings
@@ -2226,8 +2373,20 @@ export default function DockBibleTab({
                       onChange={setFullscreenQuickThemeSettings}
                       onReset={() => setFullscreenQuickThemeSettings(savedFullscreenQuickThemeSettings)}
                       onSaveDefault={handleSaveFullscreenQuickThemeSettings}
+                      title="Fullscreen Text Settings"
+                      subtitle="Adjust verse text, case, spacing, and color for fullscreen output."
                     />
-                  ) : null}
+                  ) : (
+                    <DockFullscreenThemeQuickSettings
+                      settings={activeLowerThirdQuickThemeSettings}
+                      onChange={setLowerThirdQuickThemeSettings}
+                      onReset={() => setLowerThirdQuickThemeSettings(savedLowerThirdQuickThemeSettings)}
+                      onSaveDefault={handleSaveLowerThirdQuickThemeSettings}
+                      title="Lower Third Text Settings"
+                      subtitle="Adjust verse text, case, spacing, and color for lower-third output."
+                      showBackgroundControls={false}
+                    />
+                  )}
                 </div>
               </div>
 

@@ -361,6 +361,13 @@ export interface SpeakerProfileSetting {
   role: string;
 }
 
+export interface BrandLogoAssetSetting {
+  id: string;
+  name: string;
+  path: string;
+  createdAt: string;
+}
+
 export interface SermonPointSetting {
   id: string;
   text: string;
@@ -413,6 +420,7 @@ export interface MVSettings {
   pastorNames: string;
   pastorSpeakers: SpeakerProfileSetting[];
   brandLogoPath: string;
+  brandLogoAssets: BrandLogoAssetSetting[];
   churchProfileOnboardingCompleted: boolean;
   socialWebsite: string;
   socialInstagram: string;
@@ -463,6 +471,7 @@ export const DEFAULT_SETTINGS: MVSettings = {
   pastorNames: "",
   pastorSpeakers: [],
   brandLogoPath: "",
+  brandLogoAssets: [],
   churchProfileOnboardingCompleted: false,
   socialWebsite: "",
   socialInstagram: "",
@@ -519,6 +528,7 @@ export function updateSettings(patch: Partial<MVSettings>): MVSettings {
   // Sync branding settings to dock data file (fire-and-forget)
   if (
     patch.brandLogoPath !== undefined ||
+    patch.brandLogoAssets !== undefined ||
     patch.brandColor !== undefined ||
     patch.brandSecondaryColor !== undefined ||
     patch.churchName !== undefined ||
@@ -565,6 +575,10 @@ export async function syncBrandingToDock(settings: MVSettings): Promise<void> {
       data: JSON.stringify({
         brandLogoPath: settings.brandLogoPath,
         brandLogoFileName: logoFileName,
+        brandLogoAssets: settings.brandLogoAssets.map((asset) => ({
+          ...asset,
+          fileName: asset.path ? (asset.path.split(/[\\/]/).pop()?.trim() ?? "") : "",
+        })),
         brandColor: settings.brandColor,
         brandSecondaryColor: settings.brandSecondaryColor,
         churchName: settings.churchName,

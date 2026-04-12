@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getOverlayBaseUrl, getOverlayBaseUrlSync } from "../../services/overlayUrl";
+import { dockClient } from "../../services/dockBridge";
 import { dockObsClient } from "../dockObsClient";
 import type { DockStagedItem } from "../dockTypes";
 
@@ -191,6 +192,16 @@ export default function DockAnimatedLTTab({ onStage }: Props) {
     }, 450);
     return () => window.clearTimeout(timer);
   }, [syncProfileToPanel, panelUrl]);
+
+  useEffect(() => {
+    const unsub = dockClient.onState((msg) => {
+      if (msg.type !== "state:branding-updated") return;
+      window.setTimeout(() => {
+        void syncProfileToPanel();
+      }, 120);
+    });
+    return unsub;
+  }, [syncProfileToPanel]);
 
   const postPanelMessage = useCallback((payload: Record<string, unknown>) => {
     iframeRef.current?.contentWindow?.postMessage(payload, "*");

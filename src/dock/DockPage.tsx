@@ -381,6 +381,10 @@ export default function DockPage() {
             setObsConnected((msg.payload as { connected: boolean }).connected);
           }
           break;
+        case "state:branding-updated": {
+          void dockObsClient.refreshBrandingCache().catch(() => {});
+          break;
+        }
         case "state:update": {
           setAppConnected(true);
           const payload = msg.payload as Record<string, unknown>;

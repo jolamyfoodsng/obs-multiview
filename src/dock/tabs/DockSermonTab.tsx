@@ -406,15 +406,6 @@ export default function DockSermonTab({ staged, onStage }: Props) {
     setItemModal(null);
   }, [itemModal, items]);
 
-  const deleteItem = useCallback((itemId: string) => {
-    setItems((current) => current.filter((item) => item.id !== itemId));
-    setActiveItemId((current) => (current === itemId ? null : current));
-    setSelectedSlideId(null);
-    if (staged?.type === "sermon" && stagedSermonData?.itemId === itemId) {
-      onStage(null);
-    }
-  }, [onStage, staged, stagedSermonData]);
-
   const openSlideModal = useCallback((item: SermonItem, slide?: SermonSlide) => {
     setFormError("");
     setSlideModal({
@@ -692,9 +683,7 @@ export default function DockSermonTab({ staged, onStage }: Props) {
                 <Icon name="add" size={14} />
                 {activeItem.type === "quote" ? "Add " : "Add"}
               </button>
-              <button type="button" className="dock-lyric-card__action" onClick={() => deleteItem(activeItem.id)} aria-label="Delete sermon item">
-                <Icon name="close" size={12} />
-              </button>
+
             </div>
           </div>
 

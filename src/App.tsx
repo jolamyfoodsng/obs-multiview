@@ -297,6 +297,14 @@ function App() {
       if (detail?.churchProfileOnboardingCompleted === false) {
         setShowChurchOnboarding(true);
       }
+      syncProductionSettingsToDock().catch(() => {});
+      dockBridge.sendBrandingUpdated({
+        brandLogoPath: detail?.brandLogoPath ?? "",
+        brandColor: detail?.brandColor ?? "",
+        brandSecondaryColor: detail?.brandSecondaryColor ?? "",
+        churchName: detail?.churchName ?? "",
+        mainPastorName: detail?.mainPastorName ?? "",
+      });
     };
     window.addEventListener(MV_SETTINGS_UPDATED_EVENT, handleSettingsUpdated);
     return () => window.removeEventListener(MV_SETTINGS_UPDATED_EVENT, handleSettingsUpdated);

@@ -6,13 +6,15 @@
 	<!--Author: NoeAL-->
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0, user-scalable=0">
-		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
-		<title>Lower Thirds Control Panel</title>
-		<link rel="preconnect" href="https://fonts.googleapis.com">
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-			<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Open+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-			<link rel="stylesheet" href="../common/css/cp-icons.css">
-			<link rel="stylesheet" href="../common/css/style-control_panel.css">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+	<title>Lower Thirds Control Panel</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link
+		href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;600;700&family=Open+Sans:wght@400;500;600;700;800&display=swap"
+		rel="stylesheet">
+	<link rel="stylesheet" href="../common/css/cp-icons.css">
+	<link rel="stylesheet" href="../common/css/style-control_panel.css">
 	<script src="../common/js/jquery.js"></script>
 	<script src="../common/js/jscolor.js"></script>
 	<script src="../common/js/hotkeys.js"></script>
@@ -4138,8 +4140,8 @@
 				const name = typeof item.name === "string" ? item.name.trim() : "";
 				const role = typeof item.role === "string" ? item.role.trim() :
 					typeof item.position === "string" ? item.position.trim() :
-					typeof item.info === "string" ? item.info.trim() :
-					typeof item.title === "string" ? item.title.trim() : "";
+						typeof item.info === "string" ? item.info.trim() :
+							typeof item.title === "string" ? item.title.trim() : "";
 				const key = name.toLowerCase();
 				if (!key || seen[key]) return;
 				seen[key] = true;

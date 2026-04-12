@@ -2348,6 +2348,68 @@
   object-fit: contain;
 }
 
+.mv-settings-logo-library {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.mv-settings-logo-card {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--surface-2, rgba(0, 0, 0, 0.14));
+  padding: 8px;
+}
+
+.mv-settings-logo-card--active {
+  border-color: color-mix(in srgb, var(--primary) 72%, var(--border));
+}
+
+.mv-settings-logo-card .mv-settings-logo-preview-wrap {
+  margin-top: 0;
+  max-width: none;
+  min-height: 92px;
+  border-width: 1px;
+  border-radius: 3px;
+}
+
+.mv-settings-logo-card__body {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.mv-settings-logo-card__title {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.mv-settings-logo-card__badge {
+  display: inline-flex;
+  margin-top: 4px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+  color: var(--primary);
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.mv-settings-logo-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
 /* ── Settings: OBS status dot ── */
 
 .mv-obs-status-dot {

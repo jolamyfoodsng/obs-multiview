@@ -6,6 +6,7 @@ import {
   DEFAULT_SETTINGS,
   getSettings,
   updateSettings,
+  type BrandLogoAssetSetting,
   type SpeakerProfileSetting,
 } from "../multiview/mvStore";
 import { applyBrandingSettingsToDom } from "../services/branding";
@@ -33,6 +34,17 @@ function resolveLogoPreviewSrc(path: string): string {
   return convertFileSrc(trimmed);
 }
 
+function buildLogoAsset(path: string, name: string): BrandLogoAssetSetting {
+  return {
+    id: typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `logo-${Date.now()}`,
+    name: name.trim() || path.split(/[\\/]/).pop()?.trim() || "Church logo",
+    path,
+    createdAt: new Date().toISOString(),
+  };
+}
+
 function buildPastorSpeaker(mainPastorName: string): SpeakerProfileSetting[] {
   const name = mainPastorName.trim();
   return name ? [{ name, role: "Lead Pastor" }] : [];
@@ -53,6 +65,7 @@ export function ChurchProfileOnboardingModal({ onComplete }: ChurchProfileOnboar
   const [brandColor, setBrandColor] = useState(existing.brandColor || DEFAULT_SETTINGS.brandColor);
   const [brandSecondaryColor, setBrandSecondaryColor] = useState(existing.brandSecondaryColor);
   const [brandLogoPath, setBrandLogoPath] = useState(existing.brandLogoPath);
+  const [brandLogoAssets, setBrandLogoAssets] = useState<BrandLogoAssetSetting[]>(existing.brandLogoAssets);
   const [step, setStep] = useState<1 | 2>(1);
   const [logoStatus, setLogoStatus] = useState("");
   const [logoError, setLogoError] = useState("");
@@ -81,6 +94,7 @@ export function ChurchProfileOnboardingModal({ onComplete }: ChurchProfileOnboar
       brandColor: brandColor.trim() || DEFAULT_SETTINGS.brandColor,
       brandSecondaryColor: brandSecondaryColor.trim(),
       brandLogoPath: brandLogoPath.trim(),
+      brandLogoAssets,
       churchProfileOnboardingCompleted: true,
     });
     applyBrandingSettingsToDom({ brandColor: next.brandColor, churchName: next.churchName });
@@ -127,7 +141,9 @@ export function ChurchProfileOnboardingModal({ onComplete }: ChurchProfileOnboar
     setLogoError("");
     try {
       const absolutePath = await saveUploadFile(file);
+      const asset = buildLogoAsset(absolutePath, file.name);
       setBrandLogoPath(absolutePath);
+      setBrandLogoAssets((prev) => [...prev.filter((item) => item.path !== absolutePath), asset]);
       setLogoStatus(file.name);
     } catch (err) {
       setLogoError(err instanceof Error ? err.message : "Logo upload failed.");

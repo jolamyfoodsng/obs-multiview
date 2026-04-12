@@ -60,6 +60,7 @@ export type DockStateType =
   | "state:update"
   | "state:obs-status"
   | "state:service-status"
+  | "state:branding-updated"
   | "state:speakers"
   | "state:library-updated"
   | "state:songs-data"
@@ -181,6 +182,14 @@ class DockBridge {
     this.sendState({
       type: "state:library-updated",
       payload: null,
+      timestamp: Date.now(),
+    });
+  }
+
+  sendBrandingUpdated(payload: Record<string, unknown> | null = null) {
+    this.sendState({
+      type: "state:branding-updated",
+      payload,
       timestamp: Date.now(),
     });
   }

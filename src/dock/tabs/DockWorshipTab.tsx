@@ -17,7 +17,7 @@ import {
   postWorshipDockSongSaveCommand,
   type WorshipDockSongSavePayload,
 } from "../../services/worshipDockInterop";
-import { generateSlides, parseWorshipLyricSections } from "../../worship/slideEngine";
+import { generateSlides } from "../../worship/slideEngine";
 import type { Song } from "../../worship/types";
 import {
   formatOnlineLyricsSearchError,
@@ -273,10 +273,6 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
 
   const selectedSongSections = useMemo(
     () => (selectedSong ? parseLyricSections(selectedSong.lyrics, linesPerSlide) : []),
-    [linesPerSlide, selectedSong],
-  );
-  const selectedSongLyricSections = useMemo(
-    () => (selectedSong ? parseWorshipLyricSections(selectedSong.lyrics, linesPerSlide) : []),
     [linesPerSlide, selectedSong],
   );
   const visibleSectionIndexes = useMemo(
@@ -801,17 +797,6 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
         clickTimerRef.current = null;
       }
       void pushSection(idx, true);
-    },
-    [pushSection],
-  );
-
-  const handleJumpToLyricSection = useCallback(
-    (idx: number, live = false) => {
-      if (clickTimerRef.current) {
-        clearTimeout(clickTimerRef.current);
-        clickTimerRef.current = null;
-      }
-      void pushSection(idx, live);
     },
     [pushSection],
   );
@@ -1351,29 +1336,6 @@ export default function DockWorshipTab({ staged, onStage, productionDefaults }: 
                 </button>
               </div>
             </div>
-
-            {selectedSongLyricSections.length > 1 && (
-              <div className="dock-worship-jumpbar" aria-label="Worship section quick jumps">
-                {selectedSongLyricSections.map((section) => {
-                  const isActive = activeSectionIndex !== null &&
-                    activeSectionIndex >= section.startSlideIndex &&
-                    activeSectionIndex < section.startSlideIndex + section.slideCount;
-                  return (
-                    <button
-                      key={section.id}
-                      type="button"
-                      className={`dock-worship-jump${isActive ? " dock-worship-jump--active" : ""} dock-worship-jump--${section.type}`}
-                      onClick={() => handleJumpToLyricSection(section.startSlideIndex, false)}
-                      onDoubleClick={() => handleJumpToLyricSection(section.startSlideIndex, true)}
-                      title={`${section.label}: click previews, double-click sends Program`}
-                    >
-                      <span className="dock-worship-jump__short">{section.shortLabel}</span>
-                      <span className="dock-worship-jump__label">{section.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
 
             {selectedSongSections.length === 0 || visibleSectionIndexes.length === 0 ? (
               <div className="dock-empty dock-worship-workspace__empty">

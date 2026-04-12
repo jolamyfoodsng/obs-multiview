@@ -21,6 +21,9 @@ interface Props {
   onChange: (settings: DockFullscreenQuickThemeSettings) => void;
   onReset: () => void;
   onSaveDefault: () => void | Promise<void>;
+  title?: string;
+  subtitle?: string;
+  showBackgroundControls?: boolean;
 }
 
 type ThemePreset = {
@@ -123,6 +126,9 @@ export default function DockFullscreenThemeQuickSettings({
   onChange,
   onReset,
   onSaveDefault,
+  title = "Quick Theme Settings",
+  subtitle = "Theme edits update the dock preview live.",
+  showBackgroundControls = true,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -183,8 +189,8 @@ export default function DockFullscreenThemeQuickSettings({
           >
             <div className="dock-theme-quick__modal-head">
               <div>
-                <div className="dock-theme-quick__heading">Quick Theme Settings</div>
-                <div className="dock-theme-quick__sub">Fullscreen theme edits update the dock preview live.</div>
+                <div className="dock-theme-quick__heading">{title}</div>
+                <div className="dock-theme-quick__sub">{subtitle}</div>
               </div>
               <button
                 type="button"
@@ -310,50 +316,54 @@ export default function DockFullscreenThemeQuickSettings({
                     </span>
                   </label>
 
-                  <label className="dock-theme-quick__color-field">
-                    <span>Background</span>
-                    <span className="dock-theme-quick__color-input-wrap">
-                      <input
-                        className="dock-theme-quick__color-input"
-                        type="color"
-                        value={settings.fullscreenShadeColor}
-                        onChange={(event) =>
-                          onChange(
-                            withPatch(settings, {
-                              fullscreenShadeColor: event.target.value,
-                            }),
-                          )
-                        }
-                      />
-                      <span>{settings.fullscreenShadeColor.toUpperCase()}</span>
-                    </span>
-                  </label>
+                  {showBackgroundControls && (
+                    <label className="dock-theme-quick__color-field">
+                      <span>Background</span>
+                      <span className="dock-theme-quick__color-input-wrap">
+                        <input
+                          className="dock-theme-quick__color-input"
+                          type="color"
+                          value={settings.fullscreenShadeColor}
+                          onChange={(event) =>
+                            onChange(
+                              withPatch(settings, {
+                                fullscreenShadeColor: event.target.value,
+                              }),
+                            )
+                          }
+                        />
+                        <span>{settings.fullscreenShadeColor.toUpperCase()}</span>
+                      </span>
+                    </label>
+                  )}
                 </div>
               </div>
 
-              <div className="dock-theme-quick__section">
-                <label className="dock-theme-quick__field">
-                  <span className="dock-theme-quick__field-head">
-                    <span>Background opacity</span>
-                    <span>{formatOpacity(settings.fullscreenShadeOpacity)}</span>
-                  </span>
-                  <input
-                    className="dock-theme-quick__range"
-                    type="range"
-                    min={0}
-                    max={100}
-                    step={1}
-                    value={Math.round(settings.fullscreenShadeOpacity * 100)}
-                    onChange={(event) =>
-                      onChange(
-                        withPatch(settings, {
-                          fullscreenShadeOpacity: Number(event.target.value) / 100,
-                        }),
-                      )
-                    }
-                  />
-                </label>
-              </div>
+              {showBackgroundControls && (
+                <div className="dock-theme-quick__section">
+                  <label className="dock-theme-quick__field">
+                    <span className="dock-theme-quick__field-head">
+                      <span>Background opacity</span>
+                      <span>{formatOpacity(settings.fullscreenShadeOpacity)}</span>
+                    </span>
+                    <input
+                      className="dock-theme-quick__range"
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={Math.round(settings.fullscreenShadeOpacity * 100)}
+                      onChange={(event) =>
+                        onChange(
+                          withPatch(settings, {
+                            fullscreenShadeOpacity: Number(event.target.value) / 100,
+                          }),
+                        )
+                      }
+                    />
+                  </label>
+                </div>
+              )}
 
               <div className="dock-theme-quick__split-row">
                 <div className="dock-theme-quick__section">
